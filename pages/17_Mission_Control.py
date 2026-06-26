@@ -24,7 +24,7 @@ from src.hq.factory_status import (
 )
 from src.hq.daily_report import generate_report, export_report
 
-APP_VERSION = "4.4"
+APP_VERSION = "4.4.1"
 TODAY = date.today()
 
 st.set_page_config(page_title="Mission Control | Creator Factory OS", page_icon="🎯", layout="wide")
@@ -34,8 +34,8 @@ st.set_page_config(page_title="Mission Control | Creator Factory OS", page_icon=
 st.title("🎯 Creator Factory OS")
 h1, h2, h3 = st.columns(3)
 h1.caption(f"📅 {TODAY.strftime('%Y年%m月%d日 (%A)')}")
-h2.caption(f"🔨 Build: v{APP_VERSION} SNS Factory")
-h3.caption(f"✅ Status: v{APP_VERSION} SNS Factory")
+h2.caption(f"🔨 Build: v{APP_VERSION} Approval Assistant")
+h3.caption(f"✅ Status: v{APP_VERSION} Approval Assistant")
 
 st.divider()
 
@@ -372,12 +372,13 @@ st.divider()
 st.subheader("🚀 Quick Navigation")
 
 NAV_ITEMS = [
-    ("🎬 AI動画工場を開く",    "pages/1_Script.py"),
-    ("📝 note投稿工場を開く",  "pages/18_Note_Factory.py"),
-    ("📱 SNS投稿工場を開く",   "pages/19_SNS_Factory.py"),
-    ("💼 営業工場を開く",      None),
-    ("💰 会計監査工場を開く",  None),
-    ("📊 ダッシュボードを開く", "pages/8_Dashboard.py"),
+    ("🎬 AI動画工場を開く",      "pages/1_Script.py"),
+    ("📝 note投稿工場を開く",    "pages/18_Note_Factory.py"),
+    ("📱 SNS投稿工場を開く",     "pages/19_SNS_Factory.py"),
+    ("💼 営業工場を開く",        None),
+    ("💰 会計監査工場を開く",    None),
+    ("📊 ダッシュボードを開く",  "pages/8_Dashboard.py"),
+    ("🔍 承認アシスタント",      "pages/20_Approval_Assistant.py"),
 ]
 
 nav_cols = st.columns(3)
@@ -388,6 +389,41 @@ for i, (label, page_path) in enumerate(NAV_ITEMS):
         else:
             st.button(label + " 🚧", disabled=True, use_container_width=True,
                       key=f"nav_coming_{i}", help="Coming Soon — このページはまだ実装されていません")
+
+st.divider()
+
+# ── Section 7.5: Dev Tools ────────────────────────────────────────────────────
+
+st.subheader("🛠️ Dev Tools")
+
+dev_c1, dev_c2 = st.columns([3, 2])
+
+with dev_c1:
+    st.markdown("**🔍 Claude承認アシスタント**")
+    st.caption("Claude Codeの確認プロンプトを日本語訳してリスク分類します。")
+    try:
+        from src.devtools.approval_analyzer import get_latest_risk
+        _latest = get_latest_risk()
+        if _latest:
+            _risk_icon = _latest.get("risk_icon", "🟢")
+            _risk_label = _latest.get("risk_label", "安全") if "risk_label" in _latest else _latest.get("risk_level", "safe")
+            _summary = _latest.get("summary", "")[:60]
+            _ts = _latest.get("timestamp", "")[:16].replace("T", " ")
+            st.caption(f"最終分析: {_ts} | {_risk_icon} {_risk_label}")
+            st.caption(f"内容: {_summary}")
+        else:
+            st.caption("まだ分析履歴がありません。")
+    except Exception:
+        st.caption("承認アシスタントのデータを取得できませんでした。")
+
+with dev_c2:
+    approval_page = ROOT / "pages" / "20_Approval_Assistant.py"
+    if approval_page.exists():
+        st.page_link("pages/20_Approval_Assistant.py", label="🔍 承認アシスタントを開く →",
+                     use_container_width=True)
+    else:
+        st.button("🔍 承認アシスタント 🚧", disabled=True, use_container_width=True,
+                  key="nav_approval", help="Coming Soon")
 
 st.divider()
 

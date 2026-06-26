@@ -34,6 +34,10 @@ Creator Factory OS rebrand. Mission Control daily command center. KPI, task list
 `pages/18_Note_Factory.py` — article lifecycle (draft → review → scheduled → published → archived), 6-criteria rule-based scoring (SEO/Readability/CTA/Story/Originality/Monetization 0-100), per-article revenue tracking, content repurposing (X/Threads/YouTube Shorts/video proposal), Mission Control KPI integration. `src/factories/note/` data layer.
 
 ### ✅ v4.4 — SNS Factory
+`pages/19_SNS_Factory.py` — 7-platform SNS management. Rule-based platform formatter. Hashtag generator. Content repurposing from notes and episodes. Weekly calendar. Engagement tracking. `src/factories/sns/` data layer.
+
+### ✅ v4.4.1 — Claude Approval Assistant
+`pages/20_Approval_Assistant.py` — Claude Code approval prompt classifier. 4 risk levels (🟢/🟡/🟠/🔴). 36 command patterns. Japanese explanations for 30+ command types. History. Mission Control Dev Tools card. No external API. `src/devtools/` module layer.
 `pages/19_SNS_Factory.py` — 7-platform SNS management (X, Threads, Instagram, TikTok, YouTube Shorts, LinkedIn, Facebook). Rule-based platform formatter. Hashtag generator. Repurpose from note articles and video episodes. Weekly schedule calendar. Overdue detection. Manual engagement tracking. Analytics stubs. Mission Control KPI integration. `src/factories/sns/` data layer.
 
 ---

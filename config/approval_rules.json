@@ -1,0 +1,33 @@
+{
+  "version": "4.4.1",
+  "description": "Claude Approval Assistant — risk classification rules",
+  "stop_keywords": [
+    "rm -rf", "Remove-Item.*-Recurse.*project", "Remove-Item.*-Recurse.*config",
+    "Remove-Item.*-Recurse.*src", "Remove-Item.*-Recurse.*pages",
+    "--force", "push --force", "push -f", "reset --hard",
+    "checkout -- .", "git clean -f", ".env", "api_key", "secret",
+    "password", "token"
+  ],
+  "caution_keywords": [
+    "Move-Item", "Rename-Item", "pip install", "pip3 install",
+    "requirements.txt", ".gitignore", "Remove-Item", "rm pages/",
+    "src/core/", "src/pipeline/", "src/agents/"
+  ],
+  "review_keywords": [
+    "git add", "git commit", "git push", "git merge",
+    "Write", "Set-Content", "New-Item.*File",
+    "app.py", ".md", "config/"
+  ],
+  "safe_keywords": [
+    "git status", "git log", "git diff", "git stash",
+    "py_compile", "check_project.py", "streamlit run",
+    "Get-ChildItem", "Get-Content", "New-Item.*Directory",
+    "ls ", "dir "
+  ],
+  "critical_paths": [
+    "project/", "config/", "src/", "pages/"
+  ],
+  "protected_files": [
+    "app.py", "requirements.txt", ".env", ".gitignore"
+  ]
+}

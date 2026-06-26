@@ -15,7 +15,7 @@ from src.director.director_planner import plan_exists as director_plan_exists
 
 st.set_page_config(page_title="制作ダッシュボード", page_icon="📊", layout="wide")
 st.title("📊 制作ダッシュボード")
-st.caption("全エピソードの制作進捗を一覧管理 | v4.4")
+st.caption("全エピソードの制作進捗を一覧管理 | v4.4.1")
 
 # ── Mission Control Summary (v4.2) ─────────────────────────────────────────────
 try:
@@ -64,6 +64,24 @@ try:
         sc3.metric("✅ 累計公開", _sns_pub)
         sc4.metric("📅 今日の公開", _sns_today)
         st.page_link("pages/19_SNS_Factory.py", label="📱 SNS投稿工場を開く →")
+        st.divider()
+except Exception:
+    pass
+
+# ── Approval Assistant Summary (v4.4.1) ───────────────────────────────────────
+try:
+    from src.devtools.approval_analyzer import get_latest_risk
+    _latest_approval = get_latest_risk()
+    if _latest_approval:
+        _a_icon = _latest_approval.get("risk_icon", "🟢")
+        _a_ts = _latest_approval.get("timestamp", "")[:16].replace("T", " ")
+        _a_summary = _latest_approval.get("summary", "")[:50]
+        _a_rec = _latest_approval.get("recommendation", "yes")
+        st.markdown("##### 🔍 承認アシスタント 直近の分析")
+        _ac1, _ac2 = st.columns([3, 1])
+        _ac1.caption(f"{_a_icon} {_a_ts} — {_a_summary}")
+        _ac2.caption({"yes": "✅ 承認", "ask_revise": "🟠 修正依頼", "no": "🔴 拒否"}.get(_a_rec, ""))
+        st.page_link("pages/20_Approval_Assistant.py", label="🔍 承認アシスタントを開く →")
         st.divider()
 except Exception:
     pass

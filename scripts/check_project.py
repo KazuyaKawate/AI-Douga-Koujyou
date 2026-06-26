@@ -1,4 +1,4 @@
-"""Project health check script for Creator Factory OS (AI動画工場 v4.4)."""
+"""Project health check script for Creator Factory OS (AI動画工場 v4.4.1)."""
 import io
 import sys
 from pathlib import Path
@@ -24,6 +24,7 @@ REQUIRED_FOLDERS = [
     "src/factories",
     "src/factories/note",
     "src/factories/sns",
+    "src/devtools",
     "src/hq",
     "src/utils",
     "src/pipeline",
@@ -54,6 +55,13 @@ REQUIRED_FILES = [
     "pages/17_Mission_Control.py",
     "pages/18_Note_Factory.py",
     "pages/19_SNS_Factory.py",
+    "pages/20_Approval_Assistant.py",
+    # Dev Tools — 承認アシスタント
+    "src/devtools/__init__.py",
+    "src/devtools/risk_rules.py",
+    "src/devtools/command_classifier.py",
+    "src/devtools/approval_templates.py",
+    "src/devtools/approval_analyzer.py",
     # Factories — SNS投稿工場
     "src/factories/sns/__init__.py",
     "src/factories/sns/sns_post_manager.py",
@@ -133,6 +141,8 @@ OPTIONAL_FILES = [
     "config/sns_posts.json",
     "config/sns_platforms.json",
     "config/sns_schedule.json",
+    "config/approval_rules.json",
+    "config/approval_history.json",
 ]
 
 
@@ -141,7 +151,7 @@ def check() -> bool:
     width = 60
 
     print("=" * width)
-    print("  Creator Factory OS v4.4 — Project Health Check")
+    print("  Creator Factory OS v4.4.1 — Project Health Check")
     print("=" * width)
     print(f"  Root: {ROOT}\n")
 
@@ -229,6 +239,29 @@ def check() -> bool:
                 ok = False
         else:
             print(f"  [----] {cfg_name}  (未作成)")
+
+    print()
+
+    # Approval Assistant
+    print("[ Approval Assistant データ ]")
+    approval_rules_path = ROOT / "config" / "approval_rules.json"
+    approval_history_path = ROOT / "config" / "approval_history.json"
+    for cfg_ap in [approval_rules_path, approval_history_path]:
+        rel_ap = str(cfg_ap.relative_to(ROOT)).replace("\\", "/")
+        if cfg_ap.exists():
+            try:
+                data = json.loads(cfg_ap.read_text(encoding="utf-8"))
+                if "history" in data:
+                    print(f"  [OK  ] {rel_ap}  ({len(data['history'])} 件の履歴)")
+                elif "stop_keywords" in data:
+                    print(f"  [OK  ] {rel_ap}  (v{data.get('version','?')})")
+                else:
+                    print(f"  [OK  ] {rel_ap}")
+            except Exception as exc:
+                print(f"  [ERR ] {rel_ap}  → JSONパースエラー: {exc}")
+                ok = False
+        else:
+            print(f"  [----] {rel_ap}  (未作成)")
 
     print()
 

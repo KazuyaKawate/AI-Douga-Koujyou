@@ -17,7 +17,7 @@ st.set_page_config(
 )
 
 st.title("🎯 Creator Factory OS")
-st.caption("AIツールを組み合わせた動画制作自動化プラットフォーム | v4.4 — SNS Factory")
+st.caption("AIツールを組み合わせた動画制作自動化プラットフォーム | v4.4.1 — Approval Assistant")
 
 st.divider()
 
@@ -25,6 +25,7 @@ WORKFLOW = [
     ("🎯", "Mission Control",    "毎日のKPI・タスク・工場状態を一覧管理",    None),
     ("📝", "note投稿工場",       "記事管理・スコア・収益・コンテンツ転用",    None),
     ("📱", "SNS投稿工場",       "プラットフォーム別SNS投稿管理・スケジュール", None),
+    ("🔍", "承認アシスタント",  "Claude Codeの承認プロンプトをリスク分類",    None),
     ("⚡", "一発生成",           "AIで全工程を自動生成",                    "project"),
     ("🎞️", "エピソード管理",    "EP制作フロー全体を管理",                  "project"),
     ("📚", "素材ライブラリ",    "素材を管理・エピソードにアサイン",         "assets/images"),
@@ -68,6 +69,14 @@ for col, (icon, title, desc, folder) in zip(cols, WORKFLOW):
             _sp = PROJECT_ROOT / "config" / "sns_posts.json"
             _sd = _json.loads(_sp.read_text(encoding="utf-8")) if _sp.exists() else {}
             count = len([p for p in _sd.get("posts", []) if p.get("status") == "published"])
+        except Exception:
+            count = 0
+    elif title == "承認アシスタント":
+        try:
+            import json as _json
+            _ap = PROJECT_ROOT / "config" / "approval_history.json"
+            _ad = _json.loads(_ap.read_text(encoding="utf-8")) if _ap.exists() else {}
+            count = len(_ad.get("history", []))
         except Exception:
             count = 0
     elif title == "制作ダッシュボード":
@@ -152,10 +161,11 @@ with col1:
     st.info("👈 左のサイドバーから各ページを選択して作業を開始してください。")
 with col2:
     st.markdown("""
-**クイックスタート v4.4**
+**クイックスタート v4.4.1**
 1. 🎯 **Mission Control** で今日のKPI・タスクを確認
 2. 📝 **note投稿工場** で記事を作成・スコアリング・収益管理
 3. 📱 **SNS投稿工場** でプラットフォーム別投稿を生成・スケジュール
+4. 🔍 **承認アシスタント** でClaude Codeの確認プロンプトをリスク分類
 2. ⚙️ スタジオ設定 でプロジェクト・AI設定を構成
 3. 🧑 キャラクター管理 でキャラクターを作成してデフォルト設定
 4. 🏞️ 背景管理 でロケーション・カメラ設定を登録

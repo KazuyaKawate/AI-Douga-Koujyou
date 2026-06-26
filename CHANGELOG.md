@@ -6,6 +6,37 @@ Versions are cumulative; each release builds on the previous stable base.
 
 ---
 
+## [v4.4.1] — 2026-06-27 — Claude Approval Assistant
+
+**Codename:** Approval Assistant  
+**Upgrade path:** v4.4 → v4.4.1 (additive, no breaking changes)
+
+### Added
+- `pages/20_Approval_Assistant.py` — 3-tab Claude Code approval analysis page
+  - Tab 1: 分析 — paste prompt, analyze, see risk + Japanese explanation + next instruction
+  - Tab 2: 履歴 — filterable history of past analyses (last 100)
+  - Tab 3: ガイド — risk level reference guide + project rules
+- `src/devtools/` package — Dev Tools module layer
+  - `risk_rules.py` — 4-level risk definitions (🟢/🟡/🟠/🔴) + 36 command patterns
+  - `command_classifier.py` — regex-based pattern detection, tool type inference, file path extraction
+  - `approval_templates.py` — Japanese templates for 30+ command keys (what/why/after/warnings/next_instruction)
+  - `approval_analyzer.py` — analysis pipeline, history save/load, `get_latest_risk()`
+- `config/approval_rules.json` — configurable keyword lists per risk level
+- `config/approval_history.json` — persisted analysis history (last 100 entries)
+
+### Changed
+- `pages/17_Mission_Control.py` — v4.4.1; added Section 7.5 Dev Tools with latest risk display and launch button;承認アシスタント added to NAV_ITEMS
+- `pages/8_Dashboard.py` — added Approval Assistant latest analysis summary strip
+- `app.py` — v4.4.1; 承認アシスタント added to WORKFLOW with analysis count
+- `scripts/check_project.py` — v4.4.1; added src/devtools/ folder, 4 devtools files, 2 approval config files, Approval Assistant section
+
+### Architecture
+- `src/devtools/` sits parallel to `src/factories/` and `src/hq/` — no cross-dependencies with factory modules
+- Zero external API calls — all classification is regex + rule-based
+- History auto-caps at 100 entries; JSON-first storage consistent with rest of project
+
+---
+
 ## [v4.4] — 2026-06-27 — SNS Factory
 
 **Codename:** SNS Factory  
