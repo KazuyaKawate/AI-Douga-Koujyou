@@ -43,3 +43,13 @@ npm-debug.log*
 # Python仮想環境（スクリプトでPythonを使う場合）
 venv/
 .venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Whisper モデルキャッシュ
+*.pt
