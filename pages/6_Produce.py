@@ -7,6 +7,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.utils.config import OPENAI_API_KEY, PROJECT_ROOT
 from src.utils.settings_manager import load_settings
+from src.utils.character_manager import get_character, load_characters
 from src.core import episode_manager as em
 from src.core import ai_pipeline
 
@@ -30,11 +31,45 @@ if _ai["dev_mode"]:
         icon="⚠️",
     )
 
-st.sidebar.caption(
-    f"⚙️ `{_ai['model']}` | "
-    f"{'節約' if _ai['cost_saving'] else '標準'}モード | "
-    f"{'🔧 開発' if _ai['dev_mode'] else '🚀 本番'}"
-)
+with st.sidebar:
+    # ── Character selection ────────────────────────────────────────────────────
+    st.subheader("🧑 キャラクター")
+    _char_data = load_characters()
+    _all_chars = _char_data["characters"]
+    _default_char_id = _char_data.get("default_character_id")
+
+    if _all_chars:
+        _char_id_opts = [None] + [c["id"] for c in _all_chars]
+        _char_name_map = {None: "（なし）"}
+        _char_name_map.update({c["id"]: c["basic"]["display_name"] for c in _all_chars})
+        _def_idx = _char_id_opts.index(_default_char_id) if _default_char_id in _char_id_opts else 0
+
+        _sel_char_id = st.selectbox(
+            "使用するキャラクター",
+            _char_id_opts,
+            format_func=lambda x: _char_name_map.get(x, "不明"),
+            index=_def_idx,
+            key="produce_char_id",
+            label_visibility="collapsed",
+        )
+        _sel_char = get_character(_sel_char_id) if _sel_char_id else None
+        if _sel_char:
+            b = _sel_char["basic"]
+            p = _sel_char["personality"]
+            st.caption(f"役割: {b.get('role','-')}")
+            st.caption(f"話し方: {p.get('speaking_style','-')}")
+            st.caption(f"一人称: {p.get('first_person','-')}")
+    else:
+        st.caption("キャラクターがありません")
+        st.caption("🧑 キャラクター管理 で追加してください")
+        _sel_char = None
+
+    st.divider()
+    st.caption(
+        f"⚙️ `{_ai['model']}` | "
+        f"{'節約' if _ai['cost_saving'] else '標準'}モード | "
+        f"{'🔧 開発' if _ai['dev_mode'] else '🚀 本番'}"
+    )
 
 if not OPENAI_API_KEY:
     st.error("OpenAI API キーが未設定です。`.env` ファイルに `OPENAI_API_KEY` を設定してください。")
@@ -115,6 +150,7 @@ if submitted:
             target=target,
             num_scenes=num_scenes,
             cost_saving=cost_saving,
+            character=_sel_char,
         )
 
         progress.progress(100, text="✅ 全工程完了！")
@@ -147,6 +183,12 @@ st.success(
     f"**{ep['title']}** の生成が完了しました！"
     f" {len(written)} ファイルを `project/{ep_id}/` に書き出しました。"
 )
+if _sel_char:
+    st.info(
+        f"🧑 キャラクター **{_sel_char['basic']['display_name']}**"
+        f"（{_sel_char['basic'].get('role','')}）"
+        f" の設定をプロンプトに適用しました。"
+    )
 
 c1, c2, c3, c4 = st.columns(4)
 c1.metric("シーン数", len(ep["sections"]))
