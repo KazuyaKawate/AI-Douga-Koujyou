@@ -36,6 +36,7 @@ WORKFLOW = [
     ("📝", "プロンプトビルダー", "キャラ×背景×ムード×スタイルを合成",    None),
     ("🎬", "制作管理",          "進捗管理・書き出しパッケージ作成",       None),
     ("🎭", "AI Director",      "シーン演出計画・ビジュアルディレクション", None),
+    ("📁", "プロジェクト管理", "シリーズ管理・一括操作・統計・設定",       None),
 ]
 
 st.subheader("制作フロー")
@@ -89,6 +90,13 @@ for col, (icon, title, desc, folder) in zip(cols, WORKFLOW):
                 1 for d in _pr.iterdir()
                 if d.is_dir() and (d / "director_plan.json").exists()
             ) if _pr.exists() else 0
+        except Exception:
+            count = 0
+    elif title == "プロジェクト管理":
+        try:
+            import json as _json
+            _ps = PROJECT_ROOT / "config" / "project_settings.json"
+            count = len(_json.loads(_ps.read_text(encoding="utf-8")).get("series", [])) if _ps.exists() else 0
         except Exception:
             count = 0
     else:
