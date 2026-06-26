@@ -35,10 +35,11 @@ from src.pipeline.export_pipeline import (
 from src.providers.image_provider_manual import get_instructions as img_instructions
 from src.providers.video_provider_manual import get_instructions as vid_instructions
 from src.providers.audio_provider_manual import get_voice_instructions
+from src.director.director_planner import load_director_plan, plan_exists as director_plan_exists
 
 st.set_page_config(page_title="制作管理", page_icon="🎬", layout="wide")
 st.title("🎬 制作管理")
-st.caption("エピソードの制作進捗管理・書き出しパッケージ作成 | v3.0")
+st.caption("エピソードの制作進捗管理・書き出しパッケージ作成 | v3.1")
 
 _settings = load_settings()
 _gen      = _settings["generation"]
@@ -187,6 +188,8 @@ with left_col:
         st.markdown(f"{'✅' if img_val['has_images'] else '⬜'} 画像 ({img_val['image_count']} 件)")
         st.markdown(f"{'✅' if vid_val['has_clips']  else '⬜'} 動画クリップ ({vid_val['clip_count']} 件)")
         st.markdown(f"{'✅' if aud_val['has_voice']  else '⬜'} 音声 ({aud_val['voice_file_count']} 件)")
+        _has_dir_plan = director_plan_exists(episode_dir)
+        st.markdown(f"{'🎬' if _has_dir_plan else '⬜'} 演出計画 (director_plan.json)")
 
     st.divider()
 
@@ -311,6 +314,24 @@ with right_col:
             )
         else:
             st.caption("音声台本ファイルが見つかりません")
+
+    with st.expander("🎬 演出計画 (Director Plan)"):
+        _dir_plan = load_director_plan(episode_dir)
+        if _dir_plan:
+            dc1, dc2 = st.columns(2)
+            dc1.caption(f"全体トーン: {_dir_plan.get('overall_tone', '-')}")
+            dc1.caption(f"ビジュアルスタイル: {_dir_plan.get('visual_style', '-')}")
+            dc1.caption(f"ペーシング: {_dir_plan.get('pacing', '-')}")
+            dc2.caption(f"目標感情: {_dir_plan.get('target_emotion', '-')}")
+            dc2.caption(f"シーン数: {len(_dir_plan.get('scenes', []))}")
+            dc2.caption(f"更新: {_dir_plan.get('updated_at', '-')[:10]}")
+            if _dir_plan.get("thumbnail_direction"):
+                st.caption(f"サムネイル: {_dir_plan['thumbnail_direction'][:100]}")
+            if _dir_plan.get("risk_notes"):
+                st.warning(f"リスクノート: {_dir_plan['risk_notes'][:200]}")
+        else:
+            st.caption("演出計画がありません")
+            st.caption("🎬 AI Director ページで作成してください")
 
     srt_path = get_srt_path(episode_dir)
     with st.expander("🔤 字幕 (SRT)"):

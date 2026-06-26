@@ -151,6 +151,7 @@ def create_export_package(
 
     copy_targets: list[tuple[str, bool]] = [
         ("episode.json",          False),
+        ("director_plan.json",    False),
         ("*_voice_script.txt",    True),
         ("*.srt",                 True),
         ("*_image_prompts.txt",   True),
@@ -175,6 +176,23 @@ def create_export_package(
     completed_stages = [s for s, v in stages.items() if v["status"] == "done"]
     missing_stages   = [s for s, v in stages.items() if v["status"] == "pending"]
 
+    # Include director plan summary if available
+    director_summary: dict | None = None
+    _dir_path = episode_dir / "director_plan.json"
+    if _dir_path.exists():
+        try:
+            _dir_data = json.loads(_dir_path.read_text(encoding="utf-8"))
+            director_summary = {
+                "overall_tone":   _dir_data.get("overall_tone", ""),
+                "visual_style":   _dir_data.get("visual_style", ""),
+                "pacing":         _dir_data.get("pacing", ""),
+                "target_emotion": _dir_data.get("target_emotion", ""),
+                "scene_count":    len(_dir_data.get("scenes", [])),
+                "updated_at":     _dir_data.get("updated_at", ""),
+            }
+        except Exception:
+            pass
+
     report = {
         "episode_id":       episode_dir.name,
         "title":            (episode_data or {}).get("title", ""),
@@ -189,6 +207,7 @@ def create_export_package(
         "character":        (metadata or {}).get("character"),
         "background":       (metadata or {}).get("background"),
         "prompt_template":  (metadata or {}).get("prompt_template"),
+        "director":         director_summary,
         "notes":            production_state.get("notes", ""),
         "exported_files":   copied,
         "skipped_files":    skipped,

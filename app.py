@@ -17,7 +17,7 @@ st.set_page_config(
 )
 
 st.title("🎬 AI動画工場")
-st.caption("AIツールを組み合わせた動画制作自動化プラットフォーム | v3.0")
+st.caption("AIツールを組み合わせた動画制作自動化プラットフォーム | v3.1")
 
 st.divider()
 
@@ -35,6 +35,7 @@ WORKFLOW = [
     ("🏞️", "背景管理",        "ロケーション・カメラ・シーンテンプレート", None),
     ("📝", "プロンプトビルダー", "キャラ×背景×ムード×スタイルを合成",    None),
     ("🎬", "制作管理",          "進捗管理・書き出しパッケージ作成",       None),
+    ("🎭", "AI Director",      "シーン演出計画・ビジュアルディレクション", None),
 ]
 
 st.subheader("制作フロー")
@@ -81,6 +82,15 @@ for col, (icon, title, desc, folder) in zip(cols, WORKFLOW):
             ) if _pr.exists() else 0
         except Exception:
             count = 0
+    elif title == "AI Director":
+        try:
+            _pr = PROJECT_ROOT / "project"
+            count = sum(
+                1 for d in _pr.iterdir()
+                if d.is_dir() and (d / "director_plan.json").exists()
+            ) if _pr.exists() else 0
+        except Exception:
+            count = 0
     else:
         count = count_files(PROJECT_ROOT / folder)
     col.metric(label=f"{icon} {title}", value=count, help=desc)
@@ -100,16 +110,17 @@ with col1:
     st.info("👈 左のサイドバーから各ページを選択して作業を開始してください。")
 with col2:
     st.markdown("""
-**クイックスタート v3.0**
+**クイックスタート v3.1**
 1. ⚙️ スタジオ設定 でプロジェクト・AI設定を構成
 2. 🧑 キャラクター管理 でキャラクターを作成してデフォルト設定
 3. 🏞️ 背景管理 でロケーション・カメラ設定を登録してデフォルト設定
 4. 📝 プロンプトビルダー でキャラ×背景×ムード×スタイルを組み合わせてテンプレートを保存
 5. ⚡ 一発生成 でテーマを入力 → キャラ＋背景＋テンプレート付きでAI全自動生成
-6. 🛠️ プロンプトをコピーして Runway / Nano Banana で手動生成
-7. 📚 素材ライブラリ で生成素材を管理・エピソードにアサイン
-8. 🎞️ エピソード管理 で内容を確認・編集
-9. 🎬 制作管理 で制作チェックリストを管理し書き出しパッケージを作成
-10. ✂️ 動画組立 で最終動画を書き出し (FFmpeg)
-11. 📊 制作ダッシュボード で全エピソードの進捗を一覧確認
+6. 🎭 AI Director でシーンごとの演出計画を設計（手動またはAI生成）
+7. 📝 プロンプトビルダー で演出計画を注入してプロンプトを強化
+8. 🛠️ プロンプトをコピーして Runway / Nano Banana で手動生成
+9. 📚 素材ライブラリ で生成素材を管理・エピソードにアサイン
+10. 🎬 制作管理 で制作チェックリストを管理し書き出しパッケージを作成
+11. ✂️ 動画組立 で最終動画を書き出し (FFmpeg)
+12. 📊 制作ダッシュボード で全エピソードの進捗を一覧確認
 """)

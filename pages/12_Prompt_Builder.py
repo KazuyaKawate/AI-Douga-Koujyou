@@ -9,6 +9,7 @@ from src.utils.config import PROJECT_ROOT
 from src.utils.settings_manager import load_settings
 from src.utils.character_manager import load_characters
 from src.utils.background_manager import load_backgrounds
+from src.director.director_planner import load_director_plan
 from src.utils.prompt_builder import (
     CAMERA_OPTIONS,
     MOOD_OPTIONS,
@@ -81,6 +82,56 @@ with st.sidebar:
             ):
                 st.session_state["pb_load_id"] = t["id"]
                 st.rerun()
+
+    st.divider()
+
+    # ── Director Plan scene injection ──────────────────────────────────────────
+    with st.expander("🎬 演出ディレクション"):
+        _pb_project = PROJECT_ROOT / "project"
+        _pb_dir_eps = sorted([
+            d for d in _pb_project.iterdir()
+            if d.is_dir() and (d / "director_plan.json").exists()
+        ], key=lambda d: d.name) if _pb_project.exists() else []
+
+        if not _pb_dir_eps:
+            st.caption("演出計画がありません")
+            st.caption("🎬 AI Director で作成してください")
+        else:
+            _pb_dir_ep_names = [d.name for d in _pb_dir_eps]
+            _pb_sel_dir_ep   = st.selectbox(
+                "EP",
+                _pb_dir_ep_names,
+                key="pb_dir_ep_sel",
+                label_visibility="collapsed",
+            )
+            _pb_dir_plan = load_director_plan(_pb_project / _pb_sel_dir_ep) if _pb_sel_dir_ep else None
+            if _pb_dir_plan and _pb_dir_plan.get("scenes"):
+                _pb_dir_scenes     = _pb_dir_plan["scenes"]
+                _pb_dir_scene_opts = [
+                    f"S{s['scene_no']}: {s.get('scene_goal', '（未設定）')[:25]}"
+                    for s in _pb_dir_scenes
+                ]
+                _pb_sel_scene_i = st.selectbox(
+                    "Scene",
+                    range(len(_pb_dir_scene_opts)),
+                    format_func=lambda i: _pb_dir_scene_opts[i],
+                    key="pb_dir_scene_sel",
+                    label_visibility="collapsed",
+                )
+                _pb_cur_scene = st.session_state.get("pb_director_scene", {})
+                if _pb_cur_scene:
+                    st.caption(f"✅ 適用中: S{_pb_cur_scene.get('scene_no','')}")
+                if st.button("🎬 演出を適用", use_container_width=True, key="pb_dir_apply"):
+                    st.session_state["pb_director_scene"]   = _pb_dir_scenes[_pb_sel_scene_i]
+                    st.session_state["pb_director_ep_id"]   = _pb_sel_dir_ep
+                    st.rerun()
+                if _pb_cur_scene:
+                    if st.button("❌ クリア", use_container_width=True, key="pb_dir_clear_sb"):
+                        st.session_state.pop("pb_director_scene", None)
+                        st.session_state.pop("pb_director_ep_id", None)
+                        st.rerun()
+            else:
+                st.caption("シーンがありません")
 
     st.divider()
     st.caption(f"⚙️ `{_settings['ai']['model']}` | `{TEMPLATES_PATH.name}`")
@@ -254,6 +305,47 @@ if prompt_text:
                 key="dl_neg",
                 use_container_width=True,
             )
+
+    # ── Director scene injection ───────────────────────────────────────────────
+
+    _pb_d_scene = st.session_state.get("pb_director_scene")
+    _pb_d_ep_id = st.session_state.get("pb_director_ep_id", "")
+    if _pb_d_scene:
+        st.divider()
+        dir_hdr, dir_clr = st.columns([5, 1])
+        dir_hdr.subheader(f"🎬 演出ディレクション: {_pb_d_ep_id} S{_pb_d_scene.get('scene_no','')}")
+        if dir_clr.button("❌", key="pb_dir_clear_main"):
+            st.session_state.pop("pb_director_scene", None)
+            st.session_state.pop("pb_director_ep_id", None)
+            st.rerun()
+
+        dc1, dc2 = st.columns(2)
+        with dc1:
+            if _pb_d_scene.get("scene_goal"):
+                st.caption(f"ゴール: {_pb_d_scene['scene_goal']}")
+            if _pb_d_scene.get("emotion"):
+                st.caption(f"感情: {_pb_d_scene['emotion']}")
+            if _pb_d_scene.get("camera_angle"):
+                st.caption(f"カメラ: {_pb_d_scene['camera_angle']} / {_pb_d_scene.get('camera_motion','')}")
+            if _pb_d_scene.get("lighting"):
+                st.caption(f"ライティング: {_pb_d_scene['lighting']}")
+
+        # Pick direction text based on output type
+        _dir_dir_text = _pb_d_scene.get("image_prompt_direction", "")
+        if "動画" in (sel_output_type or ""):
+            _dir_dir_text = _pb_d_scene.get("video_prompt_direction", "") or _dir_dir_text
+        elif "ボイス" in (sel_output_type or ""):
+            _dir_dir_text = _pb_d_scene.get("voice_direction", "") or _dir_dir_text
+
+        with dc2:
+            if _dir_dir_text:
+                st.caption("演出ノート:")
+                st.code(_dir_dir_text[:300], language=None)
+                if st.button("✏️ プロンプトに追記", key="pb_dir_append_main", use_container_width=True):
+                    st.session_state["pb_prompt_text"] += f"\n\n[演出ディレクション]\n{_dir_dir_text}"
+                    st.rerun()
+            else:
+                st.caption("（このシーンの演出ノートはありません）")
 
     # ── Save as template ───────────────────────────────────────────────────────
 
