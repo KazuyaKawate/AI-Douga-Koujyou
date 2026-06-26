@@ -1,4 +1,4 @@
-"""Project health check script for Creator Factory OS (AI動画工場 v4.2)."""
+"""Project health check script for Creator Factory OS (AI動画工場 v4.3)."""
 import io
 import sys
 from pathlib import Path
@@ -21,6 +21,8 @@ REQUIRED_FOLDERS = [
     "src",
     "src/agents",
     "src/core",
+    "src/factories",
+    "src/factories/note",
     "src/hq",
     "src/utils",
     "src/pipeline",
@@ -49,6 +51,15 @@ REQUIRED_FILES = [
     "pages/15_Project_Manager.py",
     "pages/16_AI_Studio.py",
     "pages/17_Mission_Control.py",
+    "pages/18_Note_Factory.py",
+    # Factories — note投稿工場
+    "src/factories/__init__.py",
+    "src/factories/note/__init__.py",
+    "src/factories/note/article_manager.py",
+    "src/factories/note/article_scorer.py",
+    "src/factories/note/revenue_tracker.py",
+    "src/factories/note/repurpose_engine.py",
+    "src/factories/note/integration_bridge.py",
     # Core
     "src/core/openai_client.py",
     "src/core/whisper_client.py",
@@ -109,6 +120,7 @@ OPTIONAL_FILES = [
     "config/daily_tasks.json",
     "config/factory_status.json",
     "config/revenue_expense.json",
+    "config/note_articles.json",
 ]
 
 
@@ -117,7 +129,7 @@ def check() -> bool:
     width = 60
 
     print("=" * width)
-    print("  Creator Factory OS v4.2 — Project Health Check")
+    print("  Creator Factory OS v4.3 — Project Health Check")
     print("=" * width)
     print(f"  Root: {ROOT}\n")
 
@@ -205,6 +217,23 @@ def check() -> bool:
                 ok = False
         else:
             print(f"  [----] {cfg_name}  (未作成)")
+
+    print()
+
+    # Note Factory articles
+    print("[ Note Factory 記事データ ]")
+    note_articles_path = ROOT / "config" / "note_articles.json"
+    if note_articles_path.exists():
+        try:
+            data = json.loads(note_articles_path.read_text(encoding="utf-8"))
+            arts = data.get("articles", [])
+            published = sum(1 for a in arts if a.get("status") == "published")
+            print(f"  [OK  ] config/note_articles.json  ({len(arts)} 記事, {published} 公開済)")
+        except Exception as exc:
+            print(f"  [ERR ] config/note_articles.json  → JSONパースエラー: {exc}")
+            ok = False
+    else:
+        print(f"  [----] config/note_articles.json  (未作成)")
 
     print()
 

@@ -24,7 +24,7 @@ from src.hq.factory_status import (
 )
 from src.hq.daily_report import generate_report, export_report
 
-APP_VERSION = "4.2"
+APP_VERSION = "4.3"
 TODAY = date.today()
 
 st.set_page_config(page_title="Mission Control | Creator Factory OS", page_icon="🎯", layout="wide")
@@ -34,8 +34,8 @@ st.set_page_config(page_title="Mission Control | Creator Factory OS", page_icon=
 st.title("🎯 Creator Factory OS")
 h1, h2, h3 = st.columns(3)
 h1.caption(f"📅 {TODAY.strftime('%Y年%m月%d日 (%A)')}")
-h2.caption(f"🔨 Build: v{APP_VERSION} Dashboard Factory")
-h3.caption(f"✅ Status: v{APP_VERSION} Dashboard Factory")
+h2.caption(f"🔨 Build: v{APP_VERSION} Note Factory")
+h3.caption(f"✅ Status: v{APP_VERSION} Note Factory")
 
 st.divider()
 
@@ -119,7 +119,7 @@ st.markdown("")
 # Page map for navigation
 PAGE_MAP: dict[str, str | None] = {
     "AI動画工場":   "pages/1_Script.py",
-    "note投稿工場": None,
+    "note投稿工場": "pages/18_Note_Factory.py",
     "SNS投稿工場":  None,
     "営業工場":     None,
     "会計監査工場": None,
@@ -373,7 +373,7 @@ st.subheader("🚀 Quick Navigation")
 
 NAV_ITEMS = [
     ("🎬 AI動画工場を開く",    "pages/1_Script.py"),
-    ("📝 note投稿工場を開く",  None),
+    ("📝 note投稿工場を開く",  "pages/18_Note_Factory.py"),
     ("📱 SNS投稿工場を開く",   None),
     ("💼 営業工場を開く",      None),
     ("💰 会計監査工場を開く",  None),
