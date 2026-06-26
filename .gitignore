@@ -17,6 +17,7 @@ config/*.key
 config/secrets.*
 .env
 .env.*
+!.env.example
 
 # 大容量メディアファイル（必要に応じてコメント解除）
 # videos/
