@@ -16,4 +16,5 @@ FOLDERS = {
     "字幕": "subtitles",
     "完成動画": "output",
     "一時ファイル": "temp",
+    "エピソード": "project",
 }
