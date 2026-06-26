@@ -8,6 +8,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.utils.config import OPENAI_API_KEY, PROJECT_ROOT
 from src.utils.settings_manager import load_settings
 from src.utils.character_manager import get_character, load_characters
+from src.utils.background_manager import get_background, load_backgrounds
 from src.core import episode_manager as em
 from src.core import ai_pipeline
 
@@ -63,6 +64,41 @@ with st.sidebar:
         st.caption("キャラクターがありません")
         st.caption("🧑 キャラクター管理 で追加してください")
         _sel_char = None
+
+    st.divider()
+
+    # ── Background selection ───────────────────────────────────────────────────
+    st.subheader("🏞️ 背景・シーン")
+    _bg_data = load_backgrounds()
+    _all_bgs = _bg_data["backgrounds"]
+    _default_bg_id = _bg_data.get("default_background_id")
+
+    if _all_bgs:
+        _bg_id_opts = [None] + [b["id"] for b in _all_bgs]
+        _bg_name_map = {None: "（なし）"}
+        _bg_name_map.update({b["id"]: b["basic"]["display_name"] for b in _all_bgs})
+        _bg_def_idx = _bg_id_opts.index(_default_bg_id) if _default_bg_id in _bg_id_opts else 0
+
+        _sel_bg_id = st.selectbox(
+            "使用する背景",
+            _bg_id_opts,
+            format_func=lambda x: _bg_name_map.get(x, "不明"),
+            index=_bg_def_idx,
+            key="produce_bg_id",
+            label_visibility="collapsed",
+        )
+        _sel_bg = get_background(_sel_bg_id) if _sel_bg_id else None
+        if _sel_bg:
+            v = _sel_bg["visual"]
+            cam = _sel_bg["camera"]
+            st.caption(f"カテゴリ: {_sel_bg['basic'].get('category','-')}")
+            st.caption(f"ロケーション: {v.get('location_type','-')}")
+            st.caption(f"時間帯: {v.get('time_of_day','-')} / {v.get('lighting','-')}")
+            st.caption(f"カメラ: {cam.get('default_camera_angle','-')} / {cam.get('default_motion','-')}")
+    else:
+        st.caption("背景がありません")
+        st.caption("🏞️ 背景管理 で追加してください")
+        _sel_bg = None
 
     st.divider()
     st.caption(
@@ -151,6 +187,7 @@ if submitted:
             num_scenes=num_scenes,
             cost_saving=cost_saving,
             character=_sel_char,
+            background=_sel_bg,
         )
 
         progress.progress(100, text="✅ 全工程完了！")
@@ -187,6 +224,12 @@ if _sel_char:
     st.info(
         f"🧑 キャラクター **{_sel_char['basic']['display_name']}**"
         f"（{_sel_char['basic'].get('role','')}）"
+        f" の設定をプロンプトに適用しました。"
+    )
+if _sel_bg:
+    st.info(
+        f"🏞️ 背景 **{_sel_bg['basic']['display_name']}**"
+        f"（{_sel_bg['basic'].get('category','')}）"
         f" の設定をプロンプトに適用しました。"
     )
 

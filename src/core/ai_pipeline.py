@@ -27,17 +27,19 @@ def generate_episode_ai(
     num_scenes: int = 4,
     cost_saving: bool = False,
     character: dict | None = None,
+    background: dict | None = None,
 ) -> tuple[dict, dict]:
     """
     Full pipeline: OpenAI → episode dict → export all files.
     Returns (episode, written_files).
     cost_saving=True reduces max_tokens and instructs shorter content.
-    character: optional character dict whose settings are injected into the prompt.
+    character: optional character dict injected into the prompt.
+    background: optional background dict injected into the prompt after character.
     """
     total_sec = DURATION_SECONDS.get(duration, 180)
     sec_per_scene = total_sec // num_scenes
 
-    raw = _call_openai(topic, duration, total_sec, style, target, num_scenes, sec_per_scene, cost_saving, character)
+    raw = _call_openai(topic, duration, total_sec, style, target, num_scenes, sec_per_scene, cost_saving, character, background)
     _validate(raw, num_scenes)
 
     ep = _build_episode(episode_id, raw, target, sec_per_scene)
@@ -57,9 +59,11 @@ def _call_openai(
     sec_per_scene: int,
     cost_saving: bool = False,
     character: dict | None = None,
+    background: dict | None = None,
 ) -> dict:
     from src.utils.settings_manager import load_settings
     from src.utils.character_manager import character_to_prompt_snippet
+    from src.utils.background_manager import background_to_prompt_snippet
     _ai = load_settings()["ai"]
     model       = _ai.get("model", "gpt-4o-mini")
     temperature = float(_ai.get("temperature", 0.8))
@@ -74,8 +78,11 @@ def _call_openai(
 
     char_note = ""
     if character:
-        snippet = character_to_prompt_snippet(character)
-        char_note = f"\n\n{snippet}"
+        char_note = f"\n\n{character_to_prompt_snippet(character)}"
+
+    bg_note = ""
+    if background:
+        bg_note = f"\n\n{background_to_prompt_snippet(background)}"
 
     prompt = f"""あなたはプロの動画プロデューサーです。
 
@@ -84,7 +91,7 @@ def _call_openai(
 - 動画の長さ: {duration}（合計{total_sec}秒）
 - スタイル: {style}
 - ターゲット視聴者: {target or "一般視聴者"}
-- シーン数: {num_scenes}（各シーン約{sec_per_scene}秒）{cost_note}{char_note}
+- シーン数: {num_scenes}（各シーン約{sec_per_scene}秒）{cost_note}{char_note}{bg_note}
 
 以下のJSON形式で動画エピソードを生成してください:
 {{
