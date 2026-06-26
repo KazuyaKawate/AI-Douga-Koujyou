@@ -25,15 +25,17 @@ def generate_episode_ai(
     style: str = "解説・教育",
     target: str = "",
     num_scenes: int = 4,
+    cost_saving: bool = False,
 ) -> tuple[dict, dict]:
     """
     Full pipeline: OpenAI → episode dict → export all files.
     Returns (episode, written_files).
+    cost_saving=True reduces max_tokens and instructs shorter content.
     """
     total_sec = DURATION_SECONDS.get(duration, 180)
     sec_per_scene = total_sec // num_scenes
 
-    raw = _call_openai(topic, duration, total_sec, style, target, num_scenes, sec_per_scene)
+    raw = _call_openai(topic, duration, total_sec, style, target, num_scenes, sec_per_scene, cost_saving)
     _validate(raw, num_scenes)
 
     ep = _build_episode(episode_id, raw, target, sec_per_scene)
@@ -51,8 +53,15 @@ def _call_openai(
     target: str,
     num_scenes: int,
     sec_per_scene: int,
+    cost_saving: bool = False,
 ) -> dict:
     client = OpenAI(api_key=OPENAI_API_KEY)
+
+    cost_note = (
+        "\n- コスト節約モード: narrationは120文字以内、image_promptとvideo_promptは40語以内で簡潔に"
+        if cost_saving else ""
+    )
+    max_tokens = 1500 if cost_saving else 3000
 
     prompt = f"""あなたはプロの動画プロデューサーです。
 
@@ -61,7 +70,7 @@ def _call_openai(
 - 動画の長さ: {duration}（合計{total_sec}秒）
 - スタイル: {style}
 - ターゲット視聴者: {target or "一般視聴者"}
-- シーン数: {num_scenes}（各シーン約{sec_per_scene}秒）
+- シーン数: {num_scenes}（各シーン約{sec_per_scene}秒）{cost_note}
 
 以下のJSON形式で動画エピソードを生成してください:
 {{
@@ -86,7 +95,7 @@ def _call_openai(
         messages=[{"role": "user", "content": prompt}],
         response_format={"type": "json_object"},
         temperature=0.8,
-        max_tokens=3000,
+        max_tokens=max_tokens,
     )
     return json.loads(response.choices[0].message.content)
 

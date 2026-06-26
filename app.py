@@ -16,7 +16,7 @@ st.set_page_config(
 )
 
 st.title("🎬 AI動画工場")
-st.caption("AIツールを組み合わせた動画制作自動化プラットフォーム | v2.0")
+st.caption("AIツールを組み合わせた動画制作自動化プラットフォーム | v2.1")
 
 st.divider()
 

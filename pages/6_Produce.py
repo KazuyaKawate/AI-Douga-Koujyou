@@ -11,7 +11,16 @@ from src.core import ai_pipeline
 
 st.set_page_config(page_title="一発生成", page_icon="⚡", layout="wide")
 st.title("⚡ 一発生成")
-st.caption("テーマを入力するだけで台本・シーン分割・画像/動画プロンプト・字幕・音声台本を全自動生成 | v2.0")
+st.caption("テーマを入力するだけで台本・シーン分割・画像/動画プロンプト・字幕・音声台本を全自動生成 | v2.1")
+
+# ── Dev mode banner ───────────────────────────────────────────────────────────
+
+st.warning(
+    "**開発モード:** 外部生成API（画像・動画・音声）は無効です。"
+    " 予期しないコストを避けるため、Nano Banana / Runway / 音声APIは呼び出しません。"
+    " プロンプトを手動でコピーして各ツールで生成してください。",
+    icon="⚠️",
+)
 
 if not OPENAI_API_KEY:
     st.error("OpenAI API キーが未設定です。`.env` ファイルに `OPENAI_API_KEY` を設定してください。")
@@ -45,8 +54,13 @@ with st.form("produce_form"):
             "シーン数",
             min_value=2,
             max_value=8,
-            value=4,
-            help="シーンが多いほど構造的になりますが各シーンは短くなります",
+            value=2,
+            help="コスト節約モードでは 2〜3 を推奨",
+        )
+        cost_saving = st.checkbox(
+            "コスト節約モード",
+            value=True,
+            help="プロンプトを短くして OpenAI トークン消費を削減します（2〜3シーン推奨）",
         )
         overwrite = st.checkbox("同名エピソードを上書きする", value=False)
 
@@ -68,7 +82,7 @@ if submitted:
     if em.load_episode(episode_id) is not None and not overwrite:
         st.warning(
             f"`{episode_id}` は既に存在します。"
-            "「同名エピソードを上書きする」を有効にするか、別のIDを使用してください。"
+            " 「同名エピソードを上書きする」を有効にするか、別のIDを使用してください。"
         )
         st.stop()
 
@@ -83,6 +97,7 @@ if submitted:
             style=style,
             target=target,
             num_scenes=num_scenes,
+            cost_saving=cost_saving,
         )
 
         progress.progress(100, text="✅ 全工程完了！")
@@ -107,21 +122,24 @@ written = st.session_state.get(f"produced_written_{last_id}", {})
 if ep is None:
     st.stop()
 
+ep_id = ep["episode_id"]
+ep_folder = PROJECT_ROOT / "project" / ep_id
+
 st.divider()
 st.success(
     f"**{ep['title']}** の生成が完了しました！"
-    f" {len(written)} ファイルを `project/{ep['episode_id']}/` に書き出しました。"
+    f" {len(written)} ファイルを `project/{ep_id}/` に書き出しました。"
 )
 
 c1, c2, c3, c4 = st.columns(4)
 c1.metric("シーン数", len(ep["sections"]))
 c2.metric("合計尺", f"{ep['total_duration_seconds']}秒")
 c3.metric("台本文字数", f"{sum(len(s['narration_text']) for s in ep['sections'])}文字")
-c4.metric("エピソードID", ep["episode_id"])
+c4.metric("エピソードID", ep_id)
 
 st.divider()
 
-# Scene cards
+# Scene overview (collapsed by default except first)
 st.subheader("📋 シーン一覧")
 for s in ep["sections"]:
     with st.expander(
@@ -142,39 +160,123 @@ for s in ep["sections"]:
 
 st.divider()
 
-# File downloads — read from disk (avoids widget state / key collision issues)
-ep_id = ep["episode_id"]
-ep_folder = PROJECT_ROOT / "project" / ep_id
+# ── Manual Production Guide ───────────────────────────────────────────────────
 
-dl_left, dl_right = st.columns(2)
+st.header("🛠️ 手動制作ガイド")
+st.caption(
+    "開発モード: 以下のプロンプトをコピーして各ツールで手動生成してください。"
+    " 右上のコピーボタンでクリップボードにコピーできます。"
+)
 
-with dl_left:
-    st.subheader("🎙️ 音声台本")
+img_tab, vid_tab, voice_tab, srt_tab = st.tabs([
+    "🖼️ 画像プロンプト",
+    "🎬 動画プロンプト",
+    "🎙️ 音声台本",
+    "🔤 字幕 SRT",
+])
+
+with img_tab:
+    st.caption("Nano Banana / Midjourney / DALL-E 等にコピーして画像を生成してください")
+    img_path = ep_folder / f"{ep_id}_image_prompts.txt"
+    if img_path.exists():
+        img_text = img_path.read_text(encoding="utf-8")
+        st.code(img_text, language=None)
+        st.download_button(
+            f"⬇️ {ep_id}_image_prompts.txt をダウンロード",
+            data=img_text,
+            file_name=f"{ep_id}_image_prompts.txt",
+            mime="text/plain",
+            use_container_width=True,
+            key=f"dl_img_{ep_id}",
+        )
+    else:
+        st.info("画像プロンプトファイルが見つかりません。エピソード管理ページから再エクスポートしてください。")
+
+with vid_tab:
+    st.caption("Runway Gen-3 Alpha にコピーして動画クリップを生成してください（各シーン1クリップ）")
+    vid_path = ep_folder / f"{ep_id}_video_prompts.txt"
+    if vid_path.exists():
+        vid_text = vid_path.read_text(encoding="utf-8")
+        st.code(vid_text, language=None)
+        st.download_button(
+            f"⬇️ {ep_id}_video_prompts.txt をダウンロード",
+            data=vid_text,
+            file_name=f"{ep_id}_video_prompts.txt",
+            mime="text/plain",
+            use_container_width=True,
+            key=f"dl_vid_{ep_id}",
+        )
+    else:
+        st.info("動画プロンプトファイルが見つかりません。")
+
+with voice_tab:
+    st.caption("Nano Banana / ElevenLabs / VOICEVOX 等のTTSツールにコピーして音声を生成してください")
     voice_path = ep_folder / f"{ep_id}_voice_script.txt"
     if voice_path.exists():
         voice_text = voice_path.read_text(encoding="utf-8")
-        st.text_area("音声台本", value=voice_text, height=260, key=f"v_{ep_id}")
+        st.code(voice_text, language=None)
         st.download_button(
-            f"⬇️ {ep_id}_voice_script.txt",
+            f"⬇️ {ep_id}_voice_script.txt をダウンロード",
             data=voice_text,
             file_name=f"{ep_id}_voice_script.txt",
             mime="text/plain",
             use_container_width=True,
+            key=f"dl_voice_{ep_id}",
         )
+    else:
+        st.info("音声台本ファイルが見つかりません。")
 
-with dl_right:
-    st.subheader("🔤 字幕 SRT")
+with srt_tab:
+    st.caption("完成動画に字幕として追加するSRTファイルです。動画編集ソフトにインポートしてください。")
     srt_path = ep_folder / f"{ep_id}.srt"
     if srt_path.exists():
         srt_text = srt_path.read_text(encoding="utf-8")
-        st.text_area("字幕 SRT", value=srt_text, height=260, key=f"s_{ep_id}")
+        st.code(srt_text, language=None)
         st.download_button(
-            f"⬇️ {ep_id}.srt",
+            f"⬇️ {ep_id}.srt をダウンロード",
             data=srt_text,
             file_name=f"{ep_id}.srt",
             mime="text/plain",
             use_container_width=True,
+            key=f"dl_srt_{ep_id}",
         )
+    else:
+        st.info("SRTファイルが見つかりません。")
+
+st.divider()
+
+# ── Production Checklist ──────────────────────────────────────────────────────
+
+st.header("✅ 制作チェックリスト")
+
+CHECKLIST = [
+    ("img_copied",  "🖼️ 画像プロンプトをコピーした"),
+    ("img_done",    "🎨 画像を手動生成した（Nano Banana / Midjourney 等）"),
+    ("vid_copied",  "🎬 動画プロンプトをコピーした"),
+    ("vid_done",    "📽️ 動画クリップを手動生成した（Runway Gen-3 Alpha 等）"),
+    ("voice_done",  "🎙️ 音声ナレーションを手動生成した（Nano Banana 等）"),
+    ("ready",       "📦 全ての最終素材が揃った"),
+]
+
+checked_count = sum(
+    1 for key, _ in CHECKLIST
+    if st.session_state.get(f"chk_{ep_id}_{key}", False)
+)
+st.progress(
+    checked_count / len(CHECKLIST),
+    text=f"{checked_count} / {len(CHECKLIST)} 完了",
+)
+
+chk_col1, chk_col2 = st.columns(2)
+for i, (key, label) in enumerate(CHECKLIST):
+    col = chk_col1 if i % 2 == 0 else chk_col2
+    with col:
+        st.checkbox(label, key=f"chk_{ep_id}_{key}")
+
+if checked_count == len(CHECKLIST):
+    st.success(
+        "全ての素材が揃いました！ **✂️ 動画組立** ページで最終動画を組み立ててください。"
+    )
 
 st.divider()
 st.info(
