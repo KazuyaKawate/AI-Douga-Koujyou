@@ -77,3 +77,7 @@ build/
 
 # Whisper モデルキャッシュ
 *.pt
+
+# バックアップ（ローカルのみ）
+backups/
+!backups/.gitkeep
