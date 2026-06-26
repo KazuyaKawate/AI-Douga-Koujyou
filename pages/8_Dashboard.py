@@ -10,9 +10,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.utils.config import PROJECT_ROOT
 from src.utils.settings_manager import load_settings
 
+from src.pipeline.export_pipeline import is_production_ready, load_production_report, load_production_state
+
 st.set_page_config(page_title="制作ダッシュボード", page_icon="📊", layout="wide")
 st.title("📊 制作ダッシュボード")
-st.caption("全エピソードの制作進捗を一覧管理 | v2.6")
+st.caption("全エピソードの制作進捗を一覧管理 | v3.0")
 
 _settings = load_settings()
 _gen = _settings["generation"]
@@ -105,6 +107,11 @@ def _scan_episode(ep_dir: Path) -> dict | None:
         (f.stat().st_mtime for f in ep_files), default=ep_dir.stat().st_mtime
     )
 
+    # Production state (v3.0)
+    prod_state  = load_production_state(ep_dir)
+    prod_ready  = is_production_ready(prod_state)
+    prod_report = load_production_report(ep_dir)
+
     return {
         "ep_id": ep_id,
         "title": ep_data.get("title", ""),
@@ -123,6 +130,8 @@ def _scan_episode(ep_dir: Path) -> dict | None:
         "has_video_prompts": flags["動画プロンプト"],
         "has_srt": flags["字幕"],
         "has_asset_manifest": flags["素材選定"],
+        "production_ready": prod_ready,
+        "has_export": prod_report is not None,
     }
 
 
@@ -216,11 +225,16 @@ st.divider()
 for ep in filtered:
     icon = STATUS_ICON.get(ep["status"], "⚪")
     pct = int(ep["progress"] * 100)
+    prod_badge = (
+        "　|　📦 **書き出し済**" if ep.get("has_export")
+        else ("　|　🎬 **制作可能**" if ep.get("production_ready") else "")
+    )
     header = (
         f"{icon} **{ep['ep_id']}**"
         f" — {ep['title'] or '（タイトル未設定）'}"
         f"　|　{STATUS_BADGE.get(ep['status'], ep['status'])}"
         f"　|　進捗 {pct}%"
+        f"{prod_badge}"
     )
 
     with st.expander(header, expanded=(ep["status"] in ("制作中", "素材待ち"))):
