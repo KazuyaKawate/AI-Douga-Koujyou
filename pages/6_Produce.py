@@ -6,20 +6,34 @@ import streamlit as st
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.utils.config import OPENAI_API_KEY, PROJECT_ROOT
+from src.utils.settings_manager import load_settings
 from src.core import episode_manager as em
 from src.core import ai_pipeline
 
 st.set_page_config(page_title="一発生成", page_icon="⚡", layout="wide")
 st.title("⚡ 一発生成")
-st.caption("テーマを入力するだけで台本・シーン分割・画像/動画プロンプト・字幕・音声台本を全自動生成 | v2.1")
+st.caption("テーマを入力するだけで台本・シーン分割・画像/動画プロンプト・字幕・音声台本を全自動生成 | v2.6")
+
+settings = load_settings()
+_ai  = settings["ai"]
+_gen = settings["generation"]
+_p   = settings["project"]
 
 # ── Dev mode banner ───────────────────────────────────────────────────────────
 
-st.warning(
-    "**開発モード:** 外部生成API（画像・動画・音声）は無効です。"
-    " 予期しないコストを避けるため、Nano Banana / Runway / 音声APIは呼び出しません。"
-    " プロンプトを手動でコピーして各ツールで生成してください。",
-    icon="⚠️",
+if _ai["dev_mode"]:
+    st.warning(
+        f"**開発モード:** 外部生成API（画像・動画・音声）は無効です。"
+        f" プロンプトを手動でコピーして各ツールで生成してください。"
+        f" （画像: {_gen['image_provider']} / 動画: {_gen['video_provider']}"
+        f" / 音声: {_gen['voice_provider']}）",
+        icon="⚠️",
+    )
+
+st.sidebar.caption(
+    f"⚙️ `{_ai['model']}` | "
+    f"{'節約' if _ai['cost_saving'] else '標準'}モード | "
+    f"{'🔧 開発' if _ai['dev_mode'] else '🚀 本番'}"
 )
 
 if not OPENAI_API_KEY:
@@ -27,6 +41,9 @@ if not OPENAI_API_KEY:
     st.stop()
 
 # ── Input form ────────────────────────────────────────────────────────────────
+
+_dur_opts = ["1分", "2分", "3分", "5分"]
+_dur_default = _dur_opts.index(_p["default_episode_length"]) if _p["default_episode_length"] in _dur_opts else 2
 
 with st.form("produce_form"):
     col1, col2 = st.columns([3, 2])
@@ -45,7 +62,7 @@ with st.form("produce_form"):
             help="project/ フォルダ内に保存されるサブフォルダ名",
         )
     with col2:
-        duration = st.selectbox("動画の長さ", ["1分", "2分", "3分", "5分"])
+        duration = st.selectbox("動画の長さ", _dur_opts, index=_dur_default)
         style = st.selectbox(
             "スタイル",
             ["解説・教育", "エンタメ", "ニュース", "ドキュメンタリー", "Vlog"],
@@ -54,12 +71,12 @@ with st.form("produce_form"):
             "シーン数",
             min_value=2,
             max_value=8,
-            value=2,
+            value=int(_p["default_scene_count"]),
             help="コスト節約モードでは 2〜3 を推奨",
         )
         cost_saving = st.checkbox(
             "コスト節約モード",
-            value=True,
+            value=bool(_ai["cost_saving"]),
             help="プロンプトを短くして OpenAI トークン消費を削減します（2〜3シーン推奨）",
         )
         overwrite = st.checkbox("同名エピソードを上書きする", value=False)

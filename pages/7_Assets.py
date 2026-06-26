@@ -8,6 +8,7 @@ import streamlit as st
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.utils.config import PROJECT_ROOT
+from src.utils.settings_manager import load_settings
 from src.core import episode_manager as em
 
 st.set_page_config(page_title="素材ライブラリ", page_icon="📚", layout="wide")
@@ -163,6 +164,14 @@ with st.sidebar:
             "エピソードがまだありません。\n"
             "⚡ 一発生成 でエピソードを作成してください。"
         )
+
+    st.divider()
+    _s = load_settings()
+    st.caption(
+        f"⚙️ 画像: `{_s['generation']['image_provider']}`"
+        f" | 動画: `{_s['generation']['video_provider']}`"
+        f" | 音声: `{_s['generation']['voice_provider']}`"
+    )
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────

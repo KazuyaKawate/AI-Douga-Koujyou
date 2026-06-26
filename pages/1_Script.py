@@ -7,10 +7,17 @@ import streamlit as st
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.utils.config import OPENAI_API_KEY, PROJECT_ROOT
+from src.utils.settings_manager import load_settings
 
 st.set_page_config(page_title="台本生成", page_icon="📝", layout="wide")
 st.title("📝 台本生成")
 st.caption("OpenAI GPT でテーマから台本・ナレーション原稿を自動生成します")
+
+_settings = load_settings()
+st.sidebar.caption(
+    f"⚙️ `{_settings['ai']['model']}` | "
+    f"{'節約' if _settings['ai']['cost_saving'] else '標準'}モード"
+)
 
 if not OPENAI_API_KEY:
     st.warning("⚠️ OpenAI API キーが未設定です。プロジェクトルートに `.env` ファイルを作成し `OPENAI_API_KEY` を設定してください。")
@@ -21,7 +28,10 @@ with st.form("script_form"):
         topic = st.text_input("テーマ・タイトル *", placeholder="例: Pythonプログラミング入門")
         target = st.text_input("ターゲット視聴者", placeholder="例: プログラミング初心者")
     with col2:
-        duration = st.selectbox("動画の長さ", ["1分", "3分", "5分", "10分"])
+        _dur_opts = ["1分", "3分", "5分", "10分"]
+        _default_len = _settings["project"]["default_episode_length"]
+        _dur_idx = _dur_opts.index(_default_len) if _default_len in _dur_opts else 0
+        duration = st.selectbox("動画の長さ", _dur_opts, index=_dur_idx)
         style = st.selectbox("スタイル", ["解説・教育", "エンタメ", "ニュース", "ドキュメンタリー", "Vlog"])
     additional = st.text_area("追加指示（任意）", placeholder="例: 専門用語を使わず、初心者でも分かりやすく")
     submitted = st.form_submit_button("台本を生成する 🚀", type="primary")

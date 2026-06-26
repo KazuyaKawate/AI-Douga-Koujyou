@@ -9,10 +9,14 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.core import episode_manager as em
 from src.utils.config import PROJECT_ROOT
 from src.utils.file_manager import list_files
+from src.utils.settings_manager import load_settings
 
 st.set_page_config(page_title="エピソード管理", page_icon="🎞️", layout="wide")
 st.title("🎞️ エピソード管理")
-st.caption("Episode 制作フロー — v1.1 | 台本 → プロンプト → 音声台本 → 字幕 → エクスポート")
+st.caption("Episode 制作フロー — v2.6 | 台本 → プロンプト → 音声台本 → 字幕 → エクスポート")
+
+_settings = load_settings()
+_p = _settings["project"]
 
 STATUS_LABEL = {"pending": "⏸ 未着手", "draft": "✏️ 作業中", "done": "✅ 完了"}
 STEP_NAMES = {
@@ -58,6 +62,11 @@ with st.sidebar:
             st.session_state.pop("srt_text_area", None)
             st.success(f"{new_id} を作成しました")
             st.rerun()
+
+    st.divider()
+    st.caption(
+        f"⚙️ `{_p['video_aspect_ratio']}` | `{_p['resolution']}` | `{_p['fps']}fps`"
+    )
 
 # ── Guard ───────────────────────────────────────────────────────────────────────
 if "episode" not in st.session_state or st.session_state.episode is None:
@@ -190,7 +199,7 @@ with tab3:
     else:
         style_img = st.text_input(
             "スタイルサフィックス",
-            value="cinematic photography, 8K resolution, --ar 16:9",
+            value=f"cinematic photography, 8K resolution, --ar {_p['video_aspect_ratio']}",
             key="img_style",
         )
         c1, c2 = st.columns(2)
@@ -245,7 +254,10 @@ with tab4:
     else:
         style_vid = st.text_input(
             "スタイルサフィックス",
-            value="cinematic motion, smooth camera movement, Runway Gen-3 Alpha",
+            value=(
+                f"cinematic motion, smooth camera movement, Runway Gen-3 Alpha,"
+                f" {_p['fps']}fps, {_p['resolution']}, --ar {_p['video_aspect_ratio']}"
+            ),
             key="vid_style",
         )
         c1, c2 = st.columns(2)

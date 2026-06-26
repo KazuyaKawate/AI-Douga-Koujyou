@@ -7,10 +7,18 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.utils.config import PROJECT_ROOT
 from src.utils.file_manager import list_files
+from src.utils.settings_manager import load_settings
 
 st.set_page_config(page_title="動画組立", page_icon="🎬", layout="wide")
 st.title("🎬 動画組立")
 st.caption("FFmpeg で動画・音声・字幕を組み合わせて最終動画を作成します")
+
+_settings = load_settings()
+_p = _settings["project"]
+st.sidebar.caption(
+    f"⚙️ 出力: `{_p['default_output_folder']}/`"
+    f" | `{_p['resolution']}` | `{_p['fps']}fps`"
+)
 
 VIDEO_EXTS = [".mp4", ".mov", ".avi", ".mkv"]
 AUDIO_EXTS = [".mp3", ".wav", ".m4a", ".aac"]
@@ -39,12 +47,16 @@ with col_left:
 
     st.divider()
     output_name = st.text_input("出力ファイル名", value="output.mp4")
+    st.caption(
+        f"解像度: `{_p['resolution']}` | FPS: `{_p['fps']}`"
+        f" | 出力先: `{_p['default_output_folder']}/`"
+    )
 
     can_process = video_path is not None or audio_path is not None
     if st.button("動画を組立てる ▶️", type="primary", disabled=not can_process, use_container_width=True):
         from src.core.ffmpeg_utils import combine_video_audio_subtitle
 
-        output_path = PROJECT_ROOT / "output" / output_name
+        output_path = PROJECT_ROOT / _p["default_output_folder"] / output_name
         with st.spinner("FFmpeg で処理中..."):
             success = combine_video_audio_subtitle(video_path, audio_path, sub_path, output_path)
 
@@ -68,7 +80,7 @@ with col_right:
 
 st.divider()
 st.subheader("完成動画")
-output_files = list_files(PROJECT_ROOT / "output", VIDEO_EXTS)
+output_files = list_files(PROJECT_ROOT / _p["default_output_folder"], VIDEO_EXTS)
 if output_files:
     st.write(f"合計 **{len(output_files)}** ファイル")
     for f in output_files:

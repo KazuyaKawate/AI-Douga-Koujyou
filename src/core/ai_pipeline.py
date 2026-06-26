@@ -55,13 +55,18 @@ def _call_openai(
     sec_per_scene: int,
     cost_saving: bool = False,
 ) -> dict:
+    from src.utils.settings_manager import load_settings
+    _ai = load_settings()["ai"]
+    model       = _ai.get("model", "gpt-4o-mini")
+    temperature = float(_ai.get("temperature", 0.8))
+    max_tokens  = 1500 if cost_saving else int(_ai.get("max_tokens", 3000))
+
     client = OpenAI(api_key=OPENAI_API_KEY)
 
     cost_note = (
         "\n- コスト節約モード: narrationは120文字以内、image_promptとvideo_promptは40語以内で簡潔に"
         if cost_saving else ""
     )
-    max_tokens = 1500 if cost_saving else 3000
 
     prompt = f"""あなたはプロの動画プロデューサーです。
 
@@ -91,10 +96,10 @@ def _call_openai(
 重要: scenesは必ず{num_scenes}個、JSONのみ出力（説明文不要）"""
 
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=model,
         messages=[{"role": "user", "content": prompt}],
         response_format={"type": "json_object"},
-        temperature=0.8,
+        temperature=temperature,
         max_tokens=max_tokens,
     )
     return json.loads(response.choices[0].message.content)

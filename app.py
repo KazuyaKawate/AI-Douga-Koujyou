@@ -7,6 +7,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from src.utils.config import FOLDERS, PROJECT_ROOT
 from src.utils.file_manager import count_files
+from src.utils.settings_manager import CONFIG_PATH, load_settings
 
 st.set_page_config(
     page_title="AI動画工場",
@@ -16,7 +17,7 @@ st.set_page_config(
 )
 
 st.title("🎬 AI動画工場")
-st.caption("AIツールを組み合わせた動画制作自動化プラットフォーム | v2.5")
+st.caption("AIツールを組み合わせた動画制作自動化プラットフォーム | v2.6")
 
 st.divider()
 
@@ -29,6 +30,7 @@ WORKFLOW = [
     ("🔤", "字幕生成",           "Whisper で字幕を自動生成",          "subtitles"),
     ("✂️", "動画組立",           "FFmpeg で素材を結合",               "output"),
     ("📊", "制作ダッシュボード", "全エピソードの進捗を一覧管理",       "project"),
+    ("⚙️", "スタジオ設定",     "プロジェクト・AI・プロバイダー設定",  "config"),
 ]
 
 st.subheader("制作フロー")
@@ -43,6 +45,8 @@ for col, (icon, title, desc, folder) in zip(cols, WORKFLOW):
             )
             if ep_root.exists() else 0
         )
+    elif title == "スタジオ設定":
+        count = 1 if CONFIG_PATH.exists() else 0
     else:
         count = count_files(PROJECT_ROOT / folder)
     col.metric(label=f"{icon} {title}", value=count, help=desc)
@@ -62,11 +66,12 @@ with col1:
     st.info("👈 左のサイドバーから各ページを選択して作業を開始してください。")
 with col2:
     st.markdown("""
-**クイックスタート v2.5**
-1. ⚡ 一発生成 でテーマを入力 → 台本・プロンプト・字幕を全自動生成
-2. 🛠️ プロンプトをコピーして Runway / Nano Banana で手動生成
-3. 📚 素材ライブラリ で生成素材を管理・メモ・エピソードにアサイン
-4. 🎞️ エピソード管理 で内容を確認・編集
-5. ✂️ 動画組立 で最終動画を書き出し (FFmpeg)
-6. 📊 制作ダッシュボード で全エピソードの進捗を一覧確認
+**クイックスタート v2.6**
+1. ⚙️ スタジオ設定 でプロジェクト・AI・プロバイダーを設定
+2. ⚡ 一発生成 でテーマを入力 → 台本・プロンプト・字幕を全自動生成
+3. 🛠️ プロンプトをコピーして Runway / Nano Banana で手動生成
+4. 📚 素材ライブラリ で生成素材を管理・メモ・エピソードにアサイン
+5. 🎞️ エピソード管理 で内容を確認・編集
+6. ✂️ 動画組立 で最終動画を書き出し (FFmpeg)
+7. 📊 制作ダッシュボード で全エピソードの進捗を一覧確認
 """)

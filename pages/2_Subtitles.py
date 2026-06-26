@@ -8,10 +8,17 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.utils.config import PROJECT_ROOT
 from src.utils.file_manager import list_files
+from src.utils.settings_manager import load_settings
 
 st.set_page_config(page_title="字幕生成", page_icon="🎙️", layout="wide")
 st.title("🎙️ 字幕生成")
 st.caption("Whisper で音声ファイルから字幕（SRT形式）を自動生成します")
+
+_settings = load_settings()
+st.sidebar.caption(
+    f"⚙️ `{_settings['ai']['model']}` | "
+    f"{'🔧 開発' if _settings['ai']['dev_mode'] else '🚀 本番'}モード"
+)
 
 AUDIO_EXTS = [".mp3", ".wav", ".m4a", ".mp4", ".mov", ".flac"]
 LANG_LABELS = {"ja": "日本語", "en": "英語", "auto": "自動検出"}

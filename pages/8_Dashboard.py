@@ -8,10 +8,19 @@ import streamlit as st
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.utils.config import PROJECT_ROOT
+from src.utils.settings_manager import load_settings
 
 st.set_page_config(page_title="制作ダッシュボード", page_icon="📊", layout="wide")
 st.title("📊 制作ダッシュボード")
-st.caption("全エピソードの制作進捗を一覧管理 | v2.5")
+st.caption("全エピソードの制作進捗を一覧管理 | v2.6")
+
+_settings = load_settings()
+_gen = _settings["generation"]
+st.sidebar.caption(
+    f"⚙️ 画像: `{_gen['image_provider']}`"
+    f" | 動画: `{_gen['video_provider']}`"
+    f" | 音声: `{_gen['voice_provider']}`"
+)
 
 VIDEO_EXT = {".mp4", ".mov", ".webm", ".avi"}
 

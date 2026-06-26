@@ -8,10 +8,15 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.utils.config import FOLDERS, PROJECT_ROOT
 from src.utils.file_manager import file_info, list_files
+from src.utils.settings_manager import load_settings
 
 st.set_page_config(page_title="ファイル管理", page_icon="📁", layout="wide")
 st.title("📁 ファイル管理")
 st.caption("プロジェクト内のファイルを確認・管理します")
+
+_settings = load_settings()
+_p = _settings["project"]
+st.sidebar.caption(f"⚙️ 出力: `{_p['default_output_folder']}/` | `{_p['resolution']}`")
 
 col_summary, col_detail = st.columns([1, 2])
 
