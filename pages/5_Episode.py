@@ -32,8 +32,8 @@ with st.sidebar:
         sel = st.selectbox("読み込む", episode_list)
         if st.button("📂 読み込む", use_container_width=True):
             st.session_state.episode = em.load_episode(sel)
-            st.session_state.pop("voice_script_text", None)
-            st.session_state.pop("srt_text", None)
+            st.session_state.pop("voice_text_area", None)
+            st.session_state.pop("srt_text_area", None)
             st.success(f"{sel} を読み込みました")
     else:
         st.info("まだエピソードがありません")
@@ -54,8 +54,8 @@ with st.sidebar:
             ep = em.create_new_episode(new_id, new_title, new_desc, new_audience)
             em.save_episode(ep)
             st.session_state.episode = ep
-            st.session_state.pop("voice_script_text", None)
-            st.session_state.pop("srt_text", None)
+            st.session_state.pop("voice_text_area", None)
+            st.session_state.pop("srt_text_area", None)
             st.success(f"{new_id} を作成しました")
             st.rerun()
 
@@ -302,13 +302,12 @@ with tab5:
         st.caption("Nano Banana などの TTS に貼り付けるテキスト")
 
         if st.button("音声台本を生成", type="primary", key="gen_voice"):
-            st.session_state["voice_script_text"] = em.build_voice_script(ep)
+            st.session_state["voice_text_area"] = em.build_voice_script(ep)
             em.save_episode(ep)
             st.session_state.episode = ep
 
         voice_text = st.text_area(
             "音声台本（編集可）",
-            value=st.session_state.get("voice_script_text", ""),
             height=420,
             key="voice_text_area",
         )
@@ -331,13 +330,12 @@ with tab5:
         st.caption("タイミングは duration_seconds から推定（音声なし）")
 
         if st.button("字幕を生成", type="primary", key="gen_srt"):
-            st.session_state["srt_text"] = em.build_srt(ep)
+            st.session_state["srt_text_area"] = em.build_srt(ep)
             em.save_episode(ep)
             st.session_state.episode = ep
 
         srt_text = st.text_area(
             "SRT プレビュー（編集可）",
-            value=st.session_state.get("srt_text", ""),
             height=420,
             key="srt_text_area",
         )
