@@ -6,6 +6,45 @@ Versions are cumulative; each release builds on the previous stable base.
 
 ---
 
+## [v4.5] — 2026-06-27 — Sales Factory
+
+**Codename:** Sales Factory
+**Upgrade path:** v4.4.1 → v4.5 (additive, no breaking changes)
+
+### Added
+- `pages/21_Sales_Factory.py` — 6-tab CRM page (ダッシュボード/見込み客/商談/フォロー/提案/売上予測)
+  - Tab 1: today's followups, overdue alerts, pipeline overview, recent deals
+  - Tab 2: lead CRUD with status/rank/source filtering and inline edit
+  - Tab 3: deal management with stage kanban, transition, amount/probability editing
+  - Tab 4: followup management (today/week/overdue/all views), mark done, skip
+  - Tab 5: proposal tracking with response status lifecycle
+  - Tab 6: sales forecast (pipeline, weighted, contracted, conversion rate, monthly projection, goal setting)
+- `src/factories/sales/` package — full CRM module layer
+  - `lead_manager.py` — lead CRUD, status lifecycle (new→contracted/lost), rank (S/A/B/C), 8 sources
+  - `deal_manager.py` — deal CRUD, 7-stage pipeline, `transition_stage()`, `_on_contract()` KPI+factory side-effect
+  - `followup_manager.py` — followup CRUD, overdue/today/week detection, `mark_done_followup()` → increments `sales_calls` KPI
+  - `proposal_tracker.py` — proposal CRUD, 5 response statuses (draft/sent/replied/accepted/declined)
+  - `sales_forecast.py` — rule-based pipeline/weighted/conversion calculations, monthly projection, settings load
+- `config/sales_leads.json` — lead records store
+- `config/sales_deals.json` — deal records store
+- `config/sales_followups.json` — followup records store
+- `config/sales_settings.json` — monthly_target + default probabilities per stage
+
+### Changed
+- `pages/17_Mission_Control.py` — v4.5; 営業工場 wired to `pages/21_Sales_Factory.py`; Section 7.6 Sales summary card; `sync_from_sales()` added to data load
+- `src/hq/factory_status.py` — added `sync_from_sales()`: reads leads/followups, sets warning on overdue followups
+- `pages/8_Dashboard.py` — added Sales Factory summary strip (leads/deals/contracted/forecast/followups)
+- `app.py` — v4.5; 営業工場 added to WORKFLOW with active lead count
+- `scripts/check_project.py` — v4.5; added `src/factories/sales/` folder, 5 sales modules + page 21, 4 sales config files, Sales Factory data section
+
+### Architecture
+- `src/factories/sales/` sits parallel to `src/factories/note/` and `src/factories/sns/` — same layering pattern
+- `_on_contract()` in `deal_manager.py` updates factory card using lazy import of `factory_status`
+- `mark_done_followup()` in `followup_manager.py` increments `sales_calls` actual using lazy import of `kpi_manager`
+- All data local JSON; no external API calls; no database
+
+---
+
 ## [v4.4.1] — 2026-06-27 — Claude Approval Assistant
 
 **Codename:** Approval Assistant  

@@ -123,3 +123,31 @@ def sync_from_notes(factory_data: dict) -> dict:
     except Exception:
         pass
     return factory_data
+
+
+def sync_from_sales(factory_data: dict) -> dict:
+    """Sync 営業工場 factory status from sales data (optional import)."""
+    try:
+        from src.factories.sales.lead_manager import load_leads, get_factory_summary as lead_sum
+        from src.factories.sales.followup_manager import load_followups, get_followup_summary
+        leads_data = load_leads()
+        followups_data = load_followups()
+        l_summary = lead_sum(leads_data)
+        fu_summary = get_followup_summary(followups_data)
+        if "営業工場" in factory_data:
+            fd = factory_data["営業工場"]
+            fd["active_items"] = l_summary.get("active", 0)
+            fd["warning_count"] = fu_summary.get("overdue", 0)
+            needs = fu_summary.get("needs_followup", 0)
+            if fd["warning_count"] > 0:
+                fd["status"] = "warning"
+                fd["next_action"] = f"⚠️ {fd['warning_count']}件のフォロー期限超過"
+            elif needs > 0:
+                fd["status"] = "active"
+                fd["next_action"] = f"今日のフォロー: {needs}件"
+            elif fd["active_items"] > 0:
+                fd["status"] = "active"
+                fd["next_action"] = f"進行中商談: {fd['active_items']}件"
+    except Exception:
+        pass
+    return factory_data

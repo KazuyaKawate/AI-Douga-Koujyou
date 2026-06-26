@@ -1,4 +1,4 @@
-"""Project health check script for Creator Factory OS (AI動画工場 v4.4.1)."""
+"""Project health check script for Creator Factory OS (AI動画工場 v4.5)."""
 import io
 import sys
 from pathlib import Path
@@ -24,6 +24,7 @@ REQUIRED_FOLDERS = [
     "src/factories",
     "src/factories/note",
     "src/factories/sns",
+    "src/factories/sales",
     "src/devtools",
     "src/hq",
     "src/utils",
@@ -56,6 +57,14 @@ REQUIRED_FILES = [
     "pages/18_Note_Factory.py",
     "pages/19_SNS_Factory.py",
     "pages/20_Approval_Assistant.py",
+    "pages/21_Sales_Factory.py",
+    # Factories — 営業工場
+    "src/factories/sales/__init__.py",
+    "src/factories/sales/lead_manager.py",
+    "src/factories/sales/deal_manager.py",
+    "src/factories/sales/followup_manager.py",
+    "src/factories/sales/proposal_tracker.py",
+    "src/factories/sales/sales_forecast.py",
     # Dev Tools — 承認アシスタント
     "src/devtools/__init__.py",
     "src/devtools/risk_rules.py",
@@ -143,6 +152,10 @@ OPTIONAL_FILES = [
     "config/sns_schedule.json",
     "config/approval_rules.json",
     "config/approval_history.json",
+    "config/sales_leads.json",
+    "config/sales_deals.json",
+    "config/sales_followups.json",
+    "config/sales_settings.json",
 ]
 
 
@@ -151,7 +164,7 @@ def check() -> bool:
     width = 60
 
     print("=" * width)
-    print("  Creator Factory OS v4.4.1 — Project Health Check")
+    print("  Creator Factory OS v4.5 — Project Health Check")
     print("=" * width)
     print(f"  Root: {ROOT}\n")
 
@@ -232,6 +245,33 @@ def check() -> bool:
                 if key:
                     count = len(data.get(key, [])) if isinstance(data.get(key), list) else data.get(key, "—")
                     print(f"  [OK  ] {cfg_name}  ({key}: {count})")
+                else:
+                    print(f"  [OK  ] {cfg_name}")
+            except Exception as exc:
+                print(f"  [ERR ] {cfg_name}  → JSONパースエラー: {exc}")
+                ok = False
+        else:
+            print(f"  [----] {cfg_name}  (未作成)")
+
+    print()
+
+    # Sales Factory
+    print("[ Sales Factory データ ]")
+    sales_files = [
+        ("config/sales_leads.json",    "leads"),
+        ("config/sales_deals.json",    "deals"),
+        ("config/sales_followups.json", "followups"),
+        ("config/sales_settings.json",  None),
+    ]
+    for cfg_name, key in sales_files:
+        p = ROOT / cfg_name
+        if p.exists():
+            try:
+                data = json.loads(p.read_text(encoding="utf-8"))
+                if key and key in data:
+                    print(f"  [OK  ] {cfg_name}  ({len(data[key])} {key})")
+                elif "monthly_target" in data:
+                    print(f"  [OK  ] {cfg_name}  (目標: ¥{data['monthly_target']:,})")
                 else:
                     print(f"  [OK  ] {cfg_name}")
             except Exception as exc:

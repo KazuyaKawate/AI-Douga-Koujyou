@@ -1,0 +1,13 @@
+{
+  "monthly_target": 100000,
+  "default_probability_by_stage": {
+    "new": 10,
+    "contacted": 20,
+    "meeting": 35,
+    "proposal_sent": 50,
+    "negotiation": 70,
+    "contracted": 100,
+    "lost": 0
+  },
+  "meta": {"version": "4.5", "updated_at": "2026-06-27"}
+}

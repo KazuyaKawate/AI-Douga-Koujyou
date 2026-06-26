@@ -15,7 +15,7 @@ from src.director.director_planner import plan_exists as director_plan_exists
 
 st.set_page_config(page_title="制作ダッシュボード", page_icon="📊", layout="wide")
 st.title("📊 制作ダッシュボード")
-st.caption("全エピソードの制作進捗を一覧管理 | v4.4.1")
+st.caption("全エピソードの制作進捗を一覧管理 | v4.5")
 
 # ── Mission Control Summary (v4.2) ─────────────────────────────────────────────
 try:
@@ -65,6 +65,31 @@ try:
         sc4.metric("📅 今日の公開", _sns_today)
         st.page_link("pages/19_SNS_Factory.py", label="📱 SNS投稿工場を開く →")
         st.divider()
+except Exception:
+    pass
+
+# ── Sales Factory Summary (v4.5) ──────────────────────────────────────────────
+try:
+    from src.factories.sales.lead_manager import load_leads, get_factory_summary as _sale_lsum
+    from src.factories.sales.deal_manager import load_deals, get_factory_summary as _sale_dsum
+    from src.factories.sales.followup_manager import load_followups, get_followup_summary as _sale_fsum
+    from src.factories.sales.sales_forecast import calculate_forecast as _sale_fc
+    _sl_data = load_leads()
+    _sd_data = load_deals()
+    _sf_data = load_followups()
+    _sl_s = _sale_lsum(_sl_data)
+    _sd_s = _sale_dsum(_sd_data)
+    _sf_s = _sale_fsum(_sf_data)
+    _sfc = _sale_fc(_sl_data, _sd_data)
+    st.markdown("##### 💼 Sales Factory サマリー")
+    ssl1, ssl2, ssl3, ssl4, ssl5 = st.columns(5)
+    ssl1.metric("👥 リード",      _sl_s["total"])
+    ssl2.metric("🤝 商談中",      _sd_s["active"])
+    ssl3.metric("🏆 成約",        _sd_s["contracted"])
+    ssl4.metric("💰 今月売上予測", f"¥{_sfc['expected_monthly']:,}")
+    ssl5.metric("⚠️ 要フォロー",  _sf_s["needs_followup"])
+    st.page_link("pages/21_Sales_Factory.py", label="💼 営業工場を開く →")
+    st.divider()
 except Exception:
     pass
 

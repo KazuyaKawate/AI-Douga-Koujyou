@@ -38,6 +38,9 @@ Creator Factory OS rebrand. Mission Control daily command center. KPI, task list
 
 ### ✅ v4.4.1 — Claude Approval Assistant
 `pages/20_Approval_Assistant.py` — Claude Code approval prompt classifier. 4 risk levels (🟢/🟡/🟠/🔴). 36 command patterns. Japanese explanations for 30+ command types. History. Mission Control Dev Tools card. No external API. `src/devtools/` module layer.
+
+### ✅ v4.5 — Sales Factory
+`pages/21_Sales_Factory.py` — Full CRM: lead management (8 sources, 4 ranks, status lifecycle), deal pipeline (7 stages with weighted forecast), follow-up manager (overdue detection, today/week views, mark-done → `sales_calls` KPI), proposal tracker (5 response statuses), rule-based sales forecast (pipeline/weighted/conversion/monthly projection). Mission Control Section 7.6 sales card + `sync_from_sales()`. `src/factories/sales/` data layer.
 `pages/19_SNS_Factory.py` — 7-platform SNS management (X, Threads, Instagram, TikTok, YouTube Shorts, LinkedIn, Facebook). Rule-based platform formatter. Hashtag generator. Repurpose from note articles and video episodes. Weekly schedule calendar. Overdue detection. Manual engagement tracking. Analytics stubs. Mission Control KPI integration. `src/factories/sns/` data layer.
 
 ---
@@ -69,26 +72,6 @@ Creator Factory OS rebrand. Mission Control daily command center. KPI, task list
 **Mission Control changes:**
 - `pages/18_Note_Factory.py` wired to "📝 note投稿工場を開く" button
 - note投稿工場 factory card shows live article counts
-
----
-
-### 🔲 v4.5 — 営業 Factory _(Target: 2026-08)_
-
-**Goal:** Track outbound sales activity: leads, emails, follow-ups, conversion.
-
-**Deliverables:**
-
-| Item | Description |
-|------|-------------|
-| `pages/20_Sales_Factory.py` | 営業工場 page |
-| `src/factories/sales/` | Lead manager, pipeline tracker |
-| `config/sales_pipeline.json` | Lead records with status lifecycle |
-
-**Page sections:**
-1. **Lead Pipeline** — Kanban-style: 新規 → 連絡済 → 商談中 → 成約 / 失注
-2. **Daily Actions** — today's calls/emails due (feeds `sales_calls` KPI)
-3. **Revenue Forecast** — projected close value × probability
-4. **KPI Integration** — each completed action increments `sales_calls` actual
 
 ---
 

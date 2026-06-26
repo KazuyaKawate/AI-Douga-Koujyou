@@ -20,11 +20,11 @@ from src.hq.task_manager import (
 )
 from src.hq.factory_status import (
     load_factory_status, save_factory_status,
-    sync_from_tasks, FACTORIES, FACTORY_ICONS, STATUS_COLORS,
+    sync_from_tasks, sync_from_sales, FACTORIES, FACTORY_ICONS, STATUS_COLORS,
 )
 from src.hq.daily_report import generate_report, export_report
 
-APP_VERSION = "4.4.1"
+APP_VERSION = "4.5"
 TODAY = date.today()
 
 st.set_page_config(page_title="Mission Control | Creator Factory OS", page_icon="🎯", layout="wide")
@@ -34,8 +34,8 @@ st.set_page_config(page_title="Mission Control | Creator Factory OS", page_icon=
 st.title("🎯 Creator Factory OS")
 h1, h2, h3 = st.columns(3)
 h1.caption(f"📅 {TODAY.strftime('%Y年%m月%d日 (%A)')}")
-h2.caption(f"🔨 Build: v{APP_VERSION} Approval Assistant")
-h3.caption(f"✅ Status: v{APP_VERSION} Approval Assistant")
+h2.caption(f"🔨 Build: v{APP_VERSION} Sales Factory")
+h3.caption(f"✅ Status: v{APP_VERSION} Sales Factory")
 
 st.divider()
 
@@ -45,6 +45,7 @@ kpi_data = load_kpi()
 tasks_data = load_tasks()
 factory_data = load_factory_status()
 factory_data = sync_from_tasks(factory_data, tasks_data)
+factory_data = sync_from_sales(factory_data)
 
 finance_path = ROOT / "config" / "revenue_expense.json"
 try:
@@ -121,7 +122,7 @@ PAGE_MAP: dict[str, str | None] = {
     "AI動画工場":   "pages/1_Script.py",
     "note投稿工場": "pages/18_Note_Factory.py",
     "SNS投稿工場":  "pages/19_SNS_Factory.py",
-    "営業工場":     None,
+    "営業工場":     "pages/21_Sales_Factory.py",
     "会計監査工場": None,
     "開発":         "pages/17_Mission_Control.py",
     "経営":         "pages/8_Dashboard.py",
@@ -375,7 +376,7 @@ NAV_ITEMS = [
     ("🎬 AI動画工場を開く",      "pages/1_Script.py"),
     ("📝 note投稿工場を開く",    "pages/18_Note_Factory.py"),
     ("📱 SNS投稿工場を開く",     "pages/19_SNS_Factory.py"),
-    ("💼 営業工場を開く",        None),
+    ("💼 営業工場を開く",        "pages/21_Sales_Factory.py"),
     ("💰 会計監査工場を開く",    None),
     ("📊 ダッシュボードを開く",  "pages/8_Dashboard.py"),
     ("🔍 承認アシスタント",      "pages/20_Approval_Assistant.py"),
@@ -424,6 +425,51 @@ with dev_c2:
     else:
         st.button("🔍 承認アシスタント 🚧", disabled=True, use_container_width=True,
                   key="nav_approval", help="Coming Soon")
+
+st.divider()
+
+# ── Section 7.6: Sales Factory ────────────────────────────────────────────────
+
+st.subheader("💼 営業工場")
+
+sales_c1, sales_c2 = st.columns([3, 2])
+
+with sales_c1:
+    st.markdown("**CRM · リード管理 · 商談 · フォロー · 売上予測**")
+    try:
+        from src.factories.sales.lead_manager import load_leads, get_factory_summary as _lead_sum
+        from src.factories.sales.followup_manager import load_followups, get_followup_summary as _fu_sum
+        from src.factories.sales.deal_manager import load_deals, get_factory_summary as _deal_sum
+        from src.factories.sales.sales_forecast import calculate_forecast as _calc_fc
+        _ld = load_leads()
+        _fd = load_deals()
+        _fud = load_followups()
+        _ls = _lead_sum(_ld)
+        _ds = _deal_sum(_fd)
+        _fus = _fu_sum(_fud)
+        _fc = _calc_fc(_ld, _fd)
+        sc1, sc2, sc3, sc4 = st.columns(4)
+        sc1.metric("👥 リード", _ls["total"])
+        sc2.metric("🤝 商談中", _ds["active"])
+        sc3.metric("⚠️ 要フォロー", _fus["needs_followup"])
+        sc4.metric("💰 今月予測", f"¥{_fc['expected_monthly']:,}")
+        if _fus["overdue"] > 0:
+            st.caption(f"🔴 フォロー期限超過 {_fus['overdue']} 件")
+        elif _fus["today"] > 0:
+            st.caption(f"📅 今日のフォロー {_fus['today']} 件")
+        else:
+            st.caption(f"✅ フォロー期限内 | 成約: {_ds['contracted']} 件")
+    except Exception:
+        st.caption("営業データを読み込めませんでした。")
+
+with sales_c2:
+    sales_page = ROOT / "pages" / "21_Sales_Factory.py"
+    if sales_page.exists():
+        st.page_link("pages/21_Sales_Factory.py", label="💼 営業工場を開く →",
+                     use_container_width=True)
+    else:
+        st.button("💼 営業工場 🚧", disabled=True, use_container_width=True,
+                  key="nav_sales", help="Coming Soon")
 
 st.divider()
 
