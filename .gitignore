@@ -24,6 +24,29 @@ config/secrets.*
 # images/
 # output/
 
+# 素材ライブラリ — メディアファイルはローカルのみ、フォルダ構造は .gitkeep で管理
+# (case-insensitive on Windows; patterns cover both lower and upper-case extensions)
+assets/**/*.jpg
+assets/**/*.jpeg
+assets/**/*.png
+assets/**/*.gif
+assets/**/*.webp
+assets/**/*.bmp
+assets/**/*.psd
+assets/**/*.mp4
+assets/**/*.mov
+assets/**/*.avi
+assets/**/*.webm
+assets/**/*.mp3
+assets/**/*.wav
+assets/**/*.ogg
+assets/**/*.m4a
+assets/**/*.aac
+assets/**/*.flac
+
+# プロジェクト生成ファイル（大容量になりうる）
+project/
+
 # OS・エディタ
 .DS_Store
 Desktop.ini
