@@ -9,6 +9,7 @@ from src.utils.config import OPENAI_API_KEY, PROJECT_ROOT
 from src.utils.settings_manager import load_settings
 from src.utils.character_manager import get_character, load_characters
 from src.utils.background_manager import get_background, load_backgrounds
+from src.utils.prompt_builder import get_template, load_templates
 from src.core import episode_manager as em
 from src.core import ai_pipeline
 
@@ -101,6 +102,38 @@ with st.sidebar:
         _sel_bg = None
 
     st.divider()
+
+    # ── Prompt template selection ──────────────────────────────────────────────
+    st.subheader("📝 プロンプトテンプレート")
+    _tmpl_data = load_templates()
+    _all_tmpls = _tmpl_data["templates"]
+
+    if _all_tmpls:
+        _tmpl_id_opts = [None] + [t["id"] for t in _all_tmpls]
+        _tmpl_name_map = {None: "（なし）"}
+        _tmpl_name_map.update({t["id"]: t["name"] for t in _all_tmpls})
+
+        _sel_tmpl_id = st.selectbox(
+            "使用するテンプレート",
+            _tmpl_id_opts,
+            format_func=lambda x: _tmpl_name_map.get(x, "不明"),
+            key="produce_tmpl_id",
+            label_visibility="collapsed",
+        )
+        _sel_template = get_template(_sel_tmpl_id) if _sel_tmpl_id else None
+        if _sel_template:
+            st.caption(f"タイプ: {_sel_template.get('output_type','')}")
+            st.caption(
+                f"ムード: {_sel_template.get('mood','-')} | "
+                f"スタイル: {_sel_template.get('style','-')} | "
+                f"カメラ: {_sel_template.get('camera','-')}"
+            )
+    else:
+        st.caption("テンプレートがありません")
+        st.caption("📝 プロンプトビルダー で作成してください")
+        _sel_template = None
+
+    st.divider()
     st.caption(
         f"⚙️ `{_ai['model']}` | "
         f"{'節約' if _ai['cost_saving'] else '標準'}モード | "
@@ -188,6 +221,7 @@ if submitted:
             cost_saving=cost_saving,
             character=_sel_char,
             background=_sel_bg,
+            prompt_template=_sel_template,
         )
 
         progress.progress(100, text="✅ 全工程完了！")
@@ -231,6 +265,13 @@ if _sel_bg:
         f"🏞️ 背景 **{_sel_bg['basic']['display_name']}**"
         f"（{_sel_bg['basic'].get('category','')}）"
         f" の設定をプロンプトに適用しました。"
+    )
+if _sel_template:
+    st.info(
+        f"📝 プロンプトテンプレート **{_sel_template['name']}**"
+        f"（{_sel_template.get('output_type','')} | "
+        f"ムード: {_sel_template.get('mood','')} / スタイル: {_sel_template.get('style','')}）"
+        f" をプロンプトに適用しました。"
     )
 
 c1, c2, c3, c4 = st.columns(4)
