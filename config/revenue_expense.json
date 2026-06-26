@@ -1,0 +1,14 @@
+{
+  "today": {
+    "date": "2026-06-27",
+    "revenue": 0,
+    "expense": 0
+  },
+  "month": {
+    "year_month": "2026-06",
+    "revenue": 0,
+    "expense": 0,
+    "breakeven": 50000
+  },
+  "history": []
+}

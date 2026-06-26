@@ -10,18 +10,19 @@ from src.utils.file_manager import count_files
 from src.utils.settings_manager import CONFIG_PATH, load_settings
 
 st.set_page_config(
-    page_title="AI動画工場",
-    page_icon="🎬",
+    page_title="Creator Factory OS",
+    page_icon="🎯",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-st.title("🎬 AI動画工場")
-st.caption("AIツールを組み合わせた動画制作自動化プラットフォーム | v4.0 — Multi-Agent Production Studio")
+st.title("🎯 Creator Factory OS")
+st.caption("AIツールを組み合わせた動画制作自動化プラットフォーム | v4.2 — Dashboard Factory")
 
 st.divider()
 
 WORKFLOW = [
+    ("🎯", "Mission Control",    "毎日のKPI・タスク・工場状態を一覧管理",    None),
     ("⚡", "一発生成",           "AIで全工程を自動生成",                    "project"),
     ("🎞️", "エピソード管理",    "EP制作フロー全体を管理",                  "project"),
     ("📚", "素材ライブラリ",    "素材を管理・エピソードにアサイン",         "assets/images"),
@@ -43,7 +44,15 @@ WORKFLOW = [
 st.subheader("制作フロー")
 cols = st.columns(len(WORKFLOW))
 for col, (icon, title, desc, folder) in zip(cols, WORKFLOW):
-    if title == "制作ダッシュボード":
+    if title == "Mission Control":
+        try:
+            from src.hq.task_manager import load_tasks, get_task_stats
+            _td = load_tasks()
+            _stats = get_task_stats(_td)
+            count = _stats["done"]
+        except Exception:
+            count = 0
+    elif title == "制作ダッシュボード":
         ep_root = PROJECT_ROOT / folder
         count = (
             sum(
@@ -125,16 +134,17 @@ with col1:
     st.info("👈 左のサイドバーから各ページを選択して作業を開始してください。")
 with col2:
     st.markdown("""
-**クイックスタート v4.0**
-1. ⚙️ スタジオ設定 でプロジェクト・AI設定を構成
-2. 🧑 キャラクター管理 でキャラクターを作成してデフォルト設定
-3. 🏞️ 背景管理 でロケーション・カメラ設定を登録
-4. 📝 プロンプトビルダー でテンプレートを保存
-5. 🤖 **AI Studio** でマルチエージェントパイプラインを開始
+**クイックスタート v4.2**
+1. 🎯 **Mission Control** で今日のKPI・タスクを確認
+2. ⚙️ スタジオ設定 でプロジェクト・AI設定を構成
+3. 🧑 キャラクター管理 でキャラクターを作成してデフォルト設定
+4. 🏞️ 背景管理 でロケーション・カメラ設定を登録
+5. 📝 プロンプトビルダー でテンプレートを保存
+6. 🤖 **AI Studio** でマルチエージェントパイプラインを開始
    - ProducerAgent → DirectorAgent → ScriptAgent
    - → PromptAgent → EditorAgent → PublisherAgent
-6. または ⚡ 一発生成 で単体エピソードを生成
-7. 🎭 AI Director で演出計画を設計
-8. 🎬 制作管理 で書き出しパッケージを作成
-9. 📁 プロジェクト管理 でシリーズ・バックアップ・統計を管理
+7. または ⚡ 一発生成 で単体エピソードを生成
+8. 🎭 AI Director で演出計画を設計
+9. 🎬 制作管理 で書き出しパッケージを作成
+10. 📁 プロジェクト管理 でシリーズ・バックアップ・統計を管理
 """)

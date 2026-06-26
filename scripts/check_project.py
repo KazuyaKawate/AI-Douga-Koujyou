@@ -1,4 +1,4 @@
-"""Project health check script for AI動画工場."""
+"""Project health check script for Creator Factory OS (AI動画工場 v4.2)."""
 import io
 import sys
 from pathlib import Path
@@ -16,9 +16,12 @@ REQUIRED_FOLDERS = [
     "config",
     "pages",
     "project",
+    "reports",
+    "reports/daily",
     "src",
     "src/agents",
     "src/core",
+    "src/hq",
     "src/utils",
     "src/pipeline",
     "src/providers",
@@ -45,6 +48,7 @@ REQUIRED_FILES = [
     "pages/14_Director.py",
     "pages/15_Project_Manager.py",
     "pages/16_AI_Studio.py",
+    "pages/17_Mission_Control.py",
     # Core
     "src/core/openai_client.py",
     "src/core/whisper_client.py",
@@ -87,6 +91,12 @@ REQUIRED_FILES = [
     "src/director/__init__.py",
     "src/director/director_schema.py",
     "src/director/director_planner.py",
+    # HQ — Mission Control
+    "src/hq/__init__.py",
+    "src/hq/kpi_manager.py",
+    "src/hq/task_manager.py",
+    "src/hq/factory_status.py",
+    "src/hq/daily_report.py",
 ]
 
 OPTIONAL_FILES = [
@@ -95,6 +105,10 @@ OPTIONAL_FILES = [
     "config/characters.json",
     "config/backgrounds.json",
     "config/prompt_templates.json",
+    "config/kpi_targets.json",
+    "config/daily_tasks.json",
+    "config/factory_status.json",
+    "config/revenue_expense.json",
 ]
 
 
@@ -103,7 +117,7 @@ def check() -> bool:
     width = 60
 
     print("=" * width)
-    print("  AI動画工場 — Project Health Check")
+    print("  Creator Factory OS v4.2 — Project Health Check")
     print("=" * width)
     print(f"  Root: {ROOT}\n")
 
@@ -165,6 +179,43 @@ def check() -> bool:
                 ok = False
         else:
             print(f"  [----] {cfg_name}  (未作成)")
+
+    print()
+
+    # Mission Control daily config
+    print("[ Mission Control 設定ファイル ]")
+    mc_configs = [
+        ("config/kpi_targets.json",    "date"),
+        ("config/daily_tasks.json",    "tasks"),
+        ("config/factory_status.json", None),
+        ("config/revenue_expense.json", None),
+    ]
+    for cfg_name, key in mc_configs:
+        p = ROOT / cfg_name
+        if p.exists():
+            try:
+                data = json.loads(p.read_text(encoding="utf-8"))
+                if key:
+                    count = len(data.get(key, [])) if isinstance(data.get(key), list) else data.get(key, "—")
+                    print(f"  [OK  ] {cfg_name}  ({key}: {count})")
+                else:
+                    print(f"  [OK  ] {cfg_name}")
+            except Exception as exc:
+                print(f"  [ERR ] {cfg_name}  → JSONパースエラー: {exc}")
+                ok = False
+        else:
+            print(f"  [----] {cfg_name}  (未作成)")
+
+    print()
+
+    # Reports folder
+    print("[ レポートフォルダ ]")
+    reports_dir = ROOT / "reports" / "daily"
+    if reports_dir.exists():
+        report_count = len(list(reports_dir.glob("*.md")))
+        print(f"  [OK  ] reports/daily/  ({report_count} レポート)")
+    else:
+        print(f"  [----] reports/daily/  (未作成)")
 
     print()
 

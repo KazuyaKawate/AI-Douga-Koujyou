@@ -1,0 +1,44 @@
+{
+  "AI動画工場": {
+    "status": "active",
+    "active_items": 2,
+    "completed_today": 0,
+    "warning_count": 0,
+    "next_action": "動画スクリプトを作成してください"
+  },
+  "note投稿工場": {
+    "status": "idle",
+    "active_items": 0,
+    "completed_today": 0,
+    "warning_count": 1,
+    "next_action": "今日のnote記事を作成してください"
+  },
+  "SNS投稿工場": {
+    "status": "idle",
+    "active_items": 0,
+    "completed_today": 0,
+    "warning_count": 0,
+    "next_action": "SNS投稿コンテンツを準備してください"
+  },
+  "営業工場": {
+    "status": "idle",
+    "active_items": 0,
+    "completed_today": 0,
+    "warning_count": 0,
+    "next_action": "営業リストを確認してください"
+  },
+  "会計監査工場": {
+    "status": "idle",
+    "active_items": 0,
+    "completed_today": 0,
+    "warning_count": 0,
+    "next_action": "収支を確認・記録してください"
+  },
+  "CEO Dashboard": {
+    "status": "active",
+    "active_items": 1,
+    "completed_today": 1,
+    "warning_count": 0,
+    "next_action": "KPIとタスクを確認してください"
+  }
+}

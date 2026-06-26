@@ -1,0 +1,77 @@
+{
+  "date": "2026-06-27",
+  "tasks": [
+    {
+      "id": "task_001",
+      "title": "YouTube動画スクリプト作成",
+      "category": "AI動画工場",
+      "priority": "high",
+      "status": "pending",
+      "page_link": "pages/1_Script.py"
+    },
+    {
+      "id": "task_002",
+      "title": "動画クリップ生成・組立",
+      "category": "AI動画工場",
+      "priority": "high",
+      "status": "pending",
+      "page_link": "pages/3_Assembly.py"
+    },
+    {
+      "id": "task_003",
+      "title": "note記事投稿（1件）",
+      "category": "note投稿工場",
+      "priority": "high",
+      "status": "pending",
+      "page_link": null
+    },
+    {
+      "id": "task_004",
+      "title": "Twitter/X投稿（3件）",
+      "category": "SNS投稿工場",
+      "priority": "medium",
+      "status": "pending",
+      "page_link": null
+    },
+    {
+      "id": "task_005",
+      "title": "Instagram投稿（1件）",
+      "category": "SNS投稿工場",
+      "priority": "medium",
+      "status": "pending",
+      "page_link": null
+    },
+    {
+      "id": "task_006",
+      "title": "新規営業メール送信",
+      "category": "営業工場",
+      "priority": "medium",
+      "status": "pending",
+      "page_link": null
+    },
+    {
+      "id": "task_007",
+      "title": "月次収支確認・記録",
+      "category": "会計監査工場",
+      "priority": "medium",
+      "status": "pending",
+      "page_link": null
+    },
+    {
+      "id": "task_008",
+      "title": "Mission Control機能開発",
+      "category": "開発",
+      "priority": "high",
+      "status": "done",
+      "page_link": "pages/16_Mission_Control.py"
+    },
+    {
+      "id": "task_009",
+      "title": "週次KPIレビューと来週計画",
+      "category": "経営",
+      "priority": "high",
+      "status": "pending",
+      "page_link": "pages/8_Dashboard.py"
+    }
+  ]
+}

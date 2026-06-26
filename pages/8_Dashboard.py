@@ -15,7 +15,34 @@ from src.director.director_planner import plan_exists as director_plan_exists
 
 st.set_page_config(page_title="制作ダッシュボード", page_icon="📊", layout="wide")
 st.title("📊 制作ダッシュボード")
-st.caption("全エピソードの制作進捗を一覧管理 | v3.0")
+st.caption("全エピソードの制作進捗を一覧管理 | v4.2")
+
+# ── Mission Control Summary (v4.2) ─────────────────────────────────────────────
+try:
+    from src.hq.task_manager import load_tasks, get_task_stats
+    from src.hq.kpi_manager import load_kpi
+    import json as _json
+
+    _tasks = load_tasks()
+    _stats = get_task_stats(_tasks)
+    _kpi = load_kpi()
+    _actuals = _kpi.get("actuals", {})
+    _today_rev = 0
+    _rev_path = Path(__file__).parent.parent / "config" / "revenue_expense.json"
+    if _rev_path.exists():
+        _today_rev = _json.loads(_rev_path.read_text(encoding="utf-8")).get("today", {}).get("revenue", 0)
+    _open_tasks = _stats["pending"] + _stats["in_progress"]
+
+    st.markdown("##### 🎯 Mission Control サマリー")
+    mc1, mc2, mc3, mc4 = st.columns(4)
+    mc1.metric("✅ 今日の完了率", f"{_stats['pct']}%", help=f"{_stats['done']}/{_stats['total']} タスク完了")
+    mc2.metric("📋 未完了タスク", _open_tasks)
+    mc3.metric("💰 今日の売上", f"¥{_today_rev:,}")
+    mc4.metric("🎬 動画制作数", _actuals.get("video_count", 0))
+    st.page_link("pages/17_Mission_Control.py", label="🎯 Mission Controlを開く →")
+    st.divider()
+except Exception:
+    pass
 
 _settings = load_settings()
 _gen = _settings["generation"]
