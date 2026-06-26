@@ -1,15 +1,26 @@
 @echo off
-chcp 65001 >nul
+REM ================================================================
+REM  backup_project.bat  --  AI-Douga-Koujyou v4.1 backup utility
+REM
+REM  IMPORTANT: This file must remain ASCII-only (0x00-0x7F).
+REM  See run_ai_factory.bat header for the full explanation.
+REM
+REM  NOTE: The ZIP archive name uses the ASCII alias
+REM  "AI-Douga-Koujyou" because Japanese literals cannot appear
+REM  in .bat files.  The project path (%ROOT%) is a runtime
+REM  variable expanded by CMD and passed to PowerShell correctly
+REM  even when the path itself contains Japanese characters.
+REM ================================================================
 
 set "ROOT=%~dp0"
 if "%ROOT:~-1%"=="\" set "ROOT=%ROOT:~0,-1%"
 cd /d "%ROOT%"
 
-title Backup AI動画工場
+title Backup AI-Douga-Koujyou
 
 echo.
 echo  ============================================
-echo   AI動画工場 v4.1 — Backup Project
+echo   AI-Douga-Koujyou v4.1 - Backup Project
 echo  ============================================
 echo.
 
@@ -19,7 +30,7 @@ powershell -ExecutionPolicy Bypass -NonInteractive -Command "
 Set-Location '%ROOT%'
 $root = (Get-Location).Path
 $date = Get-Date -Format 'yyyyMMdd_HHmm'
-$zipName = 'AI動画工場_Backup_' + $date + '.zip'
+$zipName = 'AI-Douga-Koujyou_Backup_' + $date + '.zip'
 $zipPath = Join-Path 'backups' $zipName
 
 Write-Host ('  Creating: ' + $zipName)
@@ -62,8 +73,7 @@ Write-Host ('  Files added  : ' + $addedCount)
 Write-Host ('  Archive size : ' + $sizeMB + ' MB')
 Write-Host ('  Saved to     : backups\' + $zipName)
 
-# Keep only the 20 newest backups
-$all = Get-ChildItem -Path 'backups' -Filter 'AI動画工場_Backup_*.zip' |
+$all = Get-ChildItem -Path 'backups' -Filter 'AI-Douga-Koujyou_Backup_*.zip' |
        Sort-Object LastWriteTime -Descending
 if ($all.Count -gt 20) {
     $toDelete = $all | Select-Object -Skip 20

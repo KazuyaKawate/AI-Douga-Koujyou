@@ -1,10 +1,15 @@
 @echo off
-chcp 65001 >nul
-title Stop AI動画工場
+REM ================================================================
+REM  stop_streamlit.bat  --  AI-Douga-Koujyou v4.1 server stopper
+REM
+REM  IMPORTANT: This file must remain ASCII-only (0x00-0x7F).
+REM  See run_ai_factory.bat header for the full explanation.
+REM ================================================================
+title Stop AI-Douga-Koujyou
 
 echo.
 echo  ============================================
-echo   AI動画工場 v4.1 — Stop Server
+echo   AI-Douga-Koujyou v4.1 - Stop Server
 echo  ============================================
 echo.
 
@@ -13,7 +18,7 @@ $port = 8501
 $conns = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
 if (-not $conns) {
     Write-Host '  No process is listening on port 8501.'
-    Write-Host '  AI動画工場 is not running.'
+    Write-Host '  AI-Douga-Koujyou is not running.'
 } else {
     foreach ($conn in $conns) {
         try {
@@ -28,7 +33,7 @@ if (-not $conns) {
                 Write-Host '  Stopped successfully.'
             }
         } catch {
-            Write-Host ('  Could not find process for PID ' + $conn.OwningProcess + ' — may have already exited.')
+            Write-Host ('  Could not find process for PID ' + $conn.OwningProcess + ' - may have already exited.')
         }
     }
 }
