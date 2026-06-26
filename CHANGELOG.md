@@ -6,6 +6,56 @@ Versions are cumulative; each release builds on the previous stable base.
 
 ---
 
+## [v4.4] — 2026-06-27 — SNS Factory
+
+**Codename:** SNS Factory  
+**Upgrade path:** v4.3 → v4.4 (additive, no breaking changes)
+
+### Added
+- `pages/19_SNS_Factory.py` — 6-tab SNS management page (dashboard, create, manage, calendar, repurpose, analytics)
+- `src/factories/sns/` package — full SNS factory module layer
+  - `sns_post_manager.py` — post CRUD, 4-status lifecycle, `_on_publish()` KPI/factory side-effects
+  - `platform_formatter.py` — rule-based text generation for X, Threads, Instagram, TikTok, YouTube Shorts, LinkedIn, Facebook
+  - `hashtag_generator.py` — category+platform hashtag generation with Japanese tag sets
+  - `sns_calendar.py` — week/day schedule view, overdue detection, monthly summary
+  - `sns_analytics_placeholder.py` — stub classes for X/Instagram/YouTube analytics + manual engagement updater
+- `config/sns_posts.json` — SNS post queue (platform, source, text, hashtags, status, schedule)
+- `config/sns_platforms.json` — platform config (char limits, icons, tones, max hashtags)
+- `config/sns_schedule.json` — schedule metadata store
+
+### Changed
+- `pages/17_Mission_Control.py` — v4.4; SNS投稿工場 wired to `pages/19_SNS_Factory.py`; version caption updated
+- `src/hq/factory_status.py` — added `sync_from_sns()` for live factory card sync
+- `pages/8_Dashboard.py` — added SNS Factory summary strip (draft/scheduled/published/today)
+- `app.py` — v4.4 caption; SNS投稿工場 added to WORKFLOW with published post count
+- `scripts/check_project.py` — v4.4; added src/factories/sns/ folder, 6 SNS files, 3 SNS config files, SNS data section
+
+### Architecture
+- `src/factories/sns/` sits parallel to `src/factories/note/` — same pattern, different domain
+- Platform formatter is purely rule-based (no LLM calls); each platform has dedicated formatter function
+- SNS → Mission Control integration: `_on_publish()` increments `sns_posts` KPI + updates factory card
+- Repurpose bridge reads `config/note_articles.json` and `project/*/episode.json` — no circular imports
+
+---
+
+## [v4.3] — 2026-06-27 — Note Factory
+
+**Codename:** Note Factory  
+**Upgrade path:** v4.2 → v4.3 (additive, no breaking changes)
+
+### Added
+- `pages/18_Note_Factory.py` — 6-tab note article management page
+- `src/factories/note/` package — article manager, scorer, revenue tracker, repurpose engine, integration bridge
+- `config/note_articles.json` — article data schema with status lifecycle and scoring
+
+### Changed
+- `pages/17_Mission_Control.py` — v4.3; note投稿工場 wired to page 18
+- `src/hq/factory_status.py` — added `sync_from_notes()`
+- `app.py` — v4.3; note投稿工場 added to WORKFLOW
+- `scripts/check_project.py` — v4.3; added factories/ folder and all note files
+
+---
+
 ## [v4.2] — 2026-06-27 — Dashboard Factory
 
 **Codename:** Dashboard Factory  

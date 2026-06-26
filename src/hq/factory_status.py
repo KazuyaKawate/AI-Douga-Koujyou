@@ -79,6 +79,31 @@ def sync_from_tasks(factory_data: dict, tasks_data: dict) -> dict:
     return factory_data
 
 
+def sync_from_sns(factory_data: dict) -> dict:
+    """Sync SNS投稿工場 factory status from SNS post data (optional import)."""
+    try:
+        from src.factories.sns.sns_post_manager import load_posts, get_factory_summary
+        sns_data = load_posts()
+        summary = get_factory_summary(sns_data)
+        if "SNS投稿工場" in factory_data:
+            fd = factory_data["SNS投稿工場"]
+            fd["completed_today"] = summary.get("published_today", 0)
+            fd["active_items"] = summary.get("scheduled", 0)
+            fd["warning_count"] = summary.get("warnings", 0)
+            if fd["completed_today"] > 0:
+                fd["status"] = "active"
+                fd["next_action"] = f"本日{fd['completed_today']}件公開済"
+            elif fd["active_items"] > 0:
+                fd["status"] = "active"
+                fd["next_action"] = f"{fd['active_items']}件のスケジュール投稿あり"
+            if fd["warning_count"] > 0:
+                fd["status"] = "warning"
+                fd["next_action"] = f"⚠️ {fd['warning_count']}件の投稿が期限超過"
+    except Exception:
+        pass
+    return factory_data
+
+
 def sync_from_notes(factory_data: dict) -> dict:
     """Sync note投稿工場 factory status from article data (optional import)."""
     try:

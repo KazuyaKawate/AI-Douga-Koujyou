@@ -1,0 +1,60 @@
+{
+  "platforms": {
+    "x": {
+      "label": "X (Twitter)",
+      "icon": "𝕏",
+      "char_limit": 280,
+      "tone": "short, hook-first, punchy",
+      "max_hashtags": 4,
+      "enabled": true
+    },
+    "threads": {
+      "label": "Threads",
+      "icon": "🧵",
+      "char_limit": 500,
+      "tone": "conversational, community-focused",
+      "max_hashtags": 5,
+      "enabled": true
+    },
+    "instagram": {
+      "label": "Instagram",
+      "icon": "📸",
+      "char_limit": 2200,
+      "tone": "visual storytelling, lifestyle",
+      "max_hashtags": 30,
+      "enabled": true
+    },
+    "tiktok": {
+      "label": "TikTok",
+      "icon": "🎵",
+      "char_limit": 150,
+      "tone": "short hook + CTA, energetic",
+      "max_hashtags": 5,
+      "enabled": true
+    },
+    "youtube_shorts": {
+      "label": "YouTube Shorts",
+      "icon": "▶️",
+      "char_limit": 5000,
+      "tone": "title + description + hashtags",
+      "max_hashtags": 10,
+      "enabled": true
+    },
+    "linkedin": {
+      "label": "LinkedIn",
+      "icon": "💼",
+      "char_limit": 3000,
+      "tone": "professional, insight-driven",
+      "max_hashtags": 5,
+      "enabled": true
+    },
+    "facebook": {
+      "label": "Facebook",
+      "icon": "👥",
+      "char_limit": 63206,
+      "tone": "community, friendly, shareable",
+      "max_hashtags": 5,
+      "enabled": true
+    }
+  }
+}

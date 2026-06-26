@@ -1,4 +1,4 @@
-"""Project health check script for Creator Factory OS (AI動画工場 v4.3)."""
+"""Project health check script for Creator Factory OS (AI動画工場 v4.4)."""
 import io
 import sys
 from pathlib import Path
@@ -23,6 +23,7 @@ REQUIRED_FOLDERS = [
     "src/core",
     "src/factories",
     "src/factories/note",
+    "src/factories/sns",
     "src/hq",
     "src/utils",
     "src/pipeline",
@@ -52,6 +53,14 @@ REQUIRED_FILES = [
     "pages/16_AI_Studio.py",
     "pages/17_Mission_Control.py",
     "pages/18_Note_Factory.py",
+    "pages/19_SNS_Factory.py",
+    # Factories — SNS投稿工場
+    "src/factories/sns/__init__.py",
+    "src/factories/sns/sns_post_manager.py",
+    "src/factories/sns/platform_formatter.py",
+    "src/factories/sns/hashtag_generator.py",
+    "src/factories/sns/sns_calendar.py",
+    "src/factories/sns/sns_analytics_placeholder.py",
     # Factories — note投稿工場
     "src/factories/__init__.py",
     "src/factories/note/__init__.py",
@@ -121,6 +130,9 @@ OPTIONAL_FILES = [
     "config/factory_status.json",
     "config/revenue_expense.json",
     "config/note_articles.json",
+    "config/sns_posts.json",
+    "config/sns_platforms.json",
+    "config/sns_schedule.json",
 ]
 
 
@@ -129,7 +141,7 @@ def check() -> bool:
     width = 60
 
     print("=" * width)
-    print("  Creator Factory OS v4.3 — Project Health Check")
+    print("  Creator Factory OS v4.4 — Project Health Check")
     print("=" * width)
     print(f"  Root: {ROOT}\n")
 
@@ -217,6 +229,31 @@ def check() -> bool:
                 ok = False
         else:
             print(f"  [----] {cfg_name}  (未作成)")
+
+    print()
+
+    # SNS Factory posts
+    print("[ SNS Factory 投稿データ ]")
+    sns_posts_path = ROOT / "config" / "sns_posts.json"
+    sns_plat_path  = ROOT / "config" / "sns_platforms.json"
+    sns_sched_path = ROOT / "config" / "sns_schedule.json"
+    for cfg_sns in [sns_posts_path, sns_plat_path, sns_sched_path]:
+        rel_sns = str(cfg_sns.relative_to(ROOT)).replace("\\", "/")
+        if cfg_sns.exists():
+            try:
+                data = json.loads(cfg_sns.read_text(encoding="utf-8"))
+                if "posts" in data:
+                    pub = sum(1 for p in data["posts"] if p.get("status") == "published")
+                    print(f"  [OK  ] {rel_sns}  ({len(data['posts'])} 投稿, {pub} 公開済)")
+                elif "platforms" in data:
+                    print(f"  [OK  ] {rel_sns}  ({len(data['platforms'])} プラットフォーム)")
+                else:
+                    print(f"  [OK  ] {rel_sns}")
+            except Exception as exc:
+                print(f"  [ERR ] {rel_sns}  → JSONパースエラー: {exc}")
+                ok = False
+        else:
+            print(f"  [----] {rel_sns}  (未作成)")
 
     print()
 

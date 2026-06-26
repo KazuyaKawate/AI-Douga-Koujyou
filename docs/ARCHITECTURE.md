@@ -1,9 +1,10 @@
-# アーキテクチャ — Creator Factory OS v4.2
+# アーキテクチャ — Creator Factory OS v4.4
 
 ## 概要
 
 Creator Factory OS はローカルファースト・JSONファースト設計の Streamlit マルチページアプリです。  
-v4.2 で **HQ Layer (`src/hq/`)** を追加し、Mission Control の日次オペレーションを支えるデータ層を分離しました。  
+v4.4 で **SNS Factory (`src/factories/sns/`)** を追加し、7プラットフォーム対応のSNS投稿管理工場が稼働しました。  
+v4.3 で **Note Factory (`src/factories/note/`)** を追加。v4.2 で **HQ Layer (`src/hq/`)** を追加し、Mission Control の日次オペレーションを支えるデータ層を分離しました。  
 外部APIはOpenAIテキスト生成のみ。AI CEOメッセージなどはAPIを呼ばないルールエンジンで生成します。
 
 ---

@@ -15,7 +15,7 @@ from src.director.director_planner import plan_exists as director_plan_exists
 
 st.set_page_config(page_title="制作ダッシュボード", page_icon="📊", layout="wide")
 st.title("📊 制作ダッシュボード")
-st.caption("全エピソードの制作進捗を一覧管理 | v4.2")
+st.caption("全エピソードの制作進捗を一覧管理 | v4.4")
 
 # ── Mission Control Summary (v4.2) ─────────────────────────────────────────────
 try:
@@ -41,6 +41,30 @@ try:
     mc4.metric("🎬 動画制作数", _actuals.get("video_count", 0))
     st.page_link("pages/17_Mission_Control.py", label="🎯 Mission Controlを開く →")
     st.divider()
+except Exception:
+    pass
+
+# ── SNS Factory Summary (v4.4) ─────────────────────────────────────────────────
+try:
+    import json as _json2
+    _sns_path = Path(__file__).parent.parent / "config" / "sns_posts.json"
+    if _sns_path.exists():
+        _sns_data = _json2.loads(_sns_path.read_text(encoding="utf-8"))
+        _sns_posts = _sns_data.get("posts", [])
+        _sns_draft = sum(1 for p in _sns_posts if p.get("status") == "draft")
+        _sns_sched = sum(1 for p in _sns_posts if p.get("status") == "scheduled")
+        _sns_pub = sum(1 for p in _sns_posts if p.get("status") == "published")
+        _sns_today = sum(1 for p in _sns_posts
+                         if p.get("status") == "published"
+                         and p.get("published_date") == __import__("datetime").date.today().isoformat())
+        st.markdown("##### 📱 SNS Factory サマリー")
+        sc1, sc2, sc3, sc4 = st.columns(4)
+        sc1.metric("📄 下書き", _sns_draft)
+        sc2.metric("🗓️ スケジュール済", _sns_sched)
+        sc3.metric("✅ 累計公開", _sns_pub)
+        sc4.metric("📅 今日の公開", _sns_today)
+        st.page_link("pages/19_SNS_Factory.py", label="📱 SNS投稿工場を開く →")
+        st.divider()
 except Exception:
     pass
 

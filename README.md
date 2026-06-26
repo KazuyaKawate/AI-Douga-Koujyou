@@ -1,4 +1,4 @@
-# 🎯 Creator Factory OS — v4.2 Dashboard Factory
+# 🎯 Creator Factory OS — v4.4 SNS Factory
 
 **Creator Factory OS** は、ソロクリエイターのための統合型デイリーオペレーティングシステムです。  
 毎朝アプリを開くと **Mission Control** が起動し、今日のKPI・タスク・工場状態・財務スナップショットを一画面で確認できます。  

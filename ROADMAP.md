@@ -30,6 +30,12 @@ Scene-by-scene direction planner (manual + OpenAI-generated). Director plan inje
 ### ✅ v4.2 — Dashboard Factory / Mission Control
 Creator Factory OS rebrand. Mission Control daily command center. KPI, task list, factory status, finance snapshot, AI CEO message, daily report export. `src/hq/` data layer.
 
+### ✅ v4.3 — Note Factory
+`pages/18_Note_Factory.py` — article lifecycle (draft → review → scheduled → published → archived), 6-criteria rule-based scoring (SEO/Readability/CTA/Story/Originality/Monetization 0-100), per-article revenue tracking, content repurposing (X/Threads/YouTube Shorts/video proposal), Mission Control KPI integration. `src/factories/note/` data layer.
+
+### ✅ v4.4 — SNS Factory
+`pages/19_SNS_Factory.py` — 7-platform SNS management (X, Threads, Instagram, TikTok, YouTube Shorts, LinkedIn, Facebook). Rule-based platform formatter. Hashtag generator. Repurpose from note articles and video episodes. Weekly schedule calendar. Overdue detection. Manual engagement tracking. Analytics stubs. Mission Control KPI integration. `src/factories/sns/` data layer.
+
 ---
 
 ## Next
@@ -59,27 +65,6 @@ Creator Factory OS rebrand. Mission Control daily command center. KPI, task list
 **Mission Control changes:**
 - `pages/18_Note_Factory.py` wired to "📝 note投稿工場を開く" button
 - note投稿工場 factory card shows live article counts
-
----
-
-### 🔲 v4.4 — SNS Factory _(Target: 2026-08)_
-
-**Goal:** Manage Twitter/X and Instagram posts from a single factory page.
-
-**Deliverables:**
-
-| Item | Description |
-|------|-------------|
-| `pages/19_SNS_Factory.py` | SNS factory page |
-| `src/factories/sns/` | Post manager, platform config |
-| `config/sns_posts.json` | Post queue (platform / content / schedule / status) |
-
-**Page sections:**
-1. **Post Queue** — by platform (Twitter/X, Instagram, YouTube Community)
-2. **Post Composer** — character counter per platform, hashtag suggestions (rule-based), image slot
-3. **Schedule View** — weekly calendar of planned posts
-4. **Engagement Log** — manual entry of likes, replies, impressions per post
-5. **KPI Integration** — "投稿済" status increments `sns_posts` actual
 
 ---
 
