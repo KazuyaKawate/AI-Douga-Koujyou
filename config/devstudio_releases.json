@@ -1,0 +1,28 @@
+{
+  "releases": [
+    {
+      "release_id": "REL-001",
+      "version": "4.8",
+      "title": "Automation Factory",
+      "date": "2026-06-27",
+      "commit_id": "",
+      "health_status": "green",
+      "summary": "Rule-based workflow automation across all factories.",
+      "notes": "7 modules, dry-run default, 5 built-in templates."
+    },
+    {
+      "release_id": "REL-002",
+      "version": "5.0-beta",
+      "title": "Development Studio",
+      "date": "2026-06-27",
+      "commit_id": "",
+      "health_status": "green",
+      "summary": "OS development headquarters. Roadmap, decisions, releases, health check, git status.",
+      "notes": "v5.0 Beta milestone 1."
+    }
+  ],
+  "meta": {
+    "version": "5.0-beta",
+    "created_at": "2026-06-27"
+  }
+}

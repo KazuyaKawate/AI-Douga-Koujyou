@@ -1,4 +1,4 @@
-"""sync_executor — Orchestrator for Google Sheets Connector (v5.2 Phase 2).
+"""sync_executor — Orchestrator for Google Sheets Connector (v5.2 Phase 3).
 
 Execution flow:
   1. load_settings()
@@ -13,6 +13,7 @@ Rules (enforced in code):
   - dry_run=True by default.
   - manual_execute=False by default.
   - auth_mode='disabled' by default → no API calls.
+  - Phase 3: gspread/google-auth readiness checks added; actual writes remain Phase 4+.
 """
 from __future__ import annotations
 import time
@@ -164,7 +165,7 @@ def get_connector_health(settings: dict | None = None) -> dict:
         "targets":          [t.get("target_id", "") for t in targets],
         "last_preview":     last_preview,
         "conflict_count":   0,
-        "phase":            "Phase 2 (connector foundation)",
+        "phase":            "Phase 3 (gspread readiness)",
     }
 
 

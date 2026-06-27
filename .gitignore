@@ -19,6 +19,16 @@ config/secrets.*
 .env.*
 !.env.example
 
+# Google Sheets 認証情報 — 絶対にコミットしないでください
+# credentials/ フォルダ内のJSONファイルはすべて除外（.gitkeepのみ追跡）
+credentials/
+!credentials/.gitkeep
+secrets/
+*.service-account.json
+*service_account*.json
+*oauth*.json
+token.json
+
 # 大容量メディアファイル（必要に応じてコメント解除）
 # videos/
 # voices/

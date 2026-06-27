@@ -1,0 +1,19 @@
+{
+  "roadmap": [
+    {
+      "roadmap_id": "RM-001",
+      "version": "5.0-beta",
+      "title": "Development Studio",
+      "type": "milestone",
+      "priority": "critical",
+      "status": "in_progress",
+      "planned_date": "2026-06-27",
+      "completed_date": "",
+      "notes": "First milestone of v5.0 Beta. Central dev management HQ."
+    }
+  ],
+  "meta": {
+    "version": "5.0-beta",
+    "created_at": "2026-06-27"
+  }
+}

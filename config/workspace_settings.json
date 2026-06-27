@@ -54,5 +54,14 @@
     "service_account_file": "",
     "oauth_client_file": "",
     "last_preview": null
+  },
+  "credential_paths": {
+    "service_account_file": "credentials/service-account.example.json",
+    "oauth_client_file": "credentials/oauth-client.example.json"
+  },
+  "google_sheets": {
+    "spreadsheet_id": "",
+    "worksheet_name": "",
+    "range": ""
   }
 }

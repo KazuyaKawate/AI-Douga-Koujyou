@@ -78,6 +78,8 @@ REQUIRED_FILES = [
     "pages/25_Development_Studio.py",
     "pages/26_AI_CEO.py",
     "pages/27_Approval_Center.py",
+    # Google Sheets Phase 3 credential safety
+    "credentials/.gitkeep",
     # Workspace Sync (v5.2 Phase 1)
     "src/workspace/__init__.py",
     "src/workspace/sync_models.py",
@@ -190,6 +192,7 @@ REQUIRED_FILES = [
     "src/core/ai_pipeline.py",
     "src/core/episode_manager.py",
     # Architecture docs
+    "docs/google_sheets_setup.md",
     "docs/FACTORY_SPEC.md",
     "docs/PROJECT_SPEC.md",
     "docs/ARCHITECTURE_DECISIONS.md",
@@ -857,6 +860,85 @@ def check() -> bool:
             except _pyc.PyCompileError as exc:
                 print(f"  [ERR ] py_compile: {_cm2}  → {exc}")
                 ok = False
+
+    print()
+
+    # Google Sheets Phase 3 Safety & gspread Readiness
+    print("[ Google Sheets Phase 3 安全性 & gspread 準備状況 ]")
+
+    # credentials/.gitkeep
+    _creds_dir  = ROOT / "credentials"
+    _gitkeep    = _creds_dir / ".gitkeep"
+    if not _creds_dir.exists():
+        print("  [MISS] credentials/  → フォルダが存在しません")
+        ok = False
+    elif not _gitkeep.exists():
+        print("  [MISS] credentials/.gitkeep  → .gitkeep が存在しません")
+        ok = False
+    else:
+        _real_jsons = list(_creds_dir.glob("*.json"))
+        if _real_jsons:
+            for _rj in _real_jsons:
+                print(f"  [WARN] credentials/{_rj.name}  → 認証JSONが検出されました。コミットしないでください。")
+        else:
+            print("  [OK  ] credentials/.gitkeep（実JSONなし — 安全）")
+
+    # docs/google_sheets_setup.md
+    _gss_doc = ROOT / "docs" / "google_sheets_setup.md"
+    if _gss_doc.exists():
+        print(f"  [OK  ] docs/google_sheets_setup.md  ({_gss_doc.stat().st_size / 1024:.1f} KB)")
+    else:
+        print("  [----] docs/google_sheets_setup.md  (未作成)")
+
+    # .gitignore credential protections
+    _gi_path = ROOT / ".gitignore"
+    _gi_required = ("credentials/", ".gitkeep", "service_account", "token.json")
+    if not _gi_path.exists():
+        print("  [MISS] .gitignore  → 存在しません")
+        ok = False
+    else:
+        _gi_content = _gi_path.read_text(encoding="utf-8", errors="replace")
+        _gi_missing = [p for p in _gi_required if p not in _gi_content]
+        if _gi_missing:
+            print(f"  [WARN] .gitignore  → 次のパターンが見つかりません: {', '.join(_gi_missing)}")
+        else:
+            print("  [OK  ] .gitignore 認証保護パターン（credentials/, service_account, token.json）")
+
+    # gspread / google-auth
+    import importlib.metadata as _imd
+    def _pkg_ver(pkg: str) -> tuple[bool, str]:
+        try:
+            return True, _imd.version(pkg)
+        except Exception:
+            return False, ""
+    _gs_ok, _gs_ver = _pkg_ver("gspread")
+    _ga_ok, _ga_ver = _pkg_ver("google-auth")
+    if _gs_ok and _ga_ok:
+        print(f"  [OK  ] gspread {_gs_ver} / google-auth {_ga_ver}  (Phase 4+ で使用)")
+    else:
+        _missing_pkgs = [p for p, ok2 in [("gspread", _gs_ok), ("google-auth", _ga_ok)] if not ok2]
+        print(f"  [----] gspread/google-auth 未インストール: {', '.join(_missing_pkgs)}"
+              "  → pip install gspread google-auth  (Phase 4+ まで不要)")
+
+    # Phase 3 composite readiness via sync_validator
+    try:
+        import sys as _sys6
+        _sys6.path.insert(0, str(ROOT))
+        from src.workspace.sync_validator import get_phase3_readiness as _p3r
+        _p3 = _p3r()
+        _p3_ok = _p3["ready"]
+        _p3_total = len(_p3["checks"])
+        _p3_pass  = sum(1 for c in _p3["checks"] if c["ok"])
+        _p3_label = "安全" if _p3_ok else "要確認"
+        print(
+            f"  [{'OK  ' if _p3_ok else 'WARN'}] Phase 3 Readiness  "
+            f"({_p3_pass}/{_p3_total} チェック通過, {_p3_label})"
+        )
+        if not _p3_ok:
+            for _blk in _p3.get("blockers", []):
+                print(f"  [WARN]   → {_blk[:80]}")
+    except Exception as exc:
+        print(f"  [----] Phase 3 Readiness  → {exc}")
 
     print()
 

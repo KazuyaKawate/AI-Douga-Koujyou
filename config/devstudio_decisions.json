@@ -1,0 +1,19 @@
+{
+  "decisions": [
+    {
+      "decision_id": "DEC-001",
+      "date": "2026-06-27",
+      "version": "5.0-beta",
+      "theme": "Architecture",
+      "decision": "Start v5.0 Beta with Development Studio as first milestone.",
+      "reason": "Need a central dev management HQ before adding new factories.",
+      "expected_effect": "Better visibility into roadmap, decisions, and release history.",
+      "impact": "high",
+      "status": "accepted"
+    }
+  ],
+  "meta": {
+    "version": "5.0-beta",
+    "created_at": "2026-06-27"
+  }
+}

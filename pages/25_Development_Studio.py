@@ -605,7 +605,7 @@ with tabs[8]:
 with tabs[9]:
     st.subheader("🔄 Google Workspace Sync")
     st.caption(
-        "v5.2 Phase 2 · ローカルJSON → Google Sheets コネクター基盤。"
+        "v5.2 Phase 3 · gspread 準備完了チェック。"
         "**手動同期のみ。自動実行なし。ドライランデフォルト。認証情報はリポジトリに保存しない。**"
     )
 
@@ -623,6 +623,7 @@ with tabs[9]:
             get_enabled_targets as _ws_targets,
             validate_connector_settings as _ws_validate_conn,
             check_no_credentials_committed as _ws_cred_check,
+            get_phase3_readiness as _ws_phase3_ready,
         )
         from src.workspace.sync_engine import (
             generate_preview as _ws_preview,
@@ -662,6 +663,43 @@ with tabs[9]:
 
         st.divider()
 
+        # ── Phase 3 Readiness Checklist ───────────────────────────────────────
+        st.markdown("**📋 Phase 3 準備状況チェックリスト**")
+        st.caption(
+            "gspread 統合（Phase 4+）前に必要なセキュリティ確認と依存パッケージ状況。"
+            "🔒 マークはセキュリティ必須項目。📦 マークはオプション（Phase 4+ で必要）。"
+        )
+
+        try:
+            _p3 = _ws_phase3_ready(_ws_settings)
+            _p3_checks = _p3.get("checks", [])
+
+            for _chk in _p3_checks:
+                _is_opt = _chk.get("optional", False)
+                _icon = "✅" if _chk["ok"] else ("📦" if _is_opt else "🔴")
+                _prefix = "📦 " if _is_opt else "🔒 "
+                _label_text = f"{_prefix}{_chk['label']}"
+                if _chk["ok"]:
+                    st.success(f"{_icon} **{_label_text}** — {_chk['detail']}")
+                elif _is_opt:
+                    st.info(f"{_icon} **{_label_text}** — {_chk['detail']}")
+                else:
+                    st.error(f"{_icon} **{_label_text}** — {_chk['detail']}")
+
+            if _p3["ready"]:
+                st.success(
+                    "🔒 **セキュリティチェック完了** — "
+                    "認証情報の保護が確認されました。"
+                )
+            else:
+                for _blk in _p3["blockers"]:
+                    st.warning(f"⚠️ {_blk}")
+
+        except Exception as _p3_exc:
+            st.warning(f"Phase 3 チェック実行エラー: {_p3_exc}")
+
+        st.divider()
+
         # ── Connection Status Banner ──────────────────────────────────────────
         st.markdown("**🔌 接続ステータス**")
         if _ws_conn["status"] == "unconfigured":
@@ -678,7 +716,7 @@ with tabs[9]:
         else:
             st.info(
                 f"{_ws_conn['icon']} **{_ws_conn['label']}** — "
-                "Phase 2: コネクター基盤。Phase 3+ でgspread実際書き込み実装予定。"
+                "Phase 3: gspread 準備完了。Phase 4+ でライブ書き込み実装予定。"
             )
 
         st.divider()
@@ -782,7 +820,7 @@ with tabs[9]:
         # ── Manual Execute button (disabled by default) ───────────────────────
         st.markdown("**⚡ 手動実行（Google Sheetsへの書き込み）**")
         st.warning(
-            "⚠️ Phase 2 では実際の書き込みは実装されていません（Phase 3+ で gspread 統合予定）。  \n"
+            "⚠️ Phase 3 では実際の書き込みは実装されていません（Phase 4+ で gspread ライブ統合予定）。  \n"
             "実行ボタンは **auth_mode が 'disabled' の間は常に無効** です。"
         )
         _exec_enabled = _ws_auth["auth_mode"] != "disabled" and _ws_cred["ready"]
@@ -796,7 +834,7 @@ with tabs[9]:
                 disabled=True,
                 help=(
                     "auth_mode='disabled' のため無効。"
-                    "Phase 3+ (gspread) 実装後に有効になります。"
+                    "Phase 4+ (gspread ライブ) 実装後に有効になります。"
                 ),
             )
 

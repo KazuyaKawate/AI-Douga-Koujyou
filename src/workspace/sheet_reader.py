@@ -1,11 +1,13 @@
-"""sheet_reader — Google Sheets read abstraction for Creator Factory OS (v5.2 Phase 2).
+"""sheet_reader — Google Sheets read abstraction for Creator Factory OS (v5.2 Phase 3).
 
 If auth_mode == 'disabled' (default): returns dry-run sample data. No API call.
-Phase 3+: will call the Google Sheets API when credentials are configured.
+If gspread is not installed: returns a safe error, never crashes.
+If credential file is missing: returns a safe error, never crashes.
+Phase 4+: will call the Google Sheets API when all requirements are met.
 """
 from __future__ import annotations
 
-from src.workspace.google_auth import get_auth_config, get_credential_status
+from src.workspace.google_auth import get_auth_config, get_credential_status, get_dependency_status
 
 # Sample data returned in dry-run / disabled mode (mirrors column mappings in sheets_sync.py)
 SAMPLE_SHEET_DATA: dict[str, list[dict]] = {
@@ -43,24 +45,43 @@ def read_sheet(sheet_name: str, settings: dict | None = None) -> tuple[list[dict
     if auth_cfg["auth_mode"] == "disabled":
         return SAMPLE_SHEET_DATA.get(sheet_name, []), None
 
+    # Dependency guard — must come before credential check
+    deps = get_dependency_status()
+    if not deps["all_ready"]:
+        missing = ", ".join(deps["missing"])
+        return [], (
+            f"依存パッケージが不足しています: {missing}  "
+            f"→ {deps['install_hint']}"
+        )
+
     cred = get_credential_status(settings)
     if not cred["ready"]:
         return [], f"認証エラー: {cred['label']}"
 
-    # Phase 3+: actual API call here (gspread / google-api-python-client).
+    # Phase 4+: actual API call here (gspread / google-api-python-client).
+    # Returns sample data in Phase 3 — no live API call yet.
     return SAMPLE_SHEET_DATA.get(sheet_name, []), None
 
 
 def get_reader_status(settings: dict | None = None) -> dict:
-    """Return reader readiness status. No side effects."""
-    auth_cfg = get_auth_config(settings)
-    cred = get_credential_status(settings)
-    dry_run = auth_cfg["auth_mode"] == "disabled"
-    return {
-        "auth_mode":        auth_cfg["auth_mode"],
-        "dry_run_mode":     dry_run,
-        "credential_ready": cred["ready"],
-        "status":           "dry_run" if dry_run else cred["status"],
-        "label":            "ドライラン（サンプルデータ）" if dry_run else cred["label"],
-        "icon":             "🔍" if dry_run else cred["icon"],
-    }
+    """Return reader readiness status. No side effects, never raises."""
+    try:
+        auth_cfg = get_auth_config(settings)
+        cred     = get_credential_status(settings)
+        deps     = get_dependency_status()
+        dry_run  = auth_cfg["auth_mode"] == "disabled"
+        return {
+            "auth_mode":        auth_cfg["auth_mode"],
+            "dry_run_mode":     dry_run,
+            "credential_ready": cred["ready"],
+            "deps_ready":       deps["all_ready"],
+            "status":           "dry_run" if dry_run else cred["status"],
+            "label":            "ドライラン（サンプルデータ）" if dry_run else cred["label"],
+            "icon":             "🔍" if dry_run else cred["icon"],
+        }
+    except Exception as exc:
+        return {
+            "auth_mode": "disabled", "dry_run_mode": True,
+            "credential_ready": False, "deps_ready": False,
+            "status": "error", "label": str(exc), "icon": "🔴",
+        }

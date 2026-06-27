@@ -1,16 +1,21 @@
-"""sheet_writer — Google Sheets write abstraction for Creator Factory OS (v5.2 Phase 2).
+"""sheet_writer — Google Sheets write abstraction for Creator Factory OS (v5.2 Phase 3).
 
 TRIPLE-LOCK WRITE GUARD (all three must be true to write):
   1. auth_mode != 'disabled'
   2. dry_run == False
   3. manual_execute == True
 
-Default behavior is always preview-only.
-No API calls in Phase 2. Actual writes are Phase 3+ (gspread integration).
+ADDITIONAL GUARDS (Phase 3):
+  4. gspread installed
+  5. google-auth installed
+  6. credential file exists
+
+Default behavior is always preview-only. Never crashes UI. Never writes by accident.
+Actual writes are Phase 4+ (live gspread call).
 """
 from __future__ import annotations
 
-from src.workspace.google_auth import get_auth_config, get_credential_status
+from src.workspace.google_auth import get_auth_config, get_credential_status, get_dependency_status
 
 
 def _can_write(auth_mode: str, dry_run: bool, manual_execute: bool) -> tuple[bool, str]:
@@ -57,13 +62,20 @@ def write_rows(
     if not can_write:
         return base
 
+    # Dependency guard — must be checked before credential and API access
+    deps = get_dependency_status()
+    if not deps["all_ready"]:
+        missing = ", ".join(deps["missing"])
+        base["reason"] = f"依存パッケージが不足しています: {missing} → {deps['install_hint']}"
+        return base
+
     cred = get_credential_status(settings)
     if not cred["ready"]:
         base["reason"] = f"認証エラー: {cred['label']}"
         return base
 
-    # Phase 3+: actual gspread write goes here.
-    base["reason"] = "Phase 3+ で gspread 実装予定"
+    # Phase 4+: actual gspread write goes here.
+    base["reason"] = "Phase 4+ で gspread 実装予定（現在: Phase 3 準備完了）"
     return base
 
 
@@ -78,6 +90,6 @@ def get_writer_status(settings: dict | None = None) -> dict:
     return {
         "auth_mode":     auth_cfg["auth_mode"],
         "write_enabled": auth_cfg["auth_mode"] != "disabled",
-        "phase":         "Phase 2 (preview-only)",
-        "note":          "Actual writes require Phase 3+ gspread integration",
+        "phase":         "Phase 3 (preview-only, gspread ready)",
+        "note":          "Actual writes require Phase 4+ gspread live integration",
     }

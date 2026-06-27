@@ -6,6 +6,39 @@ Versions are cumulative; each release builds on the previous stable base.
 
 ---
 
+## [v5.2 Phase 3] — 2026-06-27 — Google Sheets Credential Safety & gspread Readiness
+
+**Codename:** Google Sheets Credential Safety & gspread Readiness  
+**Upgrade path:** v5.2 Phase 2 → v5.2 Phase 3 (additive, no breaking changes)
+
+### Added
+- `credentials/` — credential storage folder (tracked via `.gitkeep` only; real JSON files excluded by `.gitignore`)
+- `credentials/.gitkeep` — placeholder so the folder is tracked without real credential files
+- `docs/google_sheets_setup.md` — step-by-step guide for optional Google Sheets connection; covers security principles, gspread install, service account creation, `workspace_settings.json` fields; auth_mode stays `disabled` by default
+- `src/workspace/sync_validator.check_gitignore_protections()` — verifies `.gitignore` contains all required credential protection patterns
+- `src/workspace/sync_validator.check_credentials_gitkeep()` — verifies `credentials/.gitkeep` exists and no real JSON files are present in `credentials/`
+- `src/workspace/sync_validator.check_phase3_dependencies()` — checks gspread + google-auth via `importlib.metadata`; never raises; no circular import
+- `src/workspace/sync_validator.get_phase3_readiness()` — composite Phase 3 safety check: .gitignore, .gitkeep, no-cred-committed, auth_mode=disabled, gspread/google-auth status, spreadsheet_id status
+
+### Changed
+- `src/workspace/google_auth.py` — docstring updated to Phase 3; `get_dependency_status()` added (gspread + google-auth check via importlib.metadata); `build_client()` placeholder updated for Phase 3 context
+- `src/workspace/sheet_reader.py` — docstring updated to Phase 3; dependency guard added before credential check
+- `src/workspace/sheet_writer.py` — docstring updated to Phase 3; dependency guard (gspread + google-auth) added to `write_rows()`; `get_writer_status()` phase label updated to "Phase 3"
+- `src/workspace/sync_executor.py` — docstring updated to Phase 3; `get_connector_health()` phase label updated to "Phase 3 (gspread readiness)"
+- `config/workspace_settings.json` — `meta.version` updated to "5.2 Phase 3"; `connector` section updated to Phase 3
+- `.gitignore` — added `credentials/` exclusion with `!credentials/.gitkeep` exception; added `*.service-account.json`, `*service_account*.json`, `*oauth*.json`, `token.json`
+- `pages/25_Development_Studio.py` — Tab 10: caption updated to Phase 3; Phase 3 readiness checklist section added (calls `get_phase3_readiness()`; per-check status with 🔒 safety / 📦 optional distinction); Manual Execute button help text updated to Phase 4+
+- `scripts/check_project.py` — added `credentials/.gitkeep` and `docs/google_sheets_setup.md` to REQUIRED_FILES; new "Google Sheets Phase 3 安全性 & gspread 準備状況" section: credentials folder + .gitkeep check, google_sheets_setup.md check, .gitignore pattern check, gspread/google-auth package check, composite `get_phase3_readiness()` result
+
+### Design decisions
+- `auth_mode` remains `"disabled"` — Phase 3 is safety + readiness only; no live API calls
+- `credentials/` folder is tracked via `.gitkeep`; all real JSON files excluded in `.gitignore`
+- `check_phase3_dependencies()` in `sync_validator` uses `importlib.metadata` directly to avoid circular import with `google_auth.py`
+- gspread/google-auth absence is NOT a blocker — it is flagged as optional (Phase 4+ requirement)
+- `get_phase3_readiness()` returns structured `checks` list for both UI display and CLI health check
+
+---
+
 ## [v5.2 Phase 2] — 2026-06-27 — Google Sheets Connector Foundation
 
 **Codename:** Google Sheets Connector Foundation  
