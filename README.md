@@ -1,6 +1,7 @@
-# 🎯 Creator Factory OS — v5.0 Beta — Development Studio
+# 🎯 Creator Factory OS — v5.0 Beta — AI CEO Core
 
-**v5.0 Beta が始まりました。** 最初のマイルストーンは **🛠️ Development Studio** — OS開発の司令塔です。ロードマップ・リリース・決定ログ・ミーティングノートを一元管理し、ヘルスチェックとGitステータスをリアルタイムで確認できます。
+**v5.0 Beta Phase 2:** **🧠 AI CEO Core** — OSの全データを横断分析し、健全度・優先度・リスク・機会・推奨アクションを提示するエグゼクティブ決定レイヤー。外部API不使用・自動実行なし・推奨のみ。  
+**v5.0 Beta Phase 1:** **🛠️ Development Studio** — ロードマップ・リリース・決定ログ・ミーティングノートを管理するOS開発の司令塔。
 
 **Creator Factory OS** は、ソロクリエイターのための統合型デイリーオペレーティングシステムです。  
 毎朝アプリを開くと **Mission Control** が起動し、今日のKPI・タスク・工場状態・財務スナップショットを一画面で確認できます。  

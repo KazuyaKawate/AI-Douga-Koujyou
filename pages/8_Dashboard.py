@@ -120,6 +120,31 @@ try:
 except Exception:
     pass
 
+# ── AI CEO Executive Summary (v5.0-beta) ──────────────────────────────────────
+try:
+    from src.aiceo.executive_engine import collect_snapshot as _ceo_s
+    from src.aiceo.risk_engine import identify_risks as _ceo_r
+    from src.aiceo.opportunity_engine import identify_opportunities as _ceo_o
+    from src.aiceo.executive_dashboard import compute_overall_health as _ceo_h
+    from src.aiceo.kpi_engine import analyze_kpi as _ceo_k
+    _cs = _ceo_s()
+    _cr = _ceo_r(_cs)
+    _co = _ceo_o(_cs)
+    _ch = _ceo_h(_cs, _cr)
+    _ck = _ceo_k(_cs)
+    st.markdown("##### 🧠 AI CEO Executive Summary")
+    es1, es2, es3, es4, es5, es6 = st.columns(6)
+    es1.metric("🧠 OS Health",    f"{_ch['icon']} {_ch['label']}")
+    es2.metric("📊 Score",        f"{_ch['score']}%")
+    es3.metric("🔴 High Risks",   _ch["high_risks"])
+    es4.metric("💡 Opportunities", len(_co))
+    es5.metric("📊 KPI Avg",      f"{_ck.get('avg_pct', 0)}%")
+    es6.metric("⚠️ Total Risks",  len(_cr))
+    st.page_link("pages/26_AI_CEO.py", label="🧠 AI CEO を開く →")
+    st.divider()
+except Exception:
+    pass
+
 # ── Development Studio Summary (v5.0-beta) ────────────────────────────────────
 try:
     from src.devstudio.roadmap_manager import get_summary as _ds_rm_sum

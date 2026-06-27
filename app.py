@@ -47,6 +47,7 @@ WORKFLOW = [
     ("📁", "プロジェクト管理", "シリーズ管理・一括操作・統計・設定",         None),
     ("🤖", "AI Studio",        "マルチエージェント制作スタジオ",             None),
     ("🛠️", "Development Studio", "OS開発HQ — ロードマップ・決定ログ・リリース管理", None),
+    ("🧠", "AI CEO",           "エグゼクティブ分析・優先度・リスク・推奨アクション", None),
 ]
 
 st.subheader("制作フロー")
@@ -183,6 +184,17 @@ for col, (icon, title, desc, folder) in zip(cols, WORKFLOW):
         try:
             from src.devstudio.roadmap_manager import get_summary as _ds_sum
             count = _ds_sum()["in_progress"]
+        except Exception:
+            count = 0
+    elif title == "AI CEO":
+        try:
+            from src.aiceo.executive_engine import collect_snapshot as _ceo_snap
+            from src.aiceo.risk_engine import identify_risks as _ceo_risks
+            from src.aiceo.executive_dashboard import compute_overall_health as _ceo_health
+            _ccs = _ceo_snap()
+            _ccr = _ceo_risks(_ccs)
+            _cch = _ceo_health(_ccs, _ccr)
+            count = _cch["score"]
         except Exception:
             count = 0
     else:

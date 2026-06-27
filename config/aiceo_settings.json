@@ -1,0 +1,15 @@
+{
+  "meta": {
+    "version": "5.0-beta",
+    "module_type": "executive",
+    "created_at": "2026-06-27"
+  },
+  "auto_refresh": false,
+  "max_report_history": 30,
+  "priority_top_n": 10,
+  "risk_threshold_high": 3,
+  "opportunity_top_n": 8,
+  "recommendation_top_n": 10,
+  "show_confidence": true,
+  "brief_sections": ["health", "kpi", "revenue", "top_risk", "top_recommendation"]
+}

@@ -683,6 +683,48 @@ with auto_c2:
 
 st.divider()
 
+# ── Section 7.12: AI CEO Core ────────────────────────────────────────────────
+
+st.subheader("🧠 AI CEO Core")
+
+ceo_c1, ceo_c2 = st.columns([3, 2])
+
+with ceo_c1:
+    st.markdown("**Executive Decision Layer — Health · Priorities · Risks · Recommendations**")
+    try:
+        from src.aiceo.executive_engine import collect_snapshot as _ceo_snap
+        from src.aiceo.risk_engine import identify_risks as _ceo_risks
+        from src.aiceo.executive_dashboard import compute_overall_health as _ceo_health
+        from src.aiceo.kpi_engine import analyze_kpi as _ceo_kpi
+        _cs = _ceo_snap()
+        _cr = _ceo_risks(_cs)
+        _ch = _ceo_health(_cs, _cr)
+        _ck = _ceo_kpi(_cs)
+        cc1, cc2, cc3, cc4 = st.columns(4)
+        cc1.metric("🧠 OS Health", f"{_ch['icon']} {_ch['label']}")
+        cc2.metric("📊 Score",     f"{_ch['score']}%")
+        cc3.metric("🔴 High Risks", _ch["high_risks"])
+        cc4.metric("📊 KPI Avg",   f"{_ck.get('avg_pct', 0)}%")
+        if _ch["high_risks"] > 0:
+            top_r = next((r for r in _cr if r.get("severity") == "high"), None)
+            if top_r:
+                st.caption(f"最重要リスク: {top_r['icon']} {top_r['title']}")
+        else:
+            st.caption(f"✅ 重大リスクなし | 工場健全性正常")
+    except Exception:
+        st.caption("AI CEO データを読み込めませんでした。")
+
+with ceo_c2:
+    ceo_page = ROOT / "pages" / "26_AI_CEO.py"
+    if ceo_page.exists():
+        st.page_link("pages/26_AI_CEO.py", label="🧠 AI CEO を開く →",
+                     use_container_width=True)
+    else:
+        st.button("🧠 AI CEO 🚧", disabled=True, use_container_width=True,
+                  key="nav_aiceo", help="Coming Soon")
+
+st.divider()
+
 # ── Section 7.11: Development Studio ─────────────────────────────────────────
 
 st.subheader("🛠️ Development Studio")

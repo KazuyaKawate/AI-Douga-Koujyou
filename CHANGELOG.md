@@ -6,6 +6,42 @@ Versions are cumulative; each release builds on the previous stable base.
 
 ---
 
+## [v5.0-beta Phase 2] — 2026-06-27 — AI CEO Core
+
+**Codename:** AI CEO Core  
+**Upgrade path:** v5.0-beta (Development Studio) → Phase 2 (additive, no breaking changes)
+
+### Added
+- `pages/26_AI_CEO.py` — 7-tab executive layer (CEO Daily Brief / KPI Summary / Priorities / Opportunities / Risks / Recommendations / Executive Report)
+- `src/aiceo/__init__.py` — package marker; module_type = "executive"
+- `src/aiceo/executive_engine.py` — read-only OS snapshot collector across all factories
+- `src/aiceo/executive_dashboard.py` — overall health score (0-100), CEO brief generator
+- `src/aiceo/priority_engine.py` — Top 10 priorities scored by Impact(40%)+Urgency(30%)+ROI(20%)+Dependencies(10%)
+- `src/aiceo/kpi_engine.py` — KPI achievement analysis with per-metric status and alerts
+- `src/aiceo/opportunity_engine.py` — identifies ROI, unused factory, automation, content opportunities
+- `src/aiceo/risk_engine.py` — identifies revenue, factory, roadmap, KPI, project delay risks
+- `src/aiceo/recommendation_engine.py` — generates up to 10 recommendations (reason/impact/confidence/factory/action); never executes
+- `src/aiceo/executive_report.py` — full Markdown executive report; export to `reports/aiceo/`
+- `config/aiceo_settings.json` — AI CEO module settings
+- `config/aiceo_history.json` — analysis history store
+- `reports/aiceo/` — executive report export directory
+
+### Changed
+- `pages/17_Mission_Control.py` — Section 7.12 AI CEO card (health score, high risks, KPI avg)
+- `pages/8_Dashboard.py` — AI CEO Executive Summary strip at top (6 metrics)
+- `app.py` — AI CEO in WORKFLOW with OS health score as count
+- `scripts/check_project.py` — `src/aiceo/` folder, 9 aiceo files, 2 aiceo config files, `reports/aiceo/`
+
+### Architecture
+- AI CEO is an **Executive Module**, NOT a Factory. Not registered in FactoryRegistry.
+- Strictly read-only — executive_engine.py never writes to any data store
+- No external API calls — all analysis is rule-based
+- No automatic execution — recommendations are text only
+- All engines degrade gracefully when factory data is unavailable
+- `@st.cache_data(ttl=60)` applied to snapshot collection for performance
+
+---
+
 ## [v5.0-beta] — 2026-06-27 — Development Studio
 
 **Codename:** Development Studio  

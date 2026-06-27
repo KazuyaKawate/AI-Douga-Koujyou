@@ -21,6 +21,7 @@ REQUIRED_FOLDERS = [
     "reports/monthly",
     "reports/analytics",
     "reports/automation",
+    "reports/aiceo",
     "reports/devstudio",
     "src",
     "src/agents",
@@ -32,6 +33,7 @@ REQUIRED_FOLDERS = [
     "src/factories/accounting",
     "src/factories/analytics",
     "src/factories/automation",
+    "src/aiceo",
     "src/devstudio",
     "src/devtools",
     "src/hq",
@@ -70,6 +72,17 @@ REQUIRED_FILES = [
     "pages/23_Analytics_Factory.py",
     "pages/24_Automation_Factory.py",
     "pages/25_Development_Studio.py",
+    "pages/26_AI_CEO.py",
+    # AI CEO Core — Executive Module (v5.0-beta)
+    "src/aiceo/__init__.py",
+    "src/aiceo/executive_engine.py",
+    "src/aiceo/executive_dashboard.py",
+    "src/aiceo/priority_engine.py",
+    "src/aiceo/kpi_engine.py",
+    "src/aiceo/opportunity_engine.py",
+    "src/aiceo/risk_engine.py",
+    "src/aiceo/recommendation_engine.py",
+    "src/aiceo/executive_report.py",
     # Dev Studio — OS Management
     "src/devstudio/__init__.py",
     "src/devstudio/roadmap_manager.py",
@@ -223,6 +236,9 @@ OPTIONAL_FILES = [
     "config/automation_workflows.json",
     "config/automation_runs.json",
     "config/automation_settings.json",
+    # AI CEO Core config (v5.0-beta)
+    "config/aiceo_settings.json",
+    "config/aiceo_history.json",
     # Dev Studio config (v5.0-beta)
     "config/devstudio_roadmap.json",
     "config/devstudio_releases.json",
@@ -384,6 +400,35 @@ def check() -> bool:
         print(f"  [OK  ] reports/automation/  ({len(auto_rpts)} レポート)")
     else:
         print("  [----] reports/automation/  (未作成)")
+
+    print()
+
+    # AI CEO Core (v5.0-beta)
+    print("[ AI CEO Core データ ]")
+    _ceo_cfgs = [
+        ("config/aiceo_settings.json", None),
+        ("config/aiceo_history.json",  "history"),
+    ]
+    for cfg_name, key in _ceo_cfgs:
+        p = ROOT / cfg_name
+        if p.exists():
+            try:
+                data = json.loads(p.read_text(encoding="utf-8"))
+                if key and key in data:
+                    print(f"  [OK  ] {cfg_name}  ({len(data[key])} {key})")
+                else:
+                    print(f"  [OK  ] {cfg_name}")
+            except Exception as exc:
+                print(f"  [ERR ] {cfg_name}  → JSONパースエラー: {exc}")
+                ok = False
+        else:
+            print(f"  [----] {cfg_name}  (未作成)")
+    ceo_reports_dir = ROOT / "reports" / "aiceo"
+    if ceo_reports_dir.exists():
+        ceo_rpts = list(ceo_reports_dir.glob("*_executive_report.md"))
+        print(f"  [OK  ] reports/aiceo/  ({len(ceo_rpts)} レポート)")
+    else:
+        print("  [----] reports/aiceo/  (未作成)")
 
     print()
 

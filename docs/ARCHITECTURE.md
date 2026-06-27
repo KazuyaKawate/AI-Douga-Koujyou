@@ -3,7 +3,8 @@
 ## 概要
 
 Creator Factory OS はローカルファースト・JSONファースト設計の Streamlit マルチページアプリです。  
-**v5.0-beta** で **Development Studio (`src/devstudio/`)** を追加。OS開発HQとしてロードマップ・リリース・決定ログ・ミーティングノートを管理します。Development StudioはFactory ではなく **OS Management** モジュールです。FactoryRegistryには登録しません。  
+**v5.0-beta Phase 2** で **AI CEO Core (`src/aiceo/`)** を追加。OSの全データを横断分析する**エグゼクティブモジュール**。健全度スコア・優先度ランキング・リスク識別・機会発見・推奨アクション生成を行います。FactoryではなくExecutive Moduleとして分類します。外部API不使用・自動実行なし・読み取り専用。  
+**v5.0-beta Phase 1** で **Development Studio (`src/devstudio/`)** を追加。OS開発HQとしてロードマップ・リリース・決定ログ・ミーティングノートを管理します。Development StudioはFactory ではなく **OS Management** モジュールです。FactoryRegistryには登録しません。  
 v4.8 で **Automation Factory (`src/factories/automation/`)** を追加。v4.7 で **Analytics Factory** 。v4.4 で **SNS Factory (`src/factories/sns/`)** を追加し、7プラットフォーム対応のSNS投稿管理工場が稼働しました。  
 v4.3 で **Note Factory (`src/factories/note/`)** を追加。v4.2 で **HQ Layer (`src/hq/`)** を追加し、Mission Control の日次オペレーションを支えるデータ層を分離しました。  
 外部APIはOpenAIテキスト生成のみ。AI CEOメッセージなどはAPIを呼ばないルールエンジンで生成します。
