@@ -58,6 +58,7 @@ tabs = st.tabs([
     "🏥 Health Check",
     "🔀 Git Status",
     "📤 Spreadsheet Export",
+    "📦 Module SDK",
 ])
 
 # ── Tab 1: Overview ────────────────────────────────────────────────────────────
@@ -508,3 +509,93 @@ with tabs[7]:
             st.caption(f"• `{f['name']}` — {f['size_kb']} KB — {f['modified']}")
     else:
         st.caption("No exports yet. Click Export to generate CSV files.")
+
+# ── Tab 9: Module SDK ──────────────────────────────────────────────────────────
+with tabs[8]:
+    st.subheader("📦 Module SDK — Self-Registration Registry")
+    st.caption("v5.1 · すべてのモジュールのMANIFEST情報を一覧表示。外部API不使用。読み取り専用。")
+
+    try:
+        from src.sdk.registry_builder import ModuleRegistry, TYPE_ICONS, STATUS_ICONS
+        from src.sdk.module_loader import load_all_with_errors
+        from src.sdk.module_manifest import SDK_VERSION, MODULE_TYPES
+
+        sdk_sum = ModuleRegistry.get_summary()
+
+        # Summary metrics
+        sm1, sm2, sm3, sm4, sm5, sm6 = st.columns(6)
+        sm1.metric("📦 SDK Version",    f"v{sdk_sum['sdk_version']}")
+        sm2.metric("🗂️ Total Modules",  sdk_sum["total"])
+        sm3.metric("✅ Valid",           sdk_sum["valid"])
+        sm4.metric("❌ Invalid",         sdk_sum["invalid"])
+        sm5.metric("🏭 Factories",       sdk_sum["factories"])
+        sm6.metric("📤 Registry Export", "✅" if sdk_sum["registry_exported"] else "—",
+                   help=f"最終エクスポート: {sdk_sum.get('registry_age', '—')}")
+
+        st.divider()
+
+        # Type breakdown
+        st.markdown("**モジュールタイプ別**")
+        tc1, tc2, tc3, tc4 = st.columns(4)
+        tc1.metric("🏭 Factory",     sdk_sum["factories"])
+        tc2.metric("🧠 Executive",   sdk_sum["executive"])
+        tc3.metric("🛠️ Development", sdk_sum["development"])
+        tc4.metric("🔧 Utility",     sdk_sum["utilities"])
+
+        st.divider()
+
+        # Registry export button
+        exp_col, _ = st.columns([1, 3])
+        with exp_col:
+            if st.button("📤 config/module_registry.json を生成", type="primary", use_container_width=True,
+                         key="sdk_export_registry"):
+                try:
+                    out = ModuleRegistry.export_registry()
+                    st.success(f"✅ エクスポート完了: `{out.relative_to(ROOT)}`")
+                except Exception as exc:
+                    st.error(f"エクスポートエラー: {exc}")
+
+        st.divider()
+
+        # Module cards
+        st.markdown("**登録モジュール一覧**")
+        pairs = load_all_with_errors()
+        for manifest, errors in pairs:
+            is_valid = len(errors) == 0
+            type_icon = TYPE_ICONS.get(manifest.get("module_type", ""), "📦")
+            status_icon = STATUS_ICONS.get(manifest.get("status", "stable"), "✅")
+            valid_badge = "✅" if is_valid else f"❌ {len(errors)} エラー"
+            label = (
+                f"{type_icon} **{manifest.get('module_name', '?')}** "
+                f"v{manifest.get('version', '?')} · "
+                f"{status_icon} {manifest.get('status', '?')} · {valid_badge}"
+            )
+            with st.expander(label, expanded=False):
+                c_left, c_right = st.columns(2)
+                with c_left:
+                    st.markdown(f"**module_id**: `{manifest.get('module_id', '—')}`")
+                    st.markdown(f"**display_name**: {manifest.get('display_name', '—')}")
+                    st.markdown(f"**module_type**: {manifest.get('module_type', '—')}")
+                    st.markdown(f"**version**: {manifest.get('version', '—')}")
+                    st.markdown(f"**sdk_version**: {manifest.get('sdk_version', '—')}")
+                    st.markdown(f"**min_os**: {manifest.get('minimum_os_version', '—')}")
+                    st.markdown(f"**status**: {manifest.get('status', '—')}")
+                with c_right:
+                    st.markdown(f"**page_path**: `{manifest.get('page_path', '—')}`")
+                    st.markdown(f"**package_path**: `{manifest.get('package_path', '—')}`")
+                    st.markdown(f"**entrypoint**: `{manifest.get('entrypoint', '—')}`")
+                    st.markdown(f"**dashboard_widget**: {manifest.get('dashboard_widget', False)}")
+                    st.markdown(f"**mc_widget**: {manifest.get('mission_control_widget', False)}")
+                    cfg = manifest.get("config_files", [])
+                    st.markdown(f"**config_files**: {len(cfg)} 件")
+                desc = manifest.get("description", "")
+                if desc:
+                    st.caption(f"説明: {desc}")
+                tags = manifest.get("tags", [])
+                if tags:
+                    st.caption("Tags: " + " · ".join(f"`{t}`" for t in tags))
+                if errors:
+                    st.error("バリデーションエラー:\n" + "\n".join(f"• {e}" for e in errors))
+
+    except Exception as exc:
+        st.error(f"Module SDK の読み込みに失敗しました: {exc}")

@@ -1,5 +1,7 @@
-# 🎯 Creator Factory OS — v5.0 Beta — AI CEO Core
+# 🎯 Creator Factory OS — v5.1 — Module SDK Self-Registration Foundation
 
+**v5.1 Phase 2:** **📦 Module SDK 自己登録基盤** — `MODULE_INFO` スキーマ拡張（module_id・entrypoint・status・package_path 等）。`ModuleRegistry.export_registry()` で registry スナップショットを生成。Development Studio に "Module SDK" タブ追加。  
+**v5.1 Phase 1:** **✅ Approval Center** — AI CEO・自動化・DevStudio からのアクションをレビューする人間承認ゲートウェイ。自動実行なし。  
 **v5.0 Beta Phase 2:** **🧠 AI CEO Core** — OSの全データを横断分析し、健全度・優先度・リスク・機会・推奨アクションを提示するエグゼクティブ決定レイヤー。外部API不使用・自動実行なし・推奨のみ。  
 **v5.0 Beta Phase 1:** **🛠️ Development Studio** — ロードマップ・リリース・決定ログ・ミーティングノートを管理するOS開発の司令塔。
 

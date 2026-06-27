@@ -166,6 +166,21 @@ try:
 except Exception:
     pass
 
+# ── Module SDK Summary (v5.1) ─────────────────────────────────────────────────
+try:
+    from src.sdk.registry_builder import ModuleRegistry as _MRdb
+    _sdk_db = _MRdb.get_summary()
+    st.markdown("##### 📦 Module SDK サマリー")
+    sk1, sk2, sk3, sk4 = st.columns(4)
+    sk1.metric("📦 SDK Version",   f"v{_sdk_db['sdk_version']}")
+    sk2.metric("🗂️ Total Modules", _sdk_db["total"])
+    sk3.metric("✅ Valid",          _sdk_db["valid"])
+    sk4.metric("❌ Invalid",        _sdk_db["invalid"])
+    st.page_link("pages/25_Development_Studio.py", label="📦 Module SDK を開く →")
+    st.divider()
+except Exception:
+    pass
+
 # ── Approval Center Summary (v5.1) ────────────────────────────────────────────
 try:
     from src.approval.approval_queue import get_summary as _ac_sum

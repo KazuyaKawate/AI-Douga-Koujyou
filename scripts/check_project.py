@@ -264,6 +264,8 @@ OPTIONAL_FILES = [
     "config/devstudio_settings.json",
     # Approval Center config (v5.1)
     "config/approval_queue.json",
+    # Module SDK registry export (v5.1 Phase 2)
+    "config/module_registry.json",
 ]
 
 
@@ -489,26 +491,42 @@ def check() -> bool:
 
     print()
 
-    # Module SDK + Approval Center (v5.1)
+    # Module SDK + Approval Center (v5.1 Phase 2)
     print("[ Module SDK データ ]")
-    _sdk_cfgs: list[tuple[str, str | None]] = []
-    for cfg_name, key in _sdk_cfgs:
-        p = ROOT / cfg_name
-        if p.exists():
-            try:
-                data = json.loads(p.read_text(encoding="utf-8"))
-                print(f"  [OK  ] {cfg_name}")
-            except Exception as exc:
-                print(f"  [ERR ] {cfg_name}  → JSONパースエラー: {exc}")
-                ok = False
-        else:
-            print(f"  [----] {cfg_name}  (未作成)")
+    reg_path = ROOT / "config" / "module_registry.json"
+    if reg_path.exists():
+        try:
+            reg_data = json.loads(reg_path.read_text(encoding="utf-8"))
+            _meta = reg_data.get("meta", {})
+            _mods = reg_data.get("modules", [])
+            print(
+                f"  [OK  ] config/module_registry.json  "
+                f"({len(_mods)} モジュール, SDK v{_meta.get('sdk_version', '?')}, "
+                f"生成: {_meta.get('generated_at', '?')[:10]})"
+            )
+        except Exception as exc:
+            print(f"  [ERR ] config/module_registry.json  → JSONパースエラー: {exc}")
+            ok = False
+    else:
+        print("  [----] config/module_registry.json  (未生成 — Development Studio SDK タブで生成)")
     try:
         import sys as _sys2
         _sys2.path.insert(0, str(ROOT))
         from src.sdk.registry_builder import ModuleRegistry as _MR
+        from src.sdk.module_manifest import SDK_VERSION as _SDK_VER
         _mr_sum = _MR.get_summary()
-        print(f"  [OK  ] ModuleRegistry  ({_mr_sum['total']} モジュール, {_mr_sum['factories']} 工場)")
+        _vr = _MR.get_validation_report()
+        print(
+            f"  [OK  ] ModuleRegistry  "
+            f"(SDK v{_SDK_VER}: {_mr_sum['total']} モジュール, "
+            f"{_mr_sum['valid']} valid, {_mr_sum['invalid']} invalid, "
+            f"{_mr_sum['factories']} 工場)"
+        )
+        if _mr_sum["invalid"] > 0:
+            for r in _vr["results"]:
+                if not r["valid"]:
+                    for e in r["errors"]:
+                        print(f"  [WARN] {r['module_name']}: {e}")
     except Exception as exc:
         print(f"  [----] ModuleRegistry  → {exc}")
 

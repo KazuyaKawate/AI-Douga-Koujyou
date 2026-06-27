@@ -1,0 +1,326 @@
+{
+  "meta": {
+    "sdk_version": "5.1",
+    "generated_at": "2026-06-27T12:33:05",
+    "total": 11,
+    "valid": 11,
+    "invalid": 0
+  },
+  "modules": [
+    {
+      "module_id": "video-factory",
+      "display_name": "AI Video Factory",
+      "module_name": "AI動画工場",
+      "module_type": "factory",
+      "version": "4.8",
+      "sdk_version": "5.1",
+      "minimum_os_version": "1.0",
+      "status": "stable",
+      "author": "Creator Factory OS",
+      "description": "動画制作自動化工場。スクリプト生成からアセンブリまで。",
+      "entrypoint": "src.pipeline.script_pipeline",
+      "package_path": "src/pipeline/",
+      "page_path": "pages/1_Script.py",
+      "health_check": null,
+      "dashboard_widget": true,
+      "mission_control_widget": true,
+      "project_support": true,
+      "dependencies": [
+        "src.core.openai_client",
+        "src.core.ffmpeg_utils"
+      ],
+      "config_files": [],
+      "report_dir": null,
+      "tags": [
+        "video",
+        "production"
+      ]
+    },
+    {
+      "module_id": "note-factory",
+      "display_name": "Note Factory",
+      "module_name": "note投稿工場",
+      "module_type": "factory",
+      "version": "4.3",
+      "sdk_version": "5.1",
+      "minimum_os_version": "4.3",
+      "status": "stable",
+      "author": "Creator Factory OS",
+      "description": "note記事管理・スコアリング・収益・転用工場。",
+      "entrypoint": "src.factories.note.article_manager",
+      "package_path": "src/factories/note/",
+      "page_path": "pages/18_Note_Factory.py",
+      "health_check": null,
+      "dashboard_widget": true,
+      "mission_control_widget": true,
+      "project_support": false,
+      "dependencies": [],
+      "config_files": [
+        "config/note_articles.json"
+      ],
+      "report_dir": null,
+      "tags": [
+        "content",
+        "note"
+      ]
+    },
+    {
+      "module_id": "sns-factory",
+      "display_name": "SNS Factory",
+      "module_name": "SNS投稿工場",
+      "module_type": "factory",
+      "version": "4.4",
+      "sdk_version": "5.1",
+      "minimum_os_version": "4.4",
+      "status": "stable",
+      "author": "Creator Factory OS",
+      "description": "7プラットフォーム対応SNS投稿管理・スケジュール工場。",
+      "entrypoint": "src.factories.sns.sns_post_manager",
+      "package_path": "src/factories/sns/",
+      "page_path": "pages/19_SNS_Factory.py",
+      "health_check": null,
+      "dashboard_widget": true,
+      "mission_control_widget": true,
+      "project_support": false,
+      "dependencies": [],
+      "config_files": [
+        "config/sns_posts.json",
+        "config/sns_platforms.json"
+      ],
+      "report_dir": null,
+      "tags": [
+        "sns",
+        "content"
+      ]
+    },
+    {
+      "module_id": "sales-factory",
+      "display_name": "Sales Factory",
+      "module_name": "営業工場",
+      "module_type": "factory",
+      "version": "4.5",
+      "sdk_version": "5.1",
+      "minimum_os_version": "4.5",
+      "status": "stable",
+      "author": "Creator Factory OS",
+      "description": "CRM・リード管理・商談・フォロー・売上予測工場。",
+      "entrypoint": "src.factories.sales.lead_manager",
+      "package_path": "src/factories/sales/",
+      "page_path": "pages/21_Sales_Factory.py",
+      "health_check": null,
+      "dashboard_widget": true,
+      "mission_control_widget": true,
+      "project_support": false,
+      "dependencies": [],
+      "config_files": [
+        "config/sales_leads.json",
+        "config/sales_deals.json"
+      ],
+      "report_dir": null,
+      "tags": [
+        "sales",
+        "crm"
+      ]
+    },
+    {
+      "module_id": "accounting-factory",
+      "display_name": "Accounting Factory",
+      "module_name": "会計監査工場",
+      "module_type": "factory",
+      "version": "4.6",
+      "sdk_version": "5.1",
+      "minimum_os_version": "4.6",
+      "status": "stable",
+      "author": "Creator Factory OS",
+      "description": "収支管理・ROI・監査・月次レポート工場。",
+      "entrypoint": "src.factories.accounting.revenue_manager",
+      "package_path": "src/factories/accounting/",
+      "page_path": "pages/22_Accounting_Factory.py",
+      "health_check": null,
+      "dashboard_widget": true,
+      "mission_control_widget": true,
+      "project_support": false,
+      "dependencies": [],
+      "config_files": [
+        "config/accounting_revenue.json"
+      ],
+      "report_dir": null,
+      "tags": [
+        "accounting",
+        "finance"
+      ]
+    },
+    {
+      "module_id": "analytics-factory",
+      "display_name": "Analytics Factory",
+      "module_name": "アナリティクス工場",
+      "module_type": "factory",
+      "version": "4.7",
+      "sdk_version": "5.1",
+      "minimum_os_version": "4.7",
+      "status": "stable",
+      "author": "Creator Factory OS",
+      "description": "全工場・KPI・ROI・プロジェクト横断分析工場。",
+      "entrypoint": "src.factories.analytics.analytics_collector",
+      "package_path": "src/factories/analytics/",
+      "page_path": "pages/23_Analytics_Factory.py",
+      "health_check": null,
+      "dashboard_widget": true,
+      "mission_control_widget": true,
+      "project_support": false,
+      "dependencies": [],
+      "config_files": [],
+      "report_dir": "reports/analytics",
+      "tags": [
+        "analytics",
+        "kpi"
+      ]
+    },
+    {
+      "module_id": "automation-factory",
+      "display_name": "Automation Factory",
+      "module_name": "自動化工場",
+      "module_type": "factory",
+      "version": "4.8",
+      "sdk_version": "5.1",
+      "minimum_os_version": "4.8",
+      "status": "stable",
+      "author": "Creator Factory OS",
+      "description": "ルールベース工場間ワークフロー自動化。ドライランデフォルト。",
+      "entrypoint": "src.factories.automation.workflow_manager",
+      "package_path": "src/factories/automation/",
+      "page_path": "pages/24_Automation_Factory.py",
+      "health_check": null,
+      "dashboard_widget": true,
+      "mission_control_widget": true,
+      "project_support": false,
+      "dependencies": [],
+      "config_files": [
+        "config/automation_workflows.json",
+        "config/automation_runs.json"
+      ],
+      "report_dir": "reports/automation",
+      "tags": [
+        "automation",
+        "workflow"
+      ]
+    },
+    {
+      "module_id": "approval-assistant",
+      "display_name": "Approval Assistant",
+      "module_name": "承認アシスタント",
+      "module_type": "utility",
+      "version": "4.4.1",
+      "sdk_version": "5.1",
+      "minimum_os_version": "4.4.1",
+      "status": "stable",
+      "author": "Creator Factory OS",
+      "description": "Claude Codeの承認プロンプトをリスク分類するユーティリティ。",
+      "entrypoint": "src.devtools.approval_analyzer",
+      "package_path": "src/devtools/",
+      "page_path": "pages/20_Approval_Assistant.py",
+      "health_check": null,
+      "dashboard_widget": false,
+      "mission_control_widget": true,
+      "project_support": false,
+      "dependencies": [],
+      "config_files": [
+        "config/approval_history.json"
+      ],
+      "report_dir": null,
+      "tags": [
+        "devtools",
+        "approval"
+      ]
+    },
+    {
+      "module_id": "development-studio",
+      "display_name": "Development Studio",
+      "module_name": "Development Studio",
+      "module_type": "development",
+      "version": "5.0-beta",
+      "sdk_version": "5.1",
+      "minimum_os_version": "5.0",
+      "status": "beta",
+      "author": "Creator Factory OS",
+      "description": "OS開発HQ。ロードマップ・リリース・決定ログ・ミーティングノート管理。",
+      "entrypoint": "src.devstudio.roadmap_manager",
+      "package_path": "src/devstudio/",
+      "page_path": "pages/25_Development_Studio.py",
+      "health_check": null,
+      "dashboard_widget": true,
+      "mission_control_widget": true,
+      "project_support": false,
+      "dependencies": [],
+      "config_files": [
+        "config/devstudio_roadmap.json",
+        "config/devstudio_releases.json",
+        "config/devstudio_decisions.json",
+        "config/devstudio_meetings.json"
+      ],
+      "report_dir": "reports/devstudio",
+      "tags": [
+        "devstudio",
+        "roadmap",
+        "os-management"
+      ]
+    },
+    {
+      "module_id": "ai-ceo-core",
+      "display_name": "AI CEO Core",
+      "module_name": "AI CEO Core",
+      "module_type": "executive",
+      "version": "5.0-beta",
+      "sdk_version": "5.1",
+      "minimum_os_version": "5.0",
+      "status": "beta",
+      "author": "Creator Factory OS",
+      "description": "エグゼクティブ決定レイヤー。健全度・優先度・リスク・推奨アクション。",
+      "entrypoint": "src.aiceo.executive_engine",
+      "package_path": "src/aiceo/",
+      "page_path": "pages/26_AI_CEO.py",
+      "health_check": null,
+      "dashboard_widget": true,
+      "mission_control_widget": true,
+      "project_support": false,
+      "dependencies": [],
+      "config_files": [
+        "config/aiceo_settings.json",
+        "config/aiceo_history.json"
+      ],
+      "report_dir": "reports/aiceo",
+      "tags": [
+        "executive",
+        "ai-ceo"
+      ]
+    },
+    {
+      "module_id": "approval-center",
+      "display_name": "Approval Center",
+      "module_name": "Approval Center",
+      "module_type": "utility",
+      "version": "5.1",
+      "sdk_version": "5.1",
+      "minimum_os_version": "5.1",
+      "status": "stable",
+      "author": "Creator Factory OS",
+      "description": "人間承認ゲートウェイ。AI CEO・自動化・開発Studio からのアクションをレビュー。",
+      "entrypoint": "src.approval.approval_queue",
+      "package_path": "src/approval/",
+      "page_path": "pages/27_Approval_Center.py",
+      "health_check": null,
+      "dashboard_widget": true,
+      "mission_control_widget": true,
+      "project_support": false,
+      "dependencies": [],
+      "config_files": [
+        "config/approval_queue.json"
+      ],
+      "report_dir": null,
+      "tags": [
+        "approval",
+        "governance"
+      ]
+    }
+  ]
+}

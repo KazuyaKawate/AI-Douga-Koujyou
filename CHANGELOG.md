@@ -6,6 +6,32 @@ Versions are cumulative; each release builds on the previous stable base.
 
 ---
 
+## [v5.1 Phase 2] — 2026-06-27 — Module SDK Self-Registration Foundation
+
+**Codename:** Module SDK Self-Registration Foundation  
+**Upgrade path:** v5.1 Phase 1 (Approval Center) → Phase 2 (additive, no breaking changes)
+
+### Added
+- `config/module_registry.json` — exported registry snapshot (SDK v5.1, 11 modules, 0 invalid)
+
+### Changed
+- `src/sdk/module_manifest.py` — extended MODULE_INFO schema: `module_id` (auto-slugified), `display_name`, `sdk_version`, `minimum_os_version`, `entrypoint`, `package_path`, `status` (stable/beta/alpha/deprecated/experimental); added `SDK_VERSION = "5.1"`, `MODULE_STATUSES`, `_slugify()`; all 11 BUILTIN_MANIFESTS updated with explicit ids, package paths, entrypoints, and statuses
+- `src/sdk/module_loader.py` — discovery now checks both `MODULE_INFO` (new canonical) and `MODULE_MANIFEST` (legacy); added `load_all_with_errors()` for diagnostics; added `get_manifest_by_id()`
+- `src/sdk/module_validator.py` — validates new fields: `status` enum, `module_id` format, `sdk_version` / `minimum_os_version` types; per-module results now include `module_id`, `module_type`, `version`, `status`
+- `src/sdk/registry_builder.py` — added `export_registry() → Path` (writes config/module_registry.json on demand), `load_exported_registry()`, `get_by_id()`, `get_status_icon()`, `STATUS_ICONS`; `get_summary()` now includes `sdk_version`, `by_status`, `registry_exported`, `registry_age`
+- `pages/25_Development_Studio.py` — new "📦 Module SDK" tab (tab 9): summary metrics (SDK version, total/valid/invalid, type breakdown), per-module expandable cards (all fields visible), registry export button, validation error display
+- `pages/8_Dashboard.py` — Module SDK summary strip (SDK version, total, valid, invalid)
+- `pages/17_Mission_Control.py` — Module SDK metrics (SDK version, total, valid, invalid) appended to Development Studio section
+- `scripts/check_project.py` — updated Module SDK section to show `config/module_registry.json` details and full ModuleRegistry validation summary with per-invalid-module error reporting; added `config/module_registry.json` to OPTIONAL_FILES
+
+### Design decisions
+- `MODULE_INFO` is the new canonical attribute name; `MODULE_MANIFEST` still accepted for backward compat
+- `module_id` auto-generated from module_name via ASCII slugification; explicit ids set in BUILTIN_MANIFESTS for Japanese-named modules (e.g. `video-factory`, `note-factory`)
+- `make_manifest()` signature unchanged — all new fields are kwargs with defaults
+- `export_registry()` is write-on-demand only; never called automatically
+
+---
+
 ## [v5.1 Phase 1] — 2026-06-27 — Module SDK + Approval Center
 
 **Codename:** Module SDK + Approval Center Foundation  

@@ -751,6 +751,17 @@ with ds_c1:
             st.caption(f"Latest Release: v{_ds_lr['version']} — {_ds_lr['title']}")
     except Exception:
         st.caption("Development Studio データを読み込めませんでした。")
+    try:
+        from src.sdk.registry_builder import ModuleRegistry as _mr_mc
+        _sdk_s = _mr_mc.get_summary()
+        st.markdown("**📦 Module SDK**")
+        sdkc1, sdkc2, sdkc3, sdkc4 = st.columns(4)
+        sdkc1.metric("📦 SDK Version",   f"v{_sdk_s['sdk_version']}")
+        sdkc2.metric("🗂️ Total Modules", _sdk_s["total"])
+        sdkc3.metric("✅ Valid",          _sdk_s["valid"])
+        sdkc4.metric("❌ Invalid",        _sdk_s["invalid"])
+    except Exception:
+        pass
 
 with ds_c2:
     ds_page = ROOT / "pages" / "25_Development_Studio.py"
