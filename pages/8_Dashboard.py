@@ -15,7 +15,31 @@ from src.director.director_planner import plan_exists as director_plan_exists
 
 st.set_page_config(page_title="制作ダッシュボード", page_icon="📊", layout="wide")
 st.title("📊 制作ダッシュボード")
-st.caption("全エピソードの制作進捗を一覧管理 | v4.5")
+st.caption("全エピソードの制作進捗を一覧管理 | v4.5.1")
+
+# ── System Overview (v4.5.1) ──────────────────────────────────────────────────
+try:
+    from src.core.project_registry import ProjectRegistry as _ProjReg
+    from src.core.factory_registry import FactoryRegistry as _FacReg
+    _sys_sum = _ProjReg.get_system_summary()
+    _health_dot = {"ok": "✅", "degraded": "🟡", "failed": "🔴"}.get(_sys_sum["system_health"], "⚪")
+    st.markdown("##### 🗂️ System Overview — Projects & Factories")
+    sov1, sov2, sov3, sov4, sov5 = st.columns(5)
+    sov1.metric("📁 プロジェクト",  _sys_sum["total_projects"])
+    sov2.metric("🟢 稼働プロジェクト", _sys_sum["active_projects"])
+    sov3.metric("🏭 工場数",       _sys_sum["total_factories"])
+    sov4.metric("✅ 正常工場",      _sys_sum["healthy_factories"])
+    sov5.metric("💊 健全性",        f"{_sys_sum['health_pct']}%",
+                help=f"{_health_dot} {_sys_sum['system_health'].upper()}")
+    _all_projs = _ProjReg.get_all_project_summaries()
+    _proj_line = "  |  ".join(
+        f"{p['status_icon']} **{p['name']}** ({p['factory_count']}工場)"
+        for p in _all_projs
+    )
+    st.caption(_proj_line or "プロジェクト未作成")
+    st.divider()
+except Exception:
+    pass
 
 # ── Mission Control Summary (v4.2) ─────────────────────────────────────────────
 try:
@@ -65,6 +89,36 @@ try:
         sc4.metric("📅 今日の公開", _sns_today)
         st.page_link("pages/19_SNS_Factory.py", label="📱 SNS投稿工場を開く →")
         st.divider()
+except Exception:
+    pass
+
+# ── Accounting Factory Summary (v4.6) ─────────────────────────────────────────
+try:
+    from src.factories.accounting.revenue_manager import load_revenue, get_factory_summary as _acc_rsum
+    from src.factories.accounting.expense_manager import load_expenses
+    from src.factories.accounting.subscription_manager import load_subscriptions, get_monthly_subscription_total
+    from src.factories.accounting.roi_calculator import calculate_roi as _acc_roi
+    from src.factories.accounting.audit_checker import check_audits, get_audit_summary
+    import datetime as _adt
+    _aym = _adt.date.today().strftime("%Y-%m")
+    _ard = load_revenue()
+    _aed = load_expenses()
+    _asd = load_subscriptions()
+    _ars = _acc_rsum(_ard)
+    _aroi = _acc_roi(_ard, _aed, _asd, _aym)
+    _awns = check_audits(_ard, _aed, _asd)
+    _aas = get_audit_summary(_awns)
+    _sub_total = get_monthly_subscription_total(_asd)
+    st.markdown("##### 💰 Accounting Factory サマリー")
+    aa1, aa2, aa3, aa4, aa5, aa6 = st.columns(6)
+    aa1.metric("📈 今月売上",  f"¥{_aroi['total_revenue']:,}")
+    aa2.metric("📉 今月経費",  f"¥{_aroi['total_expense']:,}")
+    aa3.metric("💹 今月利益",  f"¥{_aroi['net_profit']:,}")
+    aa4.metric("📊 ROI",       f"{_aroi['roi']}%")
+    aa5.metric("🔄 サブスク",  f"¥{_sub_total:,}/月")
+    aa6.metric("🔔 監査",      _aas["total"])
+    st.page_link("pages/22_Accounting_Factory.py", label="💰 会計監査工場を開く →")
+    st.divider()
 except Exception:
     pass
 

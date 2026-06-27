@@ -17,7 +17,7 @@ st.set_page_config(
 )
 
 st.title("🎯 Creator Factory OS")
-st.caption("AIツールを組み合わせた動画制作自動化プラットフォーム | v4.5 — Sales Factory")
+st.caption("AIツールを組み合わせた動画制作自動化プラットフォーム | v4.5.1 — Core Architecture")
 
 st.divider()
 
@@ -26,6 +26,7 @@ WORKFLOW = [
     ("📝", "note投稿工場",       "記事管理・スコア・収益・コンテンツ転用",    None),
     ("📱", "SNS投稿工場",       "プラットフォーム別SNS投稿管理・スケジュール", None),
     ("💼", "営業工場",          "CRM・リード管理・商談・フォロー・売上予測",   None),
+    ("💰", "会計監査工場",      "収支管理・ROI・サブスク・監査・月次レポート", None),
     ("🔍", "承認アシスタント",  "Claude Codeの承認プロンプトをリスク分類",    None),
     ("⚡", "一発生成",           "AIで全工程を自動生成",                    "project"),
     ("🎞️", "エピソード管理",    "EP制作フロー全体を管理",                  "project"),
@@ -78,6 +79,14 @@ for col, (icon, title, desc, folder) in zip(cols, WORKFLOW):
             _slp = PROJECT_ROOT / "config" / "sales_leads.json"
             _sld = _json.loads(_slp.read_text(encoding="utf-8")) if _slp.exists() else {}
             count = len([l for l in _sld.get("leads", []) if l.get("status") not in ("archived",)])
+        except Exception:
+            count = 0
+    elif title == "会計監査工場":
+        try:
+            import json as _json
+            _arp = PROJECT_ROOT / "config" / "accounting_revenue.json"
+            _ard = _json.loads(_arp.read_text(encoding="utf-8")) if _arp.exists() else {}
+            count = sum(1 for r in _ard.get("revenue", []) if r.get("status") == "confirmed")
         except Exception:
             count = 0
     elif title == "承認アシスタント":
@@ -165,17 +174,44 @@ for col, (label, folder) in zip(cols, FOLDERS.items()):
 
 st.divider()
 
+# ── System Overview — Project Registry (v4.5.1) ────────────────────────────────
+try:
+    from src.core.project_registry import ProjectRegistry as _AppPR
+    from src.core.factory_registry import FactoryRegistry as _AppFR
+    _app_sys = _AppPR.get_system_summary()
+    _app_projs = _AppPR.get_all_project_summaries()
+    _app_hdot  = {"ok": "✅", "degraded": "🟡", "failed": "🔴"}.get(_app_sys["system_health"], "⚪")
+    st.subheader("🗂️ Projects")
+    _acols = st.columns(len(_app_projs)) if _app_projs else [st.container()]
+    for _ci, _ap in enumerate(_app_projs):
+        with _acols[_ci]:
+            with st.container(border=True):
+                st.metric(
+                    label=f"{_ap['status_icon']} {_ap['name']}",
+                    value=f"{_ap['factory_count']} 工場",
+                    help=_ap.get("description", ""),
+                )
+                st.caption(f"👤 {_ap['owner']}  |  優先度: {_ap['priority']}")
+    st.caption(
+        f"{_app_hdot} System Health: {_app_sys['health_pct']}%  |  "
+        f"工場 {_app_sys['healthy_factories']}/{_app_sys['total_factories']} 正常"
+    )
+    st.divider()
+except Exception:
+    pass
+
 col1, col2 = st.columns([2, 1])
 with col1:
     st.info("👈 左のサイドバーから各ページを選択して作業を開始してください。")
 with col2:
     st.markdown("""
-**クイックスタート v4.5**
-1. 🎯 **Mission Control** で今日のKPI・タスクを確認
-2. 📝 **note投稿工場** で記事を作成・スコアリング・収益管理
-3. 📱 **SNS投稿工場** でプラットフォーム別投稿を生成・スケジュール
-4. 💼 **営業工場** でリード管理・商談・フォロー・売上予測
-5. 🔍 **承認アシスタント** でClaude Codeの確認プロンプトをリスク分類
+**クイックスタート v4.5.1**
+1. 🗂️ **Projects** でプロジェクトとシステム健全性を確認
+2. 🎯 **Mission Control** で今日のKPI・タスク・工場状態を確認
+3. 📝 **note投稿工場** で記事を作成・スコアリング・収益管理
+4. 📱 **SNS投稿工場** でプラットフォーム別投稿を生成・スケジュール
+5. 💼 **営業工場** でリード管理・商談・フォロー・売上予測
+6. 💰 **会計監査工場** で収支・ROI・サブスク・監査・月次レポート
 2. ⚙️ スタジオ設定 でプロジェクト・AI設定を構成
 3. 🧑 キャラクター管理 でキャラクターを作成してデフォルト設定
 4. 🏞️ 背景管理 でロケーション・カメラ設定を登録

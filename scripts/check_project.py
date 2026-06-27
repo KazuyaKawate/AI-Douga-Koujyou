@@ -1,4 +1,4 @@
-"""Project health check script for Creator Factory OS (AI動画工場 v4.5)."""
+"""Project health check script for Creator Factory OS (AI動画工場 v4.5.1)."""
 import io
 import sys
 from pathlib import Path
@@ -18,6 +18,7 @@ REQUIRED_FOLDERS = [
     "project",
     "reports",
     "reports/daily",
+    "reports/monthly",
     "src",
     "src/agents",
     "src/core",
@@ -25,6 +26,7 @@ REQUIRED_FOLDERS = [
     "src/factories/note",
     "src/factories/sns",
     "src/factories/sales",
+    "src/factories/accounting",
     "src/devtools",
     "src/hq",
     "src/utils",
@@ -58,6 +60,15 @@ REQUIRED_FILES = [
     "pages/19_SNS_Factory.py",
     "pages/20_Approval_Assistant.py",
     "pages/21_Sales_Factory.py",
+    "pages/22_Accounting_Factory.py",
+    # Factories — 会計監査工場
+    "src/factories/accounting/__init__.py",
+    "src/factories/accounting/revenue_manager.py",
+    "src/factories/accounting/expense_manager.py",
+    "src/factories/accounting/subscription_manager.py",
+    "src/factories/accounting/roi_calculator.py",
+    "src/factories/accounting/audit_checker.py",
+    "src/factories/accounting/monthly_report.py",
     # Factories — 営業工場
     "src/factories/sales/__init__.py",
     "src/factories/sales/lead_manager.py",
@@ -86,12 +97,23 @@ REQUIRED_FILES = [
     "src/factories/note/revenue_tracker.py",
     "src/factories/note/repurpose_engine.py",
     "src/factories/note/integration_bridge.py",
-    # Core
+    # Core — architecture layer (v4.5.1)
+    "src/core/factory_base.py",
+    "src/core/factory_interfaces.py",
+    "src/core/factory_registry.py",
+    "src/core/factory_events.py",
+    "src/core/project_manager.py",
+    "src/core/project_registry.py",
+    # Core — AI pipeline (pre-v4.3)
     "src/core/openai_client.py",
     "src/core/whisper_client.py",
     "src/core/ffmpeg_utils.py",
     "src/core/ai_pipeline.py",
     "src/core/episode_manager.py",
+    # Architecture docs
+    "docs/FACTORY_SPEC.md",
+    "docs/PROJECT_SPEC.md",
+    "docs/ARCHITECTURE_DECISIONS.md",
     # Utils
     "src/utils/config.py",
     "src/utils/settings_manager.py",
@@ -156,6 +178,12 @@ OPTIONAL_FILES = [
     "config/sales_deals.json",
     "config/sales_followups.json",
     "config/sales_settings.json",
+    "config/accounting_revenue.json",
+    "config/accounting_expenses.json",
+    "config/accounting_subscriptions.json",
+    "config/accounting_settings.json",
+    "config/projects.json",
+    "config/factory_events.json",
 ]
 
 
@@ -164,7 +192,7 @@ def check() -> bool:
     width = 60
 
     print("=" * width)
-    print("  Creator Factory OS v4.5 — Project Health Check")
+    print("  Creator Factory OS v4.5.1 — Project Health Check")
     print("=" * width)
     print(f"  Root: {ROOT}\n")
 
@@ -252,6 +280,72 @@ def check() -> bool:
                 ok = False
         else:
             print(f"  [----] {cfg_name}  (未作成)")
+
+    print()
+
+    # Core Architecture (v4.5.1)
+    print("[ Core Architecture ]")
+    _core_cfgs = [
+        ("config/projects.json",       "projects"),
+        ("config/factory_events.json", "events"),
+    ]
+    for cfg_name, key in _core_cfgs:
+        p = ROOT / cfg_name
+        if p.exists():
+            try:
+                data = json.loads(p.read_text(encoding="utf-8"))
+                count = len(data.get(key, []))
+                print(f"  [OK  ] {cfg_name}  ({count} {key})")
+            except Exception as exc:
+                print(f"  [ERR ] {cfg_name}  → JSONパースエラー: {exc}")
+                ok = False
+        else:
+            print(f"  [----] {cfg_name}  (未作成)")
+    try:
+        import sys as _sys
+        _sys.path.insert(0, str(ROOT))
+        from src.core.factory_registry import FactoryRegistry
+        _summary = FactoryRegistry.get_summary()
+        print(f"  [OK  ] FactoryRegistry  ({_summary['total']} 工場, {_summary['healthy']} 正常)")
+        from src.core.project_manager import get_all_projects
+        _projs = get_all_projects()
+        print(f"  [OK  ] ProjectRegistry  ({len(_projs)} プロジェクト)")
+    except Exception as exc:
+        print(f"  [ERR ] Core Architecture  → {exc}")
+        ok = False
+
+    print()
+
+    # Accounting Factory
+    print("[ Accounting Factory データ ]")
+    acc_files = [
+        ("config/accounting_revenue.json",       "revenue"),
+        ("config/accounting_expenses.json",       "expenses"),
+        ("config/accounting_subscriptions.json",  "subscriptions"),
+        ("config/accounting_settings.json",       None),
+    ]
+    for cfg_name, key in acc_files:
+        p = ROOT / cfg_name
+        if p.exists():
+            try:
+                data = json.loads(p.read_text(encoding="utf-8"))
+                if key and key in data:
+                    print(f"  [OK  ] {cfg_name}  ({len(data[key])} {key})")
+                elif "break_even_monthly" in data:
+                    print(f"  [OK  ] {cfg_name}  (損益分岐点: ¥{data['break_even_monthly']:,})")
+                else:
+                    print(f"  [OK  ] {cfg_name}")
+            except Exception as exc:
+                print(f"  [ERR ] {cfg_name}  → JSONパースエラー: {exc}")
+                ok = False
+        else:
+            print(f"  [----] {cfg_name}  (未作成)")
+    acc_reports_dir = ROOT / "reports" / "monthly"
+    if acc_reports_dir.exists():
+        acc_rpts = list(acc_reports_dir.glob("*_accounting_report.md"))
+        print(f"  [OK  ] reports/monthly/  ({len(acc_rpts)} レポート)")
+    else:
+        print("  [----] reports/monthly/  (未作成)")
 
     print()
 

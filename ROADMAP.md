@@ -41,6 +41,12 @@ Creator Factory OS rebrand. Mission Control daily command center. KPI, task list
 
 ### ✅ v4.5 — Sales Factory
 `pages/21_Sales_Factory.py` — Full CRM: lead management (8 sources, 4 ranks, status lifecycle), deal pipeline (7 stages with weighted forecast), follow-up manager (overdue detection, today/week views, mark-done → `sales_calls` KPI), proposal tracker (5 response statuses), rule-based sales forecast (pipeline/weighted/conversion/monthly projection). Mission Control Section 7.6 sales card + `sync_from_sales()`. `src/factories/sales/` data layer.
+
+### ✅ v4.5.1 — Core Architecture
+`src/core/` architecture layer: `FactoryBase` ABC (7 required methods), `FactoryRegistry` static catalog (6 factories, config/page existence health check), `EventBus` (pub/sub + JSON persistence, 7 event types), `Project` dataclass + CRUD + `ProjectRegistry` (system summary, per-project factory health). Creator Factory OS is now **Project-centric** — Projects are the top-level unit; Factories are project modules. Architecture docs: `FACTORY_SPEC.md`, `PROJECT_SPEC.md`, `ARCHITECTURE_DECISIONS.md` (7 ADRs). Mission Control Section 3.5 (Projects) + Section 7.8 (Core Architecture). Dashboard System Overview strip. Existing factory modules untouched.
+
+### ✅ v4.6 — Accounting Audit Factory
+`pages/22_Accounting_Factory.py` — Revenue management (8 sources, factory tracking, Sales Factory import), expense management (8 categories, billing cycle), subscription management (8 presets, active toggle, renewal tracking), rule-based ROI/profit/break-even calculator, 6-rule audit checker (expense>revenue, negative profit, no revenue, high sub ratio, large expense no memo, below break-even), monthly Markdown report export to `reports/monthly/`. Mission Control Section 7.7 accounting card + `sync_from_accounting()`. `src/factories/accounting/` data layer.
 `pages/19_SNS_Factory.py` — 7-platform SNS management (X, Threads, Instagram, TikTok, YouTube Shorts, LinkedIn, Facebook). Rule-based platform formatter. Hashtag generator. Repurpose from note articles and video episodes. Weekly schedule calendar. Overdue detection. Manual engagement tracking. Analytics stubs. Mission Control KPI integration. `src/factories/sns/` data layer.
 
 ---
@@ -72,26 +78,6 @@ Creator Factory OS rebrand. Mission Control daily command center. KPI, task list
 **Mission Control changes:**
 - `pages/18_Note_Factory.py` wired to "📝 note投稿工場を開く" button
 - note投稿工場 factory card shows live article counts
-
----
-
-### 🔲 v4.6 — 会計監査 Factory _(Target: 2026-09)_
-
-**Goal:** Replace manual spreadsheet with in-app revenue and expense tracking.
-
-**Deliverables:**
-
-| Item | Description |
-|------|-------------|
-| `pages/21_Finance_Factory.py` | 会計監査工場 page |
-| `src/factories/finance/` | Transaction manager, category tracker |
-| `config/transactions.json` | Income and expense records |
-
-**Page sections:**
-1. **Transaction Log** — income / expense entry with category and date
-2. **Monthly Summary** — revenue, expense, profit, ROI by category
-3. **Breakeven Tracker** — monthly progress bar to breakeven target
-4. **Finance Snapshot Integration** — auto-writes to `config/revenue_expense.json` so Mission Control always shows live data
 
 ---
 

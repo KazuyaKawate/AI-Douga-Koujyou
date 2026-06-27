@@ -20,11 +20,12 @@ from src.hq.task_manager import (
 )
 from src.hq.factory_status import (
     load_factory_status, save_factory_status,
-    sync_from_tasks, sync_from_sales, FACTORIES, FACTORY_ICONS, STATUS_COLORS,
+    sync_from_tasks, sync_from_sales, sync_from_accounting,
+    FACTORIES, FACTORY_ICONS, STATUS_COLORS,
 )
 from src.hq.daily_report import generate_report, export_report
 
-APP_VERSION = "4.5"
+APP_VERSION = "4.5.1"
 TODAY = date.today()
 
 st.set_page_config(page_title="Mission Control | Creator Factory OS", page_icon="🎯", layout="wide")
@@ -34,8 +35,8 @@ st.set_page_config(page_title="Mission Control | Creator Factory OS", page_icon=
 st.title("🎯 Creator Factory OS")
 h1, h2, h3 = st.columns(3)
 h1.caption(f"📅 {TODAY.strftime('%Y年%m月%d日 (%A)')}")
-h2.caption(f"🔨 Build: v{APP_VERSION} Sales Factory")
-h3.caption(f"✅ Status: v{APP_VERSION} Sales Factory")
+h2.caption(f"🔨 Build: v{APP_VERSION} Core Architecture")
+h3.caption(f"✅ Status: v{APP_VERSION} Core Architecture")
 
 st.divider()
 
@@ -46,6 +47,7 @@ tasks_data = load_tasks()
 factory_data = load_factory_status()
 factory_data = sync_from_tasks(factory_data, tasks_data)
 factory_data = sync_from_sales(factory_data)
+factory_data = sync_from_accounting(factory_data)
 
 finance_path = ROOT / "config" / "revenue_expense.json"
 try:
@@ -123,7 +125,7 @@ PAGE_MAP: dict[str, str | None] = {
     "note投稿工場": "pages/18_Note_Factory.py",
     "SNS投稿工場":  "pages/19_SNS_Factory.py",
     "営業工場":     "pages/21_Sales_Factory.py",
-    "会計監査工場": None,
+    "会計監査工場": "pages/22_Accounting_Factory.py",
     "開発":         "pages/17_Mission_Control.py",
     "経営":         "pages/8_Dashboard.py",
 }
@@ -213,7 +215,45 @@ for task in sorted_tasks:
 
 st.divider()
 
-# ── Section 4: Factory Status ─────────────────────────────────────────────────
+# ── Section 3.5: Projects ─────────────────────────────────────────────────────
+
+st.subheader("🗂️ Projects")
+st.caption("Creator Factory OS はプロジェクト中心のOSです。工場はプロジェクトのモジュールです。")
+
+try:
+    from src.core.project_manager import get_all_projects
+    from src.core.project_registry import ProjectRegistry
+    from src.core.factory_interfaces import FACTORY_ICONS as _FICONS
+
+    _sys = ProjectRegistry.get_system_summary()
+    _ps1, _ps2, _ps3, _ps4 = st.columns(4)
+    _ps1.metric("📁 プロジェクト数", _sys["total_projects"])
+    _ps2.metric("🟢 稼働中", _sys["active_projects"])
+    _ps3.metric("🏭 工場数", _sys["total_factories"])
+    _ps4.metric("✅ 正常工場", f"{_sys['healthy_factories']}/{_sys['total_factories']}")
+
+    _projects = get_all_projects()
+    _STATUS_DOT = {"active": "🟢", "paused": "🟡", "completed": "✅", "archived": "⬜"}
+    _proj_cols = st.columns(min(len(_projects), 3)) if _projects else []
+    for _i, _proj in enumerate(_projects):
+        _col = _proj_cols[_i % 3] if _proj_cols else st.container()
+        with _col:
+            with st.container(border=True):
+                _dot = _STATUS_DOT.get(_proj.status, "⚪")
+                st.markdown(f"**{_dot} {_proj.name}**")
+                st.caption(f"👤 {_proj.owner}  |  優先度: {_proj.priority}  |  進捗: {_proj.progress:.0f}%")
+                if _proj.progress > 0:
+                    st.progress(_proj.progress / 100)
+                _fac_icons = " ".join(_FICONS.get(f, "🏭") for f in _proj.factories)
+                st.caption(f"工場: {_fac_icons}")
+                if _proj.description:
+                    st.caption(_proj.description)
+except Exception:
+    st.caption("Projects — `src/core/project_manager.py` をインポートできません")
+
+st.divider()
+
+# ── Section 4: Factory Status (Factory Modules) ───────────────────────────────
 
 st.subheader("🏭 Factory Status")
 
@@ -377,7 +417,7 @@ NAV_ITEMS = [
     ("📝 note投稿工場を開く",    "pages/18_Note_Factory.py"),
     ("📱 SNS投稿工場を開く",     "pages/19_SNS_Factory.py"),
     ("💼 営業工場を開く",        "pages/21_Sales_Factory.py"),
-    ("💰 会計監査工場を開く",    None),
+    ("💰 会計監査工場を開く",    "pages/22_Accounting_Factory.py"),
     ("📊 ダッシュボードを開く",  "pages/8_Dashboard.py"),
     ("🔍 承認アシスタント",      "pages/20_Approval_Assistant.py"),
 ]
@@ -470,6 +510,91 @@ with sales_c2:
     else:
         st.button("💼 営業工場 🚧", disabled=True, use_container_width=True,
                   key="nav_sales", help="Coming Soon")
+
+st.divider()
+
+# ── Section 7.7: Accounting Factory ──────────────────────────────────────────
+
+st.subheader("💰 会計監査工場")
+
+acc_c1, acc_c2 = st.columns([3, 2])
+
+with acc_c1:
+    st.markdown("**収支管理 · ROI · サブスク · 監査アラート**")
+    try:
+        from src.factories.accounting.revenue_manager import load_revenue, get_factory_summary as _acc_rev_sum
+        from src.factories.accounting.expense_manager import load_expenses
+        from src.factories.accounting.subscription_manager import load_subscriptions, get_monthly_subscription_total
+        from src.factories.accounting.roi_calculator import calculate_roi as _calc_roi
+        from src.factories.accounting.audit_checker import check_audits, get_audit_summary
+        import datetime as _dt
+        _ym = _dt.date.today().strftime("%Y-%m")
+        _rd = load_revenue()
+        _ed = load_expenses()
+        _sd = load_subscriptions()
+        _rs = _acc_rev_sum(_rd)
+        _roi = _calc_roi(_rd, _ed, _sd, _ym)
+        _warns = check_audits(_rd, _ed, _sd)
+        _as = get_audit_summary(_warns)
+        ac1, ac2, ac3, ac4 = st.columns(4)
+        ac1.metric("💰 今日の売上",   f"¥{_rs['today_revenue']:,}")
+        ac2.metric("💹 今月利益",     f"¥{_roi['net_profit']:,}")
+        ac3.metric("📉 今月経費",     f"¥{_roi['total_expense']:,}")
+        ac4.metric("🔔 監査アラート",  _as["total"])
+        if _as["errors"] > 0:
+            st.caption(f"🔴 エラー {_as['errors']} 件 | ROI: {_roi['roi']}%")
+        elif _as["warning"] > 0:
+            st.caption(f"🟠 警告 {_as['warning']} 件 | ROI: {_roi['roi']}%")
+        else:
+            st.caption(f"✅ 異常なし | ROI: {_roi['roi']}% | 達成率: {_roi['target_attainment']}%")
+    except Exception:
+        st.caption("会計データを読み込めませんでした。")
+
+with acc_c2:
+    acc_page = ROOT / "pages" / "22_Accounting_Factory.py"
+    if acc_page.exists():
+        st.page_link("pages/22_Accounting_Factory.py", label="💰 会計監査工場を開く →",
+                     use_container_width=True)
+    else:
+        st.button("💰 会計監査工場 🚧", disabled=True, use_container_width=True,
+                  key="nav_accounting", help="Coming Soon")
+
+st.divider()
+
+# ── Section 7.8: Core Architecture ───────────────────────────────────────────
+
+st.subheader("🏗️ Core Architecture")
+
+arch_c1, arch_c2 = st.columns([3, 2])
+
+with arch_c1:
+    st.markdown("**Project Registry · Factory Registry · Event Bus**")
+    try:
+        from src.core.project_registry import ProjectRegistry as _PR
+        _arch_sys = _PR.get_system_summary()
+        _health_icon = {"ok": "✅", "degraded": "🟡", "failed": "🔴"}.get(
+            _arch_sys["system_health"], "⚪"
+        )
+        aa1, aa2, aa3, aa4 = st.columns(4)
+        aa1.metric("📁 プロジェクト",  _arch_sys["total_projects"])
+        aa2.metric("🏭 工場数",       _arch_sys["total_factories"])
+        aa3.metric("✅ 正常工場",      _arch_sys["healthy_factories"])
+        aa4.metric("💊 システム健全性", f"{_arch_sys['health_pct']}%")
+        st.caption(f"{_health_icon} System Health: {_arch_sys['system_health'].upper()}")
+    except Exception:
+        st.caption("Core Architecture データを読み込めませんでした。")
+
+with arch_c2:
+    st.caption("**Architecture Docs**")
+    for _doc_name, _doc_path in [
+        ("FACTORY_SPEC.md",            "docs/FACTORY_SPEC.md"),
+        ("PROJECT_SPEC.md",            "docs/PROJECT_SPEC.md"),
+        ("ARCHITECTURE_DECISIONS.md",  "docs/ARCHITECTURE_DECISIONS.md"),
+    ]:
+        if (ROOT / _doc_path).exists():
+            st.caption(f"✅ {_doc_name}")
+        else:
+            st.caption(f"❌ {_doc_name}")
 
 st.divider()
 

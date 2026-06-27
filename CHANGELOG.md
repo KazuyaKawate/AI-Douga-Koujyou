@@ -6,6 +6,73 @@ Versions are cumulative; each release builds on the previous stable base.
 
 ---
 
+## [v4.5.1] — 2026-06-27 — Core Architecture
+
+**Codename:** Core Architecture
+**Upgrade path:** v4.6 → v4.5.1 (architecture-only; no new business features, no breaking changes)
+
+### Added
+- `src/core/factory_base.py` — `FactoryBase` ABC with 7 required methods: `initialize`, `health_check`, `sync_kpi`, `sync_dashboard`, `sync_mission_control`, `generate_report`, `export_status`. Plus `FactoryStatus` and `HealthReport` dataclasses.
+- `src/core/factory_interfaces.py` — Shared TypedDicts, `FactoryProtocol` / `ProjectProtocol` Protocols, `FACTORY_ICONS` constant map.
+- `src/core/factory_registry.py` — `FACTORY_CATALOG` static dict (6 factories), `FactoryRegistry` with health check + summary. No module imports — config/page existence checks only.
+- `src/core/factory_events.py` — `EventBus` (pub/sub + JSON persistence). 7 event constants: `factory_initialized`, `factory_completed`, `factory_failed`, `factory_updated`, `project_updated`, `kpi_changed`, `report_generated`.
+- `src/core/project_manager.py` — `Project` dataclass, CRUD, auto-creates default "Creator Factory" project with all 6 factories.
+- `src/core/project_registry.py` — `ProjectRegistry` with system summary, per-project factory health, project queries.
+- `config/projects.json` — Default "Creator Factory" project.
+- `config/factory_events.json` — Event log store (empty, max 200 events).
+- `docs/FACTORY_SPEC.md` — Folder structure, required files/methods, config format, integration requirements, design constraints, page structure, health check registration.
+- `docs/PROJECT_SPEC.md` — Project model, lifecycle, workflow, registry API, Mission Control roadmap, default project.
+- `docs/ARCHITECTURE_DECISIONS.md` — 7 ADRs: Project-Centric Architecture, FactoryBase Interface, Static Factory Catalog, Event Bus, JSON-First Storage, Lazy Imports, Additive-Only Rule.
+
+### Changed
+- `pages/17_Mission_Control.py` — v4.5.1; Section 3.5 Projects (project cards + system summary); Section 7.8 Core Architecture (health metrics + doc status).
+- `pages/8_Dashboard.py` — v4.5.1; System Overview at top (project + factory health from registries).
+- `app.py` — v4.5.1; Projects section (cards from ProjectRegistry).
+- `scripts/check_project.py` — v4.5.1; 6 new core files + 3 arch docs in REQUIRED_FILES; Core Architecture data section.
+
+### Architecture
+Creator Factory OS is now **Project-centric**: Projects are the top-level unit; Factories are project modules. Existing factory modules are untouched.
+
+---
+
+## [v4.6] — 2026-06-27 — Accounting Audit Factory
+
+**Codename:** Accounting Audit Factory
+**Upgrade path:** v4.5 → v4.6 (additive, no breaking changes)
+
+### Added
+- `pages/22_Accounting_Factory.py` — 6-tab accounting page (ダッシュボード/収入/経費/サブスク/ROI/月次レポート)
+  - Tab 1: break-even progress, audit alerts, quick revenue entry, recent entries
+  - Tab 2: revenue CRUD with source filter, Sales Factory deal import
+  - Tab 3: expense CRUD with category filter, large-expense warning
+  - Tab 4: subscription management (8 presets, active/inactive toggle, renewal tracking)
+  - Tab 5: ROI metrics, revenue by factory, expense by category, break-even settings
+  - Tab 6: monthly report generate + preview + Markdown export to `reports/monthly/`
+- `src/factories/accounting/` package — 6 modules
+  - `revenue_manager.py` — revenue CRUD, 8 sources, source_factory tracking, today/monthly aggregation
+  - `expense_manager.py` — expense CRUD, 8 categories, billing_cycle, category aggregation
+  - `subscription_manager.py` — subscription CRUD, 8 presets, active toggle, renewal tracking, monthly total
+  - `roi_calculator.py` — rule-based ROI/profit/break-even/conversion calculations
+  - `audit_checker.py` — 6 rule-based warnings (expense>revenue, negative profit, no revenue, high sub ratio, large expense no memo, below break-even)
+  - `monthly_report.py` — Markdown report generator, `export_monthly_report()` → `reports/monthly/`
+- `config/accounting_revenue.json`, `accounting_expenses.json`, `accounting_subscriptions.json`, `accounting_settings.json`
+- `reports/monthly/` folder — output directory for monthly accounting reports
+
+### Changed
+- `pages/17_Mission_Control.py` — v4.6; 会計監査工場 wired to `pages/22_Accounting_Factory.py`; Section 7.7 Accounting card with today's revenue/profit/expense/audit count; `sync_from_accounting()` added to data load
+- `src/hq/factory_status.py` — added `sync_from_accounting()`: reads revenue/audits, sets warning on audit errors
+- `pages/8_Dashboard.py` — added Accounting Factory summary strip (6 metrics: revenue/expense/profit/ROI/subscriptions/audits)
+- `app.py` — v4.6; 会計監査工場 added to WORKFLOW with confirmed revenue count
+- `scripts/check_project.py` — v4.6; `reports/monthly/` folder, `src/factories/accounting/` folder, 7 accounting files, 4 accounting config files, Accounting data section
+
+### Architecture
+- `src/factories/accounting/` sits parallel to `src/factories/note/`, `sns/`, `sales/` — same layering pattern
+- Sales Factory integration: contracted deals in `sales_deals.json` can be imported as actual revenue (one-click in revenue tab)
+- Audit checker is purely rule-based — no LLM, no external API
+- Monthly report exports to `reports/monthly/YYYY-MM_accounting_report.md`
+
+---
+
 ## [v4.5] — 2026-06-27 — Sales Factory
 
 **Codename:** Sales Factory
