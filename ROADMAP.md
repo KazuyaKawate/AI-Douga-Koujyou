@@ -42,6 +42,9 @@ Creator Factory OS rebrand. Mission Control daily command center. KPI, task list
 ### ✅ v4.5 — Sales Factory
 `pages/21_Sales_Factory.py` — Full CRM: lead management (8 sources, 4 ranks, status lifecycle), deal pipeline (7 stages with weighted forecast), follow-up manager (overdue detection, today/week views, mark-done → `sales_calls` KPI), proposal tracker (5 response statuses), rule-based sales forecast (pipeline/weighted/conversion/monthly projection). Mission Control Section 7.6 sales card + `sync_from_sales()`. `src/factories/sales/` data layer.
 
+### ✅ v4.7 — Analytics Factory
+`pages/23_Analytics_Factory.py` — 6-tab unified analytics layer: KPI achievement analysis (7 KPIs, avg%, per-KPI bars), factory health analysis (FactoryRegistry health check, activity metrics, per-factory cards), project progress analysis (progress cards, factory usage distribution), cross-factory ROI analysis (revenue-by-source, expense-by-category, sub cost ratio), rule-based insight synthesis (error→warning→ok priority), Markdown report export to `reports/analytics/`, snapshot persistence. `src/factories/analytics/` package (7 modules). Mission Control Section 7.9 analytics card. Dashboard analytics strip. Uses v4.5.1 Core Architecture (FactoryRegistry + ProjectRegistry).
+
 ### ✅ v4.5.1 — Core Architecture
 `src/core/` architecture layer: `FactoryBase` ABC (7 required methods), `FactoryRegistry` static catalog (6 factories, config/page existence health check), `EventBus` (pub/sub + JSON persistence, 7 event types), `Project` dataclass + CRUD + `ProjectRegistry` (system summary, per-project factory health). Creator Factory OS is now **Project-centric** — Projects are the top-level unit; Factories are project modules. Architecture docs: `FACTORY_SPEC.md`, `PROJECT_SPEC.md`, `ARCHITECTURE_DECISIONS.md` (7 ADRs). Mission Control Section 3.5 (Projects) + Section 7.8 (Core Architecture). Dashboard System Overview strip. Existing factory modules untouched.
 

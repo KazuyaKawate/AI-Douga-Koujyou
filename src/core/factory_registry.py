@@ -81,6 +81,19 @@ FACTORY_CATALOG: dict[str, FactoryCatalogEntry] = {
         "dependencies": ["営業工場"],
         "description":  "収支管理・ROI・サブスク・監査・月次レポート",
     },
+    "アナリティクス工場": {
+        "name":         "アナリティクス工場",
+        "icon":         "📊",
+        "version":      "4.7",
+        "module_path":  "src.factories.analytics",
+        "page":         "pages/23_Analytics_Factory.py",
+        "config_files": [
+            "config/analytics_settings.json",
+            "config/analytics_snapshots.json",
+        ],
+        "dependencies": ["note投稿工場", "SNS投稿工場", "営業工場", "会計監査工場"],
+        "description":  "全工場・KPI・ROI・プロジェクト分析・インサイト生成",
+    },
 }
 
 

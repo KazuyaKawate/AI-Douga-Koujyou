@@ -15,7 +15,40 @@ from src.director.director_planner import plan_exists as director_plan_exists
 
 st.set_page_config(page_title="制作ダッシュボード", page_icon="📊", layout="wide")
 st.title("📊 制作ダッシュボード")
-st.caption("全エピソードの制作進捗を一覧管理 | v4.5.1")
+st.caption("全エピソードの制作進捗を一覧管理 | v4.7")
+
+# ── Analytics Factory Summary (v4.7) ──────────────────────────────────────────
+try:
+    from src.factories.analytics.analytics_collector import collect_snapshot as _anls
+    from src.factories.analytics.kpi_analyzer       import analyze_kpi as _anlk
+    from src.factories.analytics.factory_analyzer   import analyze_factories as _anlf
+    from src.factories.analytics.roi_analyzer       import analyze_roi as _anlr
+    from src.factories.analytics.trend_reporter     import synthesize_insights as _anlsi
+    from src.factories.analytics.kpi_analyzer       import get_kpi_insights as _anlki
+    from src.factories.analytics.factory_analyzer   import get_factory_insights as _anlfi
+    from src.factories.analytics.project_analyzer   import analyze_projects as _anlp, get_project_insights as _anlpi
+    from src.factories.analytics.roi_analyzer       import get_roi_insights as _anlri
+    _asn  = _anls()
+    _aka  = _anlk(_asn.get("kpi", {}))
+    _afa  = _anlf()
+    _apa  = _anlp()
+    _ara  = _anlr(_asn.get("accounting_revenue", {}), _asn.get("accounting_expenses", {}),
+                  _asn.get("accounting_subscriptions", {}), _asn.get("sales_deals", {}))
+    _aall = _anlsi(_anlki(_aka), _anlfi(_afa), _anlpi(_apa), _anlri(_ara))
+    _aerr = sum(1 for i in _aall if i.startswith("🔴"))
+    _awrn = sum(1 for i in _aall if i.startswith("⚠️"))
+    st.markdown("##### 📊 Analytics Factory サマリー")
+    an1, an2, an3, an4, an5, an6 = st.columns(6)
+    an1.metric("🏭 工場健全性",    f"{_afa['health_pct']}%")
+    an2.metric("📊 KPI達成率",     f"{_aka['avg_pct']}%")
+    an3.metric("📁 稼働PJ数",      _apa["active"])
+    an4.metric("💹 今月ROI",        f"{_ara['roi']}%")
+    an5.metric("🔴 エラー",         _aerr)
+    an6.metric("💡 インサイト",     len(_aall))
+    st.page_link("pages/23_Analytics_Factory.py", label="📊 アナリティクス工場を開く →")
+    st.divider()
+except Exception:
+    pass
 
 # ── System Overview (v4.5.1) ──────────────────────────────────────────────────
 try:

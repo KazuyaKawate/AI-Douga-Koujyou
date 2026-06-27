@@ -6,6 +6,47 @@ Versions are cumulative; each release builds on the previous stable base.
 
 ---
 
+## [v4.7] — 2026-06-27 — Analytics Factory
+
+**Codename:** Analytics Factory
+**Upgrade path:** v4.5.1 → v4.7 (additive, no breaking changes)
+
+### Added
+- `pages/23_Analytics_Factory.py` — 6-tab analytics page (ダッシュボード/KPI分析/工場分析/プロジェクト分析/ROI分析/レポート)
+  - Tab 1: 8 summary metrics, all insights, content counts, snapshot save
+  - Tab 2: KPI achievement table, per-KPI progress bars, KPI insights
+  - Tab 3: factory health cards (from FactoryRegistry), activity metrics
+  - Tab 4: project progress cards, factory usage distribution
+  - Tab 5: ROI metrics, revenue-by-source bars, expense-by-category bars
+  - Tab 6: report date selector, generate/preview/export/download, report history
+- `src/factories/analytics/` package — 7 modules
+  - `analytics_collector.py` — read-only JSON collection from all factory config files + core registries
+  - `kpi_analyzer.py` — KPI achievement analysis, 7 KPI labels, rule-based insights
+  - `factory_analyzer.py` — factory health + activity analysis via FactoryRegistry, rule-based insights
+  - `project_analyzer.py` — project progress + factory usage distribution, rule-based insights
+  - `roi_analyzer.py` — cross-factory revenue/expense/profit/ROI analysis from Accounting + Sales config
+  - `trend_reporter.py` — insight synthesis (error→warning→ok priority), Markdown report generation, export to `reports/analytics/`, snapshot persistence
+- `config/analytics_settings.json` — settings: snapshot limit, KPI alert threshold, ROI target
+- `config/analytics_snapshots.json` — snapshot store (max 30, FIFO eviction)
+- `reports/analytics/` — output directory for analytics reports
+
+### Changed
+- `src/core/factory_registry.py` — added アナリティクス工場 to FACTORY_CATALOG (v4.7, 2 config files, 4 dependencies)
+- `src/core/factory_interfaces.py` — added アナリティクス工場 → 📊 to FACTORY_ICONS
+- `config/projects.json` — added アナリティクス工場 to default project factories list
+- `pages/17_Mission_Control.py` — v4.7; Section 7.9 Analytics Factory card (health%, KPI%, PJ count, insight count)
+- `pages/8_Dashboard.py` — v4.7; Analytics Factory summary strip at top (6 metrics)
+- `app.py` — v4.7; アナリティクス工場 in WORKFLOW with snapshot count
+- `scripts/check_project.py` — v4.7; `reports/analytics/` folder, 7 analytics files, 2 analytics config files, Analytics data section
+
+### Architecture
+- Analytics Factory reads all factory data **read-only** from existing JSON config files — no factory module imports in `analytics_collector.py`
+- Rule-based insight synthesis: error → warning → ok priority ordering
+- Snapshot history in `config/analytics_snapshots.json` (max 30, for future trend analysis)
+- Uses `src.core.factory_registry.FactoryRegistry` and `src.core.project_manager` via lazy imports in factory_analyzer / project_analyzer
+
+---
+
 ## [v4.5.1] — 2026-06-27 — Core Architecture
 
 **Codename:** Core Architecture

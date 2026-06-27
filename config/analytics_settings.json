@@ -1,0 +1,11 @@
+{
+  "snapshot_limit": 30,
+  "insights_enabled": true,
+  "kpi_alert_threshold": 50,
+  "roi_target_pct": 20,
+  "factory_health_alert": "degraded",
+  "meta": {
+    "version": "4.7",
+    "created_at": "2026-06-27"
+  }
+}

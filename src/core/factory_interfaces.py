@@ -78,10 +78,11 @@ PROJECT_STATUSES = ("active", "paused", "completed", "archived")
 
 # Factory name → canonical icon
 FACTORY_ICONS: dict[str, str] = {
-    "AI動画工場":    "🎬",
-    "note投稿工場":  "📝",
-    "SNS投稿工場":   "📱",
+    "AI動画工場":       "🎬",
+    "note投稿工場":     "📝",
+    "SNS投稿工場":      "📱",
     "承認アシスタント": "🔍",
-    "営業工場":      "💼",
-    "会計監査工場":  "💰",
+    "営業工場":         "💼",
+    "会計監査工場":     "💰",
+    "アナリティクス工場": "📊",
 }

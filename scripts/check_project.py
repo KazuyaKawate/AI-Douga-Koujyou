@@ -1,4 +1,4 @@
-"""Project health check script for Creator Factory OS (AI動画工場 v4.5.1)."""
+"""Project health check script for Creator Factory OS (AI動画工場 v4.7)."""
 import io
 import sys
 from pathlib import Path
@@ -19,6 +19,7 @@ REQUIRED_FOLDERS = [
     "reports",
     "reports/daily",
     "reports/monthly",
+    "reports/analytics",
     "src",
     "src/agents",
     "src/core",
@@ -27,6 +28,7 @@ REQUIRED_FOLDERS = [
     "src/factories/sns",
     "src/factories/sales",
     "src/factories/accounting",
+    "src/factories/analytics",
     "src/devtools",
     "src/hq",
     "src/utils",
@@ -61,6 +63,15 @@ REQUIRED_FILES = [
     "pages/20_Approval_Assistant.py",
     "pages/21_Sales_Factory.py",
     "pages/22_Accounting_Factory.py",
+    "pages/23_Analytics_Factory.py",
+    # Factories — アナリティクス工場
+    "src/factories/analytics/__init__.py",
+    "src/factories/analytics/analytics_collector.py",
+    "src/factories/analytics/kpi_analyzer.py",
+    "src/factories/analytics/factory_analyzer.py",
+    "src/factories/analytics/project_analyzer.py",
+    "src/factories/analytics/roi_analyzer.py",
+    "src/factories/analytics/trend_reporter.py",
     # Factories — 会計監査工場
     "src/factories/accounting/__init__.py",
     "src/factories/accounting/revenue_manager.py",
@@ -184,6 +195,8 @@ OPTIONAL_FILES = [
     "config/accounting_settings.json",
     "config/projects.json",
     "config/factory_events.json",
+    "config/analytics_settings.json",
+    "config/analytics_snapshots.json",
 ]
 
 
@@ -192,7 +205,7 @@ def check() -> bool:
     width = 60
 
     print("=" * width)
-    print("  Creator Factory OS v4.5.1 — Project Health Check")
+    print("  Creator Factory OS v4.7 — Project Health Check")
     print("=" * width)
     print(f"  Root: {ROOT}\n")
 
@@ -280,6 +293,35 @@ def check() -> bool:
                 ok = False
         else:
             print(f"  [----] {cfg_name}  (未作成)")
+
+    print()
+
+    # Analytics Factory (v4.7)
+    print("[ Analytics Factory データ ]")
+    _anl_cfgs = [
+        ("config/analytics_settings.json",  "meta"),
+        ("config/analytics_snapshots.json", "snapshots"),
+    ]
+    for cfg_name, key in _anl_cfgs:
+        p = ROOT / cfg_name
+        if p.exists():
+            try:
+                data = json.loads(p.read_text(encoding="utf-8"))
+                if key == "snapshots":
+                    print(f"  [OK  ] {cfg_name}  ({len(data.get(key, []))} スナップショット)")
+                else:
+                    print(f"  [OK  ] {cfg_name}  (v{data.get('meta', {}).get('version', '?')})")
+            except Exception as exc:
+                print(f"  [ERR ] {cfg_name}  → JSONパースエラー: {exc}")
+                ok = False
+        else:
+            print(f"  [----] {cfg_name}  (未作成)")
+    anl_reports_dir = ROOT / "reports" / "analytics"
+    if anl_reports_dir.exists():
+        anl_rpts = list(anl_reports_dir.glob("*_analytics_report.md"))
+        print(f"  [OK  ] reports/analytics/  ({len(anl_rpts)} レポート)")
+    else:
+        print("  [----] reports/analytics/  (未作成)")
 
     print()
 

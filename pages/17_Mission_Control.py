@@ -25,7 +25,7 @@ from src.hq.factory_status import (
 )
 from src.hq.daily_report import generate_report, export_report
 
-APP_VERSION = "4.5.1"
+APP_VERSION = "4.7"
 TODAY = date.today()
 
 st.set_page_config(page_title="Mission Control | Creator Factory OS", page_icon="🎯", layout="wide")
@@ -35,8 +35,8 @@ st.set_page_config(page_title="Mission Control | Creator Factory OS", page_icon=
 st.title("🎯 Creator Factory OS")
 h1, h2, h3 = st.columns(3)
 h1.caption(f"📅 {TODAY.strftime('%Y年%m月%d日 (%A)')}")
-h2.caption(f"🔨 Build: v{APP_VERSION} Core Architecture")
-h3.caption(f"✅ Status: v{APP_VERSION} Core Architecture")
+h2.caption(f"🔨 Build: v{APP_VERSION} Analytics Factory")
+h3.caption(f"✅ Status: v{APP_VERSION} Analytics Factory")
 
 st.divider()
 
@@ -595,6 +595,58 @@ with arch_c2:
             st.caption(f"✅ {_doc_name}")
         else:
             st.caption(f"❌ {_doc_name}")
+
+st.divider()
+
+# ── Section 7.9: Analytics Factory ───────────────────────────────────────────
+
+st.subheader("📊 アナリティクス工場")
+
+anl_c1, anl_c2 = st.columns([3, 2])
+
+with anl_c1:
+    st.markdown("**全工場 · KPI · ROI · プロジェクト · インサイト分析**")
+    try:
+        from src.factories.analytics.analytics_collector import collect_snapshot as _anl_snap
+        from src.factories.analytics.kpi_analyzer       import analyze_kpi as _anl_kpi
+        from src.factories.analytics.factory_analyzer   import analyze_factories as _anl_fac
+        from src.factories.analytics.roi_analyzer       import analyze_roi as _anl_roi
+        from src.factories.analytics.trend_reporter     import synthesize_insights as _anl_syn
+        from src.factories.analytics.kpi_analyzer       import get_kpi_insights as _anl_ki
+        from src.factories.analytics.factory_analyzer   import get_factory_insights as _anl_fi
+        from src.factories.analytics.project_analyzer   import analyze_projects as _anl_proj, get_project_insights as _anl_pi
+        from src.factories.analytics.roi_analyzer       import get_roi_insights as _anl_ri
+        _s   = _anl_snap()
+        _ka  = _anl_kpi(_s.get("kpi", {}))
+        _fa  = _anl_fac()
+        _pa  = _anl_proj()
+        _ra  = _anl_roi(_s.get("accounting_revenue", {}), _s.get("accounting_expenses", {}),
+                        _s.get("accounting_subscriptions", {}), _s.get("sales_deals", {}))
+        _ins = _anl_syn(_anl_ki(_ka), _anl_fi(_fa), _anl_pi(_pa), _anl_ri(_ra))
+        _errs = sum(1 for i in _ins if i.startswith("🔴"))
+        _warn = sum(1 for i in _ins if i.startswith("⚠️"))
+        ac1, ac2, ac3, ac4 = st.columns(4)
+        ac1.metric("🏭 工場健全性",   f"{_fa['health_pct']}%")
+        ac2.metric("📊 KPI達成率",    f"{_ka['avg_pct']}%")
+        ac3.metric("📁 稼働PJ数",     _pa["active"])
+        ac4.metric("💡 インサイト数",  len(_ins))
+        if _errs > 0:
+            st.caption(f"🔴 エラー {_errs} 件 | ⚠️ 警告 {_warn} 件")
+        elif _warn > 0:
+            st.caption(f"⚠️ 警告 {_warn} 件 | 工場健全性 {_fa['health_pct']}%")
+        else:
+            st.caption(f"✅ 異常なし | ROI: {_ra['roi']}% | 今月利益: ¥{_ra['net_profit']:,}")
+    except Exception:
+        st.caption("アナリティクスデータを読み込めませんでした。")
+
+with anl_c2:
+    anl_page = ROOT / "pages" / "23_Analytics_Factory.py"
+    if anl_page.exists():
+        st.page_link("pages/23_Analytics_Factory.py", label="📊 アナリティクス工場を開く →",
+                     use_container_width=True)
+    else:
+        st.button("📊 アナリティクス工場 🚧", disabled=True, use_container_width=True,
+                  key="nav_analytics", help="Coming Soon")
 
 st.divider()
 
