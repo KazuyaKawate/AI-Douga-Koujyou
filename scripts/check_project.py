@@ -1005,6 +1005,81 @@ def check() -> bool:
 
     print()
 
+    # Google Sheets Phase 4-2 — Local Config Override Readiness
+    print("[ Google Sheets Phase 4-2: ローカル設定上書き & 接続テスト準備 ]")
+    import subprocess as _sp42, json as _json42
+
+    # workspace_local.json must be ignored and not tracked
+    _local_cfg_path = ROOT / "config" / "workspace_local.json"
+    if _local_cfg_path.exists():
+        print(f"  [OK  ] config/workspace_local.json  → ローカル存在確認")
+        _git_lc = _sp42.run(
+            ["git", "ls-files", "--error-unmatch", str(_local_cfg_path)],
+            cwd=str(ROOT), capture_output=True, text=True,
+        )
+        if _git_lc.returncode == 0:
+            print("  [ERR ] workspace_local.json が git に追跡されています！コミットしないでください。")
+            ok = False
+        else:
+            print("  [OK  ] workspace_local.json は git に追跡されていません（安全）")
+        # Report local config values (no cred contents)
+        try:
+            _lc_data = _json42.loads(_local_cfg_path.read_text(encoding="utf-8"))
+            _lc_am   = _lc_data.get("auth_mode", "")
+            _lc_sid  = _lc_data.get("spreadsheet_id", "").strip()
+            _lc_ws   = _lc_data.get("worksheet_name", "").strip()
+            _lc_sa   = _lc_data.get("service_account_file", "")
+            print(f"  [INFO] local auth_mode={_lc_am or '(未設定)'}  "
+                  f"spreadsheet_id={'✅' if _lc_sid else '⬜ 未設定'}  "
+                  f"worksheet_name={_lc_ws or '⬜ 未設定'}  "
+                  f"cred_file={_lc_sa or '⬜ 未設定'}")
+        except Exception as exc:
+            print(f"  [----] workspace_local.json 読み取り  → {exc}")
+    else:
+        print("  [----] config/workspace_local.json  → 未作成（接続テストには必要）")
+        print("  [INFO] テンプレート: {\"auth_mode\":\"service_account\",\"spreadsheet_id\":\"...\","
+              "\"worksheet_name\":\"...\",\"service_account_file\":\"credentials/service-account.local.json\"}")
+
+    # workspace_local.json git-ignore check
+    _gi_lc = _sp42.run(
+        ["git", "check-ignore", "-q", str(_local_cfg_path)],
+        cwd=str(ROOT), capture_output=True, text=True,
+    )
+    if _gi_lc.returncode == 0:
+        print("  [OK  ] workspace_local.json は .gitignore で除外されています（安全）")
+    else:
+        print("  [WARN] workspace_local.json が .gitignore に登録されていません。追加してください。")
+
+    # test_read_connection with merged settings
+    try:
+        from src.workspace.sync_validator import load_merged_settings as _lms42
+        from src.workspace.sync_executor import test_read_connection as _trc42
+        _ms42 = _lms42()
+        _trc42_result = _trc42(_ms42)
+        _trc42_ok = _trc42_result["ok"]
+        print(
+            f"  [{'OK  ' if _trc42_ok else 'WARN'}] test_read_connection (merged)  "
+            f"(status={_trc42_result['client_status']}, auth_mode={_trc42_result['auth_mode']}, "
+            f"source={_trc42_result['source']}, rows={_trc42_result['row_count']}, "
+            f"{_trc42_result['duration_ms']}ms)"
+        )
+    except Exception as exc:
+        print(f"  [----] test_read_connection (merged)  → {exc}")
+
+    # write guard still blocked
+    try:
+        from src.workspace.sheet_writer import get_writer_status as _gws42
+        _ws42 = _gws42()
+        _p42_write_safe = not _ws42["write_enabled"]
+        print(
+            f"  [{'OK  ' if _p42_write_safe else 'ERR '}] write guard  "
+            f"phase={_ws42['phase']}  write_enabled={_ws42['write_enabled']}"
+        )
+    except Exception as exc:
+        print(f"  [----] write guard  → {exc}")
+
+    print()
+
     # Reports folder
     print("[ レポートフォルダ ]")
     reports_dir = ROOT / "reports" / "daily"

@@ -1,10 +1,10 @@
-"""sheet_reader — Google Sheets read abstraction for Creator Factory OS (v5.2 Phase 4-1).
+"""sheet_reader — Google Sheets read abstraction for Creator Factory OS (v5.2 Phase 4-2).
 
-If auth_mode == 'disabled' (default): returns dry-run sample data. No API call.
-If auth_mode == 'service_account': calls gspread to read records. No writes.
+If auth_mode == 'disabled' (committed default): returns dry-run sample data. No API call.
+If auth_mode == 'service_account' (local override via workspace_local.json): live gspread read.
 If gspread is not installed: returns a safe error, never crashes.
 If credential file is missing: returns a safe error, never crashes.
-Phase 4-2+: OAuth read support.
+Phase 4-3+: OAuth read support.
 """
 from __future__ import annotations
 
@@ -63,10 +63,10 @@ def read_sheet(sheet_name: str, settings: dict | None = None) -> tuple[list[dict
     if client_result["status"] != "connected":
         return [], client_result.get("error") or f"接続エラー: {client_result['status']}"
 
-    # Resolve spreadsheet_id
+    # Resolve spreadsheet_id (use merged settings so local workspace_local.json is honoured)
     if settings is None:
-        from src.workspace.sync_validator import load_settings as _ls
-        settings = _ls()
+        from src.workspace.sync_validator import load_merged_settings as _lm
+        settings = _lm()
     spreadsheet_id = (
         settings.get("google_sheets", {}).get("spreadsheet_id", "").strip()
         or settings.get("spreadsheet_id", "").strip()
@@ -141,7 +141,7 @@ def get_reader_status(settings: dict | None = None) -> dict:
             "status":           "dry_run" if dry_run else cred["status"],
             "label":            "ドライラン（サンプルデータ）" if dry_run else cred["label"],
             "icon":             "🔍" if dry_run else cred["icon"],
-            "phase":            "Phase 4-1 (read-only live ready)",
+            "phase":            "Phase 4-2 (local config override, read-only)",
         }
     except Exception as exc:
         return {

@@ -618,6 +618,8 @@ with tabs[9]:
     try:
         from src.workspace.sync_validator import (
             load_settings as _ws_load_settings,
+            load_merged_settings as _ws_load_merged,
+            get_local_config_status as _ws_local_status,
             validate_settings as _ws_validate,
             get_connection_status as _ws_conn_status,
             get_enabled_targets as _ws_targets,
@@ -643,11 +645,13 @@ with tabs[9]:
         from src.workspace.sync_history import get_summary as _ws_hist_sum, get_recent as _ws_hist_recent
         from src.workspace.sync_models import STATUS_ICONS as _ws_status_icons
 
-        _ws_settings    = _ws_load_settings()
+        _ws_settings    = _ws_load_settings()     # committed (auth_mode always disabled)
+        _ws_merged      = _ws_load_merged()        # committed + local workspace_local.json
+        _ws_local       = _ws_local_status()       # workspace_local.json summary
         _ws_conn        = _ws_conn_status(_ws_settings)
         _ws_hist        = _ws_hist_sum()
-        _ws_auth        = _ws_auth_cfg(_ws_settings)
-        _ws_cred        = _ws_cred_status(_ws_settings)
+        _ws_auth        = _ws_auth_cfg(_ws_merged)  # use merged for effective auth_mode
+        _ws_cred        = _ws_cred_status(_ws_merged)
         _ex_hlth        = _ex_health(_ws_settings)
 
         # ── Auth mode + credential status ─────────────────────────────────────
@@ -801,56 +805,107 @@ with tabs[9]:
 
         st.divider()
 
-        # ── Phase 4-1: Read-Only Connection Test ──────────────────────────────
-        st.markdown("**🔌 Phase 4-1: 読み取り接続テスト**")
+        # ── Phase 4-2: Local Config & Read-Only Connection Test ───────────────
+        st.markdown("**🔌 Phase 4-2: ローカル設定 & 読み取り接続テスト**")
         st.caption(
-            "gspread サービスアカウント認証で Google Sheets を **読み取り専用** で接続します。"
-            "書き込みは Phase 4-2+ まで無効。auth_mode=disabled のままではサンプルデータを返します。"
+            "gspread サービスアカウント認証で Google Sheets を **読み取り専用** で接続します。  \n"
+            "設定は `config/workspace_local.json`（git除外）でローカル上書き可能。書き込みは無効。"
         )
 
-        # Status grid
-        _deps41   = _ws_dep_status()
-        _gs_cfg   = _ws_settings.get("google_sheets", {})
-        _conn_cfg = _ws_settings.get("connector", {})
-        _cred_cfg = _ws_settings.get("credential_paths", {})
-        _cred_file_path = _conn_cfg.get("service_account_file", "") or _cred_cfg.get("service_account_file", "")
+        # ── Local config status ───────────────────────────────────────────────
+        _lcol_a, _lcol_b = st.columns([2, 3])
+        with _lcol_a:
+            _local_icon = "✅" if _ws_local["exists"] else "⬜"
+            st.markdown(f"**{_local_icon} `config/workspace_local.json`**")
+            if _ws_local["exists"]:
+                st.caption(
+                    f"auth_mode: `{_ws_local['auth_mode'] or '(未設定)'}` ·  "
+                    f"spreadsheet_id: {'✅ 設定済み' if _ws_local['has_spreadsheet_id'] else '⬜ 未設定'} ·  "
+                    f"cred file: {'✅ 設定済み' if _ws_local['has_service_account_file'] else '⬜ 未設定'}"
+                )
+            else:
+                st.caption(
+                    "`config/workspace_local.json` が見つかりません。  \n"
+                    "テンプレートを作成して spreadsheet_id・auth_mode を設定してください。"
+                )
+                with st.expander("workspace_local.json テンプレートを表示"):
+                    st.code(
+                        '{\n'
+                        '  "auth_mode": "service_account",\n'
+                        '  "service_account_file": "credentials/service-account.local.json",\n'
+                        '  "spreadsheet_id": "YOUR_SPREADSHEET_ID",\n'
+                        '  "worksheet_name": "KPI",\n'
+                        '  "range": ""\n'
+                        '}',
+                        language="json",
+                    )
 
-        p41c1, p41c2, p41c3 = st.columns(3)
-        p41c1.metric(
+        # ── Dependency + connection status grid ───────────────────────────────
+        _deps42   = _ws_dep_status()
+        _gs_cfg42 = _ws_merged.get("google_sheets", {})
+        _conn_cfg42 = _ws_merged.get("connector", {})
+        _cred_cfg42 = _ws_merged.get("credential_paths", {})
+        _cred_file_path = (
+            _ws_local.get("service_account_file", "")
+            or _conn_cfg42.get("service_account_file", "")
+            or _cred_cfg42.get("service_account_file", "")
+        )
+
+        p42c1, p42c2, p42c3 = st.columns(3)
+        p42c1.metric(
             "📦 gspread",
-            f"✅ {_deps41['gspread_version']}" if _deps41["gspread_installed"] else "❌ 未インストール",
+            f"✅ {_deps42['gspread_version']}" if _deps42["gspread_installed"] else "❌ 未インストール",
         )
-        p41c2.metric(
+        p42c2.metric(
             "📦 google-auth",
-            f"✅ {_deps41['google_auth_version']}" if _deps41["google_auth_installed"] else "❌ 未インストール",
+            f"✅ {_deps42['google_auth_version']}" if _deps42["google_auth_installed"] else "❌ 未インストール",
         )
-        p41c3.metric(
-            "🔑 auth_mode",
+        p42c3.metric(
+            "🔑 auth_mode (実効値)",
             _ws_auth["auth_mode"],
+            help="committed=disabled。workspace_local.json で service_account に上書き可能。",
         )
 
-        p41c4, p41c5, p41c6 = st.columns(3)
-        _cred_exists = bool(_cred_file_path) and (ROOT / _cred_file_path).exists()
-        p41c4.metric(
+        p42c4, p42c5, p42c6 = st.columns(3)
+        _cred_exists42 = bool(_cred_file_path) and (ROOT / _cred_file_path).exists()
+        p42c4.metric(
             "📄 認証ファイル",
-            "✅ 存在" if _cred_exists else ("⬜ パス未設定" if not _cred_file_path else "🔴 ファイルなし"),
+            "✅ 存在" if _cred_exists42 else ("⬜ パス未設定" if not _cred_file_path else "🔴 ファイルなし"),
         )
-        p41c5.metric(
+        p42c5.metric(
             "🆔 spreadsheet_id",
-            "✅ 設定済み" if _gs_cfg.get("spreadsheet_id", "").strip() else "⬜ 未設定",
+            "✅ 設定済み" if _gs_cfg42.get("spreadsheet_id", "").strip() else "⬜ 未設定",
         )
-        p41c6.metric(
+        p42c6.metric(
             "📋 worksheet_name",
-            _gs_cfg.get("worksheet_name", "") or "⬜ 未設定",
+            _gs_cfg42.get("worksheet_name", "") or "⬜ 未設定",
         )
 
-        if not _deps41["all_ready"]:
-            st.info(
-                f"📦 **依存パッケージ未インストール:** `{_deps41['install_hint']}`  \n"
-                "インストール後、ページをリロードしてください。auth_mode=disabled のままでも動作します。"
+        # ── Setup hints ───────────────────────────────────────────────────────
+        if not _deps42["all_ready"]:
+            st.warning(
+                f"📦 **依存パッケージ未インストール:** `{_deps42['install_hint']}`  \n"
+                "ターミナルで実行後、ページをリロードしてください。"
+                "`auth_mode=disabled` のままでもアプリは動作します。"
             )
 
-        # Read Connection Test button
+        if _deps42["all_ready"] and not _cred_exists42:
+            st.info(
+                "**認証ファイルが見つかりません。** 以下の手順で設定してください:  \n"
+                "1. Google Cloud Console → サービスアカウント作成 → JSON キー発行  \n"
+                "2. `credentials/service-account.local.json` に配置  \n"
+                "3. `config/workspace_local.json` の `auth_mode` を `\"service_account\"` に変更  \n"
+                "4. `spreadsheet_id` と `worksheet_name` を設定  \n"
+                "詳細: `docs/google_sheets_setup.md`"
+            )
+
+        if _deps42["all_ready"] and _cred_exists42 and not _gs_cfg42.get("spreadsheet_id", "").strip():
+            st.warning(
+                "**spreadsheet_id が未設定です。** `config/workspace_local.json` に設定してください:  \n"
+                '`"spreadsheet_id": "YOUR_SPREADSHEET_ID_HERE"`'
+            )
+
+        # ── Read Connection Test button ────────────────────────────────────────
         _read_btn_col, _ = st.columns([1, 3])
         with _read_btn_col:
             if st.button(
@@ -861,9 +916,13 @@ with tabs[9]:
             ):
                 with st.spinner("接続テスト中…"):
                     try:
-                        _rt = _ex_test_read(_ws_settings)
+                        _rt = _ex_test_read(_ws_merged)  # use merged settings
                         if _rt["ok"]:
-                            _src_label = {"live": "ライブ読み取り", "sample": "サンプルデータ", "error": "エラー"}.get(_rt["source"], _rt["source"])
+                            _src_label = {
+                                "live":   "ライブ読み取り",
+                                "sample": "サンプルデータ（disabled）",
+                                "error":  "エラー",
+                            }.get(_rt["source"], _rt["source"])
                             st.success(
                                 f"✅ 接続テスト成功  |  "
                                 f"ソース: {_src_label}  |  "
@@ -874,29 +933,33 @@ with tabs[9]:
                         else:
                             st.error(
                                 f"🔴 接続テスト失敗  |  "
-                                f"ステータス: {_rt['client_status']}  |  "
+                                f"ステータス: `{_rt['client_status']}`  |  "
                                 f"エラー: {_rt.get('error', '不明')}"
                             )
-                            if _rt["client_status"] == "deps_missing":
+                            _cs = _rt["client_status"]
+                            if _cs == "deps_missing":
                                 st.code("pip install gspread google-auth", language="bash")
-                            elif _rt["client_status"] == "no_file_configured":
+                            elif _cs == "no_file_configured":
                                 st.info(
-                                    "**connector.service_account_file** を設定してください。  \n"
-                                    "`credentials/service-account.local.json` を配置し、"
-                                    "`config/workspace_settings.json` を更新してください。"
+                                    "`config/workspace_local.json` に `service_account_file` を設定してください。"
                                 )
-                            elif _rt["client_status"] == "file_missing":
+                            elif _cs == "file_missing":
                                 st.info(
                                     f"`{_cred_file_path}` が見つかりません。  \n"
-                                    "Google Cloud Console からサービスアカウントJSONをダウンロードし、"
+                                    "Google Cloud Console からサービスアカウント JSON をダウンロードし "
                                     "`credentials/service-account.local.json` に配置してください。"
+                                )
+                            elif _cs == "disabled":
+                                st.info(
+                                    "`config/workspace_local.json` の `auth_mode` を "
+                                    '`"service_account"` に変更してから再テストしてください。'
                                 )
                     except Exception as exc:
                         st.error(f"接続テストエラー: {exc}")
 
         st.caption(
-            "⚠️ **書き込みは無効**（Phase 4-1 は読み取り専用）。"
-            "写し込みは Phase 4-2 以降で `allow_write=True` が有効になる予定。"
+            "⚠️ **書き込みは無効**（Phase 4-2 は読み取り専用 — `allow_write=False`）。"
+            "Phase 4-3 以降でライブ書き込みを有効化予定。"
         )
 
         st.divider()
@@ -925,8 +988,8 @@ with tabs[9]:
         # ── Manual Execute button (disabled by default) ───────────────────────
         st.markdown("**⚡ 手動実行（Google Sheetsへの書き込み）**")
         st.warning(
-            "⚠️ Phase 4-1 では書き込みは無効です（`allow_write=False`）。Phase 4-2+ で有効化予定。  \n"
-            "実行ボタンは **auth_mode が 'disabled' の間は常に無効** です。"
+            "⚠️ Phase 4-2 では書き込みは無効です（`allow_write=False`）。Phase 4-3 以降で有効化予定。  \n"
+            "実行ボタンは **committed auth_mode が 'disabled' の間は常に無効** です。"
         )
         _exec_enabled = _ws_auth["auth_mode"] != "disabled" and _ws_cred["ready"]
         _exec_col, _ = st.columns([1, 3])

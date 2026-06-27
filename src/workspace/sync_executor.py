@@ -19,7 +19,7 @@ from __future__ import annotations
 import time
 from datetime import datetime, timezone
 
-from src.workspace.sync_validator import load_settings, get_enabled_targets
+from src.workspace.sync_validator import load_settings, load_merged_settings, get_enabled_targets
 from src.workspace.sheets_sync import read_local_data, get_mapping
 from src.workspace.google_auth import get_auth_config, get_credential_status, build_client, get_dependency_status
 from src.workspace.sheet_reader import read_sheet, read_sheet_detail, get_reader_status
@@ -165,7 +165,7 @@ def get_connector_health(settings: dict | None = None) -> dict:
         "targets":          [t.get("target_id", "") for t in targets],
         "last_preview":     last_preview,
         "conflict_count":   0,
-        "phase":            "Phase 4-1 (read-only connection test)",
+        "phase":            "Phase 4-2 (local config override, read-only)",
         "deps_ready":       get_dependency_status()["all_ready"],
     }
 
@@ -188,7 +188,7 @@ def test_read_connection(settings: dict | None = None) -> dict:
     t0 = time.time()
 
     if settings is None:
-        settings = load_settings()
+        settings = load_merged_settings()
 
     auth_cfg = get_auth_config(settings)
     auth_mode = auth_cfg["auth_mode"]

@@ -1,16 +1,17 @@
-"""google_auth — Credential configuration loader for Google Sheets Connector (v5.2 Phase 3).
+"""google_auth — Credential configuration loader for Google Sheets Connector (v5.2 Phase 4-2).
 
 SECURITY RULES (enforced, not just convention):
   - Real credentials are NEVER committed to this repository.
   - service_account_file / oauth_client_file are LOCAL paths set by the user.
-  - auth_mode defaults to "disabled" — all operations run in dry-run mode.
+  - auth_mode defaults to "disabled" in committed config — safe by default.
+  - Local runtime override: config/workspace_local.json (git-ignored).
   - This module NEVER loads credential file contents; it only checks existence.
   - credentials/ is excluded by .gitignore; only .gitkeep is tracked.
 """
 from __future__ import annotations
 from pathlib import Path
 
-from src.workspace.sync_validator import load_settings
+from src.workspace.sync_validator import load_settings, load_merged_settings
 
 ROOT = Path(__file__).parent.parent.parent
 
@@ -18,9 +19,13 @@ AUTH_MODES = ("disabled", "service_account", "oauth")
 
 
 def get_auth_config(settings: dict | None = None) -> dict:
-    """Return auth configuration (paths and mode only). No credentials loaded."""
+    """Return auth configuration (paths and mode only). No credentials loaded.
+
+    When settings=None, loads committed config merged with local workspace_local.json.
+    Committed auth_mode is always 'disabled'; local override can activate service_account.
+    """
     if settings is None:
-        settings = load_settings()
+        settings = load_merged_settings()
 
     connector = settings.get("connector", {})
     auth_mode = connector.get("auth_mode", "disabled")
@@ -150,7 +155,7 @@ def build_client(settings: dict | None = None) -> dict:
       label    — str (human-readable)
     """
     if settings is None:
-        settings = load_settings()
+        settings = load_merged_settings()
 
     cfg = get_auth_config(settings)
     auth_mode = cfg["auth_mode"]

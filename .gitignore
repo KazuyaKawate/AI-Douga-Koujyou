@@ -96,3 +96,7 @@ backups/
 
 # Claude Code ローカルメモリ（コミット不要）
 .claude/
+
+# ローカル専用ランタイム設定（auth_mode / 認証パス / spreadsheet_id を上書き）
+# 絶対にコミットしないでください — credentials が入る場合があります
+config/workspace_local.json

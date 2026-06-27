@@ -6,6 +6,37 @@ Versions are cumulative; each release builds on the previous stable base.
 
 ---
 
+## [v5.2 Phase 4-2] — 2026-06-27 — Google Sheets Local Config Override
+
+**Codename:** Google Sheets Local Config Override  
+**Upgrade path:** v5.2 Phase 4-1 → v5.2 Phase 4-2 (additive, no breaking changes)
+
+### Added
+- `config/workspace_local.json` — local-only runtime config (git-ignored); overrides committed `workspace_settings.json` at runtime; allows setting `auth_mode`, `service_account_file`, `spreadsheet_id`, `worksheet_name`, `range` without modifying committed config
+- `src/workspace/sync_validator.load_local_settings()` — loads `config/workspace_local.json`; returns `{}` if missing (normal); never raises
+- `src/workspace/sync_validator.load_merged_settings()` — committed settings deep-merged with local overrides; local keys win; used by all runtime paths
+- `src/workspace/sync_validator.get_local_config_status()` — summary dict of local config: exists, auth_mode, has_spreadsheet_id, has_service_account_file, is_active
+- `.gitignore`: `config/workspace_local.json` added (explicit ignore)
+
+### Changed
+- `src/workspace/google_auth.get_auth_config()` — when `settings=None`, now calls `load_merged_settings()` instead of `load_settings()`; committed auth_mode always "disabled" but local override activates service_account at runtime
+- `src/workspace/google_auth.build_client()` — same: uses `load_merged_settings()` for default
+- `src/workspace/sheet_reader.read_sheet()` — inline settings reload now uses `load_merged_settings()` so local spreadsheet_id is honoured
+- `src/workspace/sheet_reader` — phase label updated to "Phase 4-2"
+- `src/workspace/sync_executor.test_read_connection()` — uses `load_merged_settings()` when settings=None
+- `src/workspace/sync_executor` — imports `load_merged_settings`; phase label updated to "Phase 4-2"
+- `pages/25_Development_Studio.py` — Phase 4-2 section: local config status panel (exists, auth_mode, spreadsheet_id, worksheet_name), dependency metrics, credential file check, setup hint expander with JSON template, Read Connection Test now passes merged settings; manual execute warning updated
+- `scripts/check_project.py` — Phase 4-2 section: workspace_local.json git-ignore check, git-tracking check, local config values (no cred contents), test_read_connection with merged settings, write guard check
+
+### Design decisions
+- Committed `workspace_settings.json` always has `auth_mode=disabled` — safe for all contributors
+- Local override: only `config/workspace_local.json` activates service_account; never committed
+- `load_merged_settings()` is the single merge point; all runtime entry points call it when settings=None
+- Missing `workspace_local.json` → `load_local_settings()` returns `{}` → `load_merged_settings()` returns committed settings unmodified; backward-compatible
+- Health check: missing local config / cred file = WARN not STATUS fail; app is fully functional without them (auth_mode=disabled mode)
+
+---
+
 ## [v5.2 Phase 4-1] — 2026-06-27 — Google Sheets Read-Only Connection
 
 **Codename:** Google Sheets Read-Only Connection  

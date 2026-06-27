@@ -1,4 +1,4 @@
-# Google Sheets セットアップガイド — Creator Factory OS v5.2 Phase 4-1
+# Google Sheets セットアップガイド — Creator Factory OS v5.2 Phase 4-2
 
 > **重要:** このガイドはオプション設定です。  
 > `auth_mode` のデフォルトは `"disabled"` のまま維持されます。  
@@ -24,9 +24,10 @@
 | フェーズ | 機能 | 状態 |
 |---------|------|------|
 | Phase 3 | 安全性確認・依存パッケージチェック | ✅ 完了 |
-| **Phase 4-1** | **サービスアカウントで読み取り専用接続** | ✅ 現フェーズ |
-| Phase 4-2 | 書き込み有効化（`allow_write=True`） | 🔲 予定 |
-| Phase 4-3 | OAuth 認証 | 🔲 予定 |
+| Phase 4-1 | gspread 接続コード実装（build_client / read_sheet / test_read_connection） | ✅ 完了 |
+| **Phase 4-2** | **ローカル設定上書き（workspace_local.json）& 読み取り接続テスト** | ✅ 現フェーズ |
+| Phase 4-3 | 書き込み有効化（`allow_write=True`） | 🔲 予定 |
+| Phase 4-4 | OAuth 認証 | 🔲 予定 |
 
 ---
 
@@ -83,53 +84,56 @@ pip install gspread google-auth
 
 ---
 
-## Step 4: config/workspace_settings.json の更新
+## Step 4: config/workspace_local.json の作成（Phase 4-2 NEW）
 
-`config/workspace_settings.json` の `connector`・`credential_paths`・`google_sheets` セクションをローカル環境向けに更新します:
+**`config/workspace_settings.json` は変更しないでください。** `auth_mode=disabled` がリポジトリ上の安全なデフォルトです。
+
+代わりに **ローカル専用の上書きファイル** `config/workspace_local.json` を作成します:
 
 ```json
 {
-  "connector": {
-    "auth_mode": "service_account",
-    "service_account_file": "credentials/service-account.local.json",
-    "oauth_client_file": ""
-  },
-  "credential_paths": {
-    "service_account_file": "credentials/service-account.local.json",
-    "oauth_client_file": "credentials/oauth-client.local.json"
-  },
-  "google_sheets": {
-    "spreadsheet_id": "YOUR_SPREADSHEET_ID_HERE",
-    "worksheet_name": "KPI",
-    "range": "A1"
-  }
+  "_comment": "LOCAL-ONLY. DO NOT COMMIT. See docs/google_sheets_setup.md.",
+  "auth_mode": "service_account",
+  "service_account_file": "credentials/service-account.local.json",
+  "spreadsheet_id": "YOUR_SPREADSHEET_ID_HERE",
+  "worksheet_name": "KPI",
+  "range": ""
 }
 ```
 
-> **重要:** `config/workspace_settings.json` に変更した場合、コミット前に必ず `auth_mode` を `"disabled"` に戻してください。`auth_mode=disabled` がリポジトリ上の安全なデフォルトです。
+**設定値:**
+- `auth_mode`: `"service_account"` に変更（ローカルのみ）
+- `service_account_file`: サービスアカウントJSONのパス（`credentials/service-account.local.json`）
+- `spreadsheet_id`: Google SheetsのURLから取得（`https://docs.google.com/spreadsheets/d/[ここ]/edit`）
+- `worksheet_name`: 読み取るシート名（例: `"KPI"`, `"Sheet1"`）
+
+> **このファイルは `.gitignore` に登録されており、コミットされません。** `auth_mode` や `spreadsheet_id` はこのファイルにのみ設定してください。
 
 ---
 
-## Step 5: 読み取り接続テスト (Phase 4-1)
+## Step 5: 読み取り接続テスト (Phase 4-2)
 
 1. `pip install gspread google-auth` を実行（未インストールの場合）
-2. Streamlit アプリを起動: `streamlit run Home.py`
-3. **Development Studio → Tab 10 (Workspace Sync)** を開く
-4. **Phase 4-1: 読み取り接続テスト** セクションで以下を確認:
+2. `credentials/service-account.local.json` を配置（Step 3）
+3. `config/workspace_local.json` を作成・設定（Step 4）
+4. Streamlit アプリを起動: `streamlit run Home.py`
+5. **Development Studio → Tab 10 (Workspace Sync)** を開く
+6. **Phase 4-2: ローカル設定 & 読み取り接続テスト** セクションで以下を確認:
 
 | チェック項目 | 期待値 |
 |-------------|--------|
+| `config/workspace_local.json` | ✅ 存在 |
 | 📦 gspread | ✅ バージョン表示 |
 | 📦 google-auth | ✅ バージョン表示 |
-| 🔑 auth_mode | `service_account` |
+| 🔑 auth_mode (実効値) | `service_account` |
 | 📄 認証ファイル | ✅ 存在 |
 | 🆔 spreadsheet_id | ✅ 設定済み |
 | 📋 worksheet_name | シート名表示 |
 
-5. **「🔌 読み取り接続テスト」** ボタンをクリック
-6. 成功: `✅ 接続テスト成功 | ソース: ライブ読み取り | 行数: XX`
+7. **「🔌 読み取り接続テスト」** ボタンをクリック
+8. 成功: `✅ 接続テスト成功 | ソース: ライブ読み取り | 行数: XX | 〇ms`
 
-> **書き込みは Phase 4-2 まで無効。** Phase 4-1 は読み取り専用です。`allow_write=False` が常に書き込みをブロックします。
+> **書き込みは Phase 4-3 まで無効。** Phase 4-2 は読み取り専用です。`allow_write=False` が常に書き込みをブロックします。`committed auth_mode=disabled` はリポジトリに安全に保たれています。
 
 ---
 

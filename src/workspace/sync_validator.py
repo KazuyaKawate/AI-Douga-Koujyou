@@ -3,20 +3,99 @@
 Read-only. Never makes API calls.
 """
 from __future__ import annotations
+import copy
 import json
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent.parent
-SETTINGS_PATH = ROOT / "config" / "workspace_settings.json"
+SETTINGS_PATH       = ROOT / "config" / "workspace_settings.json"
+LOCAL_SETTINGS_PATH = ROOT / "config" / "workspace_local.json"
 
 
 def load_settings() -> dict:
+    """Load committed workspace_settings.json. auth_mode always 'disabled' in repo."""
     if SETTINGS_PATH.exists():
         try:
             return json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))
         except Exception:
             pass
     return {}
+
+
+def load_local_settings() -> dict:
+    """Load local-only workspace_local.json override. Returns {} if missing (normal).
+
+    This file is git-ignored and never committed. It may contain:
+      auth_mode, service_account_file, spreadsheet_id, worksheet_name, range
+    """
+    if LOCAL_SETTINGS_PATH.exists():
+        try:
+            return json.loads(LOCAL_SETTINGS_PATH.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    return {}
+
+
+def load_merged_settings() -> dict:
+    """Committed settings + local overrides. Local wins. Never crashes.
+
+    Local workspace_local.json keys override committed workspace_settings.json:
+      auth_mode            → connector.auth_mode
+      service_account_file → connector.service_account_file
+      spreadsheet_id       → google_sheets.spreadsheet_id
+      worksheet_name       → google_sheets.worksheet_name
+      range                → google_sheets.range
+    """
+    base  = load_settings()
+    local = load_local_settings()
+    if not local:
+        return base
+
+    merged = copy.deepcopy(base)
+    if "auth_mode" in local:
+        merged.setdefault("connector", {})["auth_mode"] = local["auth_mode"]
+    if "service_account_file" in local:
+        merged.setdefault("connector", {})["service_account_file"] = local["service_account_file"]
+    if "spreadsheet_id" in local:
+        merged.setdefault("google_sheets", {})["spreadsheet_id"] = local["spreadsheet_id"]
+    if "worksheet_name" in local:
+        merged.setdefault("google_sheets", {})["worksheet_name"] = local["worksheet_name"]
+    if "range" in local:
+        merged.setdefault("google_sheets", {})["range"] = local["range"]
+    return merged
+
+
+def get_local_config_status() -> dict:
+    """Report local workspace_local.json existence and key fields. Never crashes.
+
+    Returns:
+      exists              — bool
+      path                — str (relative)
+      auth_mode           — str (from local, or "")
+      service_account_file — str
+      spreadsheet_id      — str
+      worksheet_name      — str
+      has_spreadsheet_id  — bool
+      has_service_account_file — bool
+      is_active           — True when auth_mode != disabled/""
+    """
+    local  = load_local_settings()
+    exists = LOCAL_SETTINGS_PATH.exists()
+    am     = local.get("auth_mode", "")
+    sa     = local.get("service_account_file", "")
+    sid    = local.get("spreadsheet_id", "").strip()
+    ws     = local.get("worksheet_name", "").strip()
+    return {
+        "exists":                   exists,
+        "path":                     "config/workspace_local.json",
+        "auth_mode":                am,
+        "service_account_file":     sa,
+        "spreadsheet_id":           sid,
+        "worksheet_name":           ws,
+        "has_spreadsheet_id":       bool(sid),
+        "has_service_account_file": bool(sa),
+        "is_active":                am not in ("", "disabled"),
+    }
 
 
 def validate_settings(settings: dict | None = None) -> tuple[bool, list[str]]:
