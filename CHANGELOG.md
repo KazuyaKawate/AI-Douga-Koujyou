@@ -6,6 +6,40 @@ Versions are cumulative; each release builds on the previous stable base.
 
 ---
 
+## [v5.2 Phase 1] — 2026-06-27 — Google Workspace Sync Foundation
+
+**Codename:** Google Workspace Sync Foundation  
+**Upgrade path:** v5.1 Phase 2 → v5.2 Phase 1 (additive, no breaking changes)
+
+### Added
+- `src/workspace/__init__.py` — workspace sync package (v5.2)
+- `src/workspace/sync_models.py` — TypedDicts: SyncTarget, SyncRecord, SyncPreview, SyncConflict; `make_sync_record()`; STATUS_ICONS, CONNECTION_ICONS
+- `src/workspace/sync_history.py` — sync history logging; load/save `config/sync_history.json`; `log_sync()`, `get_summary()`, `get_recent()`
+- `src/workspace/sync_validator.py` — read-only config validation; `validate_settings()`, `get_connection_status()`, `get_enabled_targets()`; never makes API calls
+- `src/workspace/sheets_sync.py` — Google Sheets column mapping definitions for 5 targets (KPI, Revenue, Notes, SNS, Sales); `read_local_data()`, `prepare_mapping()`; no API calls
+- `src/workspace/sync_engine.py` — sync orchestration; `generate_preview()`, `run_dry_run()`, `run_sync()` (Phase 1: always dry-run), `get_sync_health()`; manual execution only; no external API calls in Phase 1
+- `config/workspace_settings.json` — connection settings, 5 sync targets, `dry_run_default=true`, `enabled=false`, `auto_sync=false`
+- `config/sync_history.json` — empty sync history store
+- `reports/workspace/` — directory for sync reports
+
+### Changed
+- `src/core/version.py` — OS_VERSION → "5.2", OS_CODENAME → "Google Workspace Sync Foundation"
+- `src/aiceo/executive_engine.py` — added Workspace Sync section: reads `get_sync_health()` into `snap["workspace_sync"]`
+- `pages/25_Development_Studio.py` — added "🔄 Workspace Sync" tab (tab 10): connection status banner, summary metrics, validation errors, sync preview per target, dry-run button, sync history table
+- `pages/8_Dashboard.py` — Workspace Sync summary strip (connection status, last sync, sync total, conflict count)
+- `pages/17_Mission_Control.py` — Workspace Sync card (Section 7.14): connection, dry-run mode, sync total, conflicts
+- `pages/26_AI_CEO.py` — Workspace Sync health display in CEO Brief tab (read-only; 4 metrics; "never executes" caption)
+- `scripts/check_project.py` — added `src/workspace/` and `reports/workspace` to REQUIRED_FOLDERS; all 6 src/workspace files to REQUIRED_FILES; config files to OPTIONAL_FILES; Workspace Sync data section
+- `docs/ARCHITECTURE.md` — updated to v5.2
+
+### Design decisions
+- Phase 1 is intentionally read-only; `run_sync()` always delegates to `run_dry_run()` — actual Sheets writes are Phase 2 (google-auth + gspread)
+- `auto_sync: false` hardcoded in settings and validated to be always false
+- `get_sync_health()` is safe for AI CEO integration (read-only, no side effects)
+- Dry-run records sync history so future sessions can see execution timeline
+
+---
+
 ## [v5.1 Phase 2] — 2026-06-27 — Module SDK Self-Registration Foundation
 
 **Codename:** Module SDK Self-Registration Foundation  

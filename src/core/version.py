@@ -1,2 +1,2 @@
-OS_VERSION = "5.1"
-OS_CODENAME = "Module SDK + Approval Center"
+OS_VERSION = "5.2"
+OS_CODENAME = "Google Workspace Sync Foundation"

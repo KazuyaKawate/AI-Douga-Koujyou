@@ -1,0 +1,52 @@
+{
+  "meta": {
+    "version": "5.2",
+    "module": "workspace-sync"
+  },
+  "enabled": false,
+  "dry_run_default": true,
+  "google_credentials_path": "config/google_credentials.json",
+  "spreadsheet_id": "",
+  "spreadsheet_title": "",
+  "sync_targets": [
+    {
+      "target_id": "kpi_targets",
+      "name": "KPIターゲット",
+      "local_file": "config/kpi_targets.json",
+      "sheet_name": "KPI",
+      "enabled": true
+    },
+    {
+      "target_id": "revenue_expense",
+      "name": "収支データ",
+      "local_file": "config/revenue_expense.json",
+      "sheet_name": "Revenue",
+      "enabled": true
+    },
+    {
+      "target_id": "note_articles",
+      "name": "note記事",
+      "local_file": "config/note_articles.json",
+      "sheet_name": "Notes",
+      "enabled": true
+    },
+    {
+      "target_id": "sns_posts",
+      "name": "SNS投稿",
+      "local_file": "config/sns_posts.json",
+      "sheet_name": "SNS",
+      "enabled": false
+    },
+    {
+      "target_id": "sales_leads",
+      "name": "営業リード",
+      "local_file": "config/sales_leads.json",
+      "sheet_name": "Sales",
+      "enabled": false
+    }
+  ],
+  "auto_sync": false,
+  "sync_interval_minutes": 0,
+  "last_sync": null,
+  "notification_on_conflict": true
+}

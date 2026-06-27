@@ -1,8 +1,9 @@
-# アーキテクチャ — Creator Factory OS v5.1
+# アーキテクチャ — Creator Factory OS v5.2
 
 ## 概要
 
 Creator Factory OS はローカルファースト・JSONファースト設計の Streamlit マルチページアプリです。  
+**v5.2 Phase 1** で **Google Workspace Sync 基盤 (`src/workspace/`)** を実装。ローカルJSON → Google Sheets マッピング定義、ドライランモード、手動同期のみ、外部API不使用（Phase 1）。  
 **v5.1 Phase 2** で **Module SDK 自己登録基盤** を実装。`MODULE_INFO` スキーマを拡張し、`module_id`・`display_name`・`sdk_version`・`minimum_os_version`・`entrypoint`・`package_path`・`status` フィールドを追加。`ModuleRegistry.export_registry()` で `config/module_registry.json` にスナップショットをエクスポート（オンデマンド、自動実行なし）。Development Studio に "📦 Module SDK" タブを追加し、全モジュールの MANIFEST 情報を一覧表示。  
 **v5.1 Phase 1** で **Module SDK (`src/sdk/`)** と **Approval Center (`src/approval/`)** を追加。Module SDKはすべてのモジュールを`MODULE_INFO`スキーマで記述する統一マニフェストシステム。Approval Centerは人間承認ゲートウェイ — AI CEO推奨・自動化ワークフロー・DevStudio決定をレビューするUIです。自動実行なし。承認ボタンはキューJSONのみ更新します。  
 **v5.0-beta Phase 2** で **AI CEO Core (`src/aiceo/`)** を追加。OSの全データを横断分析する**エグゼクティブモジュール**。健全度スコア・優先度ランキング・リスク識別・機会発見・推奨アクション生成を行います。FactoryではなくExecutive Moduleとして分類します。外部API不使用・自動実行なし・読み取り専用。  

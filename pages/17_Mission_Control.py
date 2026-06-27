@@ -805,6 +805,35 @@ with ac_c2:
 
 st.divider()
 
+# ── Section 7.14: Workspace Sync ─────────────────────────────────────────────
+
+st.subheader("🔄 Workspace Sync")
+
+ws_c1, ws_c2 = st.columns([3, 2])
+
+with ws_c1:
+    st.markdown("**Google Workspace Sync — ローカルJSON → Google Sheets**")
+    try:
+        from src.workspace.sync_engine import get_sync_health as _ws_mc_health
+        from src.workspace.sync_validator import get_connection_status as _ws_mc_conn
+        _wmh = _ws_mc_health()
+        _wmc = _ws_mc_conn()
+        wmc1, wmc2, wmc3, wmc4 = st.columns(4)
+        wmc1.metric("🔌 接続",       f"{_wmc['icon']} {_wmc['label']}")
+        wmc2.metric("🔍 ドライラン",  "✅ ON" if _wmh["dry_run_default"] else "⚠️ OFF")
+        wmc3.metric("📊 同期総数",    _wmh["total_syncs"])
+        wmc4.metric("⚠️ 競合",       _wmh["total_conflicts"])
+    except Exception:
+        st.caption("Workspace Sync データを読み込めませんでした。")
+
+with ws_c2:
+    ws_page = ROOT / "pages" / "25_Development_Studio.py"
+    if ws_page.exists():
+        st.page_link("pages/25_Development_Studio.py",
+                     label="🔄 Workspace Sync を開く →", use_container_width=True)
+
+st.divider()
+
 # ── Section 8: Daily Report ───────────────────────────────────────────────────
 
 st.subheader("📝 Daily Report")

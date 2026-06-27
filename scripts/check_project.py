@@ -38,6 +38,8 @@ REQUIRED_FOLDERS = [
     "src/devstudio",
     "src/devtools",
     "src/sdk",
+    "src/workspace",
+    "reports/workspace",
     "src/hq",
     "src/utils",
     "src/pipeline",
@@ -76,6 +78,13 @@ REQUIRED_FILES = [
     "pages/25_Development_Studio.py",
     "pages/26_AI_CEO.py",
     "pages/27_Approval_Center.py",
+    # Workspace Sync (v5.2)
+    "src/workspace/__init__.py",
+    "src/workspace/sync_models.py",
+    "src/workspace/sync_history.py",
+    "src/workspace/sync_validator.py",
+    "src/workspace/sheets_sync.py",
+    "src/workspace/sync_engine.py",
     # Module SDK (v5.1)
     "src/sdk/__init__.py",
     "src/sdk/module_manifest.py",
@@ -262,6 +271,9 @@ OPTIONAL_FILES = [
     "config/devstudio_decisions.json",
     "config/devstudio_meetings.json",
     "config/devstudio_settings.json",
+    # Workspace Sync config (v5.2)
+    "config/workspace_settings.json",
+    "config/sync_history.json",
     # Approval Center config (v5.1)
     "config/approval_queue.json",
     # Module SDK registry export (v5.1 Phase 2)
@@ -703,6 +715,60 @@ def check() -> bool:
             ok = False
     else:
         print(f"  [----] config/note_articles.json  (未作成)")
+
+    print()
+
+    # Workspace Sync (v5.2)
+    print("[ Workspace Sync データ ]")
+    _ws_settings_path = ROOT / "config" / "workspace_settings.json"
+    _ws_history_path  = ROOT / "config" / "sync_history.json"
+    if _ws_settings_path.exists():
+        try:
+            _ws_cfg = json.loads(_ws_settings_path.read_text(encoding="utf-8"))
+            _ws_targets = _ws_cfg.get("sync_targets", [])
+            _ws_enabled = sum(1 for t in _ws_targets if t.get("enabled", True))
+            _ws_dry = _ws_cfg.get("dry_run_default", True)
+            print(
+                f"  [OK  ] config/workspace_settings.json  "
+                f"({len(_ws_targets)} ターゲット, {_ws_enabled} 有効, "
+                f"dry_run={_ws_dry}, enabled={_ws_cfg.get('enabled', False)})"
+            )
+        except Exception as exc:
+            print(f"  [ERR ] config/workspace_settings.json  → {exc}")
+            ok = False
+    else:
+        print("  [----] config/workspace_settings.json  (未作成)")
+    if _ws_history_path.exists():
+        try:
+            _ws_hist = json.loads(_ws_history_path.read_text(encoding="utf-8"))
+            _ws_hist_count = len(_ws_hist.get("history", []))
+            print(f"  [OK  ] config/sync_history.json  ({_ws_hist_count} 同期履歴)")
+        except Exception as exc:
+            print(f"  [ERR ] config/sync_history.json  → {exc}")
+            ok = False
+    else:
+        print("  [----] config/sync_history.json  (未作成)")
+    try:
+        import sys as _sys3
+        _sys3.path.insert(0, str(ROOT))
+        from src.workspace.sync_validator import get_connection_status as _ws_status
+        from src.workspace.sync_engine import get_sync_health as _ws_hlth
+        _wst = _ws_status()
+        _wsh = _ws_hlth()
+        print(
+            f"  [OK  ] WorkspaceSync  "
+            f"({_wst['icon']} {_wst['label']}, "
+            f"sync_total={_wsh['total_syncs']}, "
+            f"conflicts={_wsh['total_conflicts']})"
+        )
+    except Exception as exc:
+        print(f"  [----] WorkspaceSync  → {exc}")
+    _ws_reports_dir = ROOT / "reports" / "workspace"
+    if _ws_reports_dir.exists():
+        _ws_rpts = list(_ws_reports_dir.glob("*.md")) + list(_ws_reports_dir.glob("*.json"))
+        print(f"  [OK  ] reports/workspace/  ({len(_ws_rpts)} ファイル)")
+    else:
+        print("  [----] reports/workspace/  (未作成)")
 
     print()
 

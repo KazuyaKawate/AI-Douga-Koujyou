@@ -1,5 +1,6 @@
-# 🎯 Creator Factory OS — v5.1 — Module SDK Self-Registration Foundation
+# 🎯 Creator Factory OS — v5.2 — Google Workspace Sync Foundation
 
+**v5.2 Phase 1:** **🔄 Google Workspace Sync 基盤** — ローカルJSON → Google Sheets マッピング。手動同期のみ。ドライランデフォルト。Phase 1はローカルデータ読み取り・プレビュー生成のみ（外部API不使用）。  
 **v5.1 Phase 2:** **📦 Module SDK 自己登録基盤** — `MODULE_INFO` スキーマ拡張（module_id・entrypoint・status・package_path 等）。`ModuleRegistry.export_registry()` で registry スナップショットを生成。Development Studio に "Module SDK" タブ追加。  
 **v5.1 Phase 1:** **✅ Approval Center** — AI CEO・自動化・DevStudio からのアクションをレビューする人間承認ゲートウェイ。自動実行なし。  
 **v5.0 Beta Phase 2:** **🧠 AI CEO Core** — OSの全データを横断分析し、健全度・優先度・リスク・機会・推奨アクションを提示するエグゼクティブ決定レイヤー。外部API不使用・自動実行なし・推奨のみ。  

@@ -175,4 +175,11 @@ def collect_snapshot() -> dict:
     except Exception:
         snap["devstudio"] = {}
 
+    # ── Workspace Sync ────────────────────────────────────────────────────────
+    try:
+        from src.workspace.sync_engine import get_sync_health
+        snap["workspace_sync"] = get_sync_health()
+    except Exception:
+        snap["workspace_sync"] = {}
+
     return snap
