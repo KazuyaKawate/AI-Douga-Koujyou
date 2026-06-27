@@ -1,7 +1,8 @@
 {
   "meta": {
-    "version": "5.2",
-    "module": "workspace-sync"
+    "version": "5.2 Phase 4-1",
+    "module": "workspace-sync",
+    "phase": "4-1: read-only connection test"
   },
   "enabled": false,
   "dry_run_default": true,
@@ -56,8 +57,8 @@
     "last_preview": null
   },
   "credential_paths": {
-    "service_account_file": "credentials/service-account.example.json",
-    "oauth_client_file": "credentials/oauth-client.example.json"
+    "service_account_file": "credentials/service-account.local.json",
+    "oauth_client_file": "credentials/oauth-client.local.json"
   },
   "google_sheets": {
     "spreadsheet_id": "",

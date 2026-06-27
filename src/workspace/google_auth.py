@@ -137,29 +137,111 @@ def get_dependency_status() -> dict:
     }
 
 
-def build_client(settings: dict | None = None):
-    """Placeholder for future Google API client construction.
+def build_client(settings: dict | None = None) -> dict:
+    """Build a gspread client for the configured auth mode. Never crashes.
 
-    Phase 3: returns None — gspread integration is prepared but not yet wired.
-             Returns a safe error dict if dependencies or credentials are missing.
-    Phase 4+: will return a gspread.Client when all requirements are met.
+    Returns a dict:
+      status   — "disabled" | "connected" | "deps_missing" | "no_file_configured"
+                 | "file_missing" | "error" | "oauth_pending"
+      client   — gspread.Client or None
+      auth_mode — str
+      error    — str or None
+      icon     — str emoji
+      label    — str (human-readable)
     """
+    if settings is None:
+        settings = load_settings()
+
+    cfg = get_auth_config(settings)
+    auth_mode = cfg["auth_mode"]
+
+    _base: dict = {
+        "auth_mode": auth_mode,
+        "client":    None,
+        "status":    "disabled",
+        "error":     None,
+        "icon":      "⚫",
+        "label":     "認証無効（ドライランのみ）",
+    }
+
+    if auth_mode == "disabled":
+        return _base
+
+    # ── Dependency check ──────────────────────────────────────────────────────
     deps = get_dependency_status()
     if not deps["all_ready"]:
-        return None
+        missing = ", ".join(deps["missing"])
+        return {
+            **_base,
+            "status": "deps_missing",
+            "error":  f"依存パッケージが不足しています: {missing} → {deps['install_hint']}",
+            "icon":   "🔴",
+            "label":  f"パッケージ未インストール: {missing}",
+        }
 
-    status = get_credential_status(settings)
-    if not status["ready"]:
-        return None
+    # ── Service Account ───────────────────────────────────────────────────────
+    if auth_mode == "service_account":
+        path_str = cfg["service_account_file"]
+        if not path_str:
+            return {
+                **_base,
+                "status": "no_file_configured",
+                "error":  "connector.service_account_file が設定されていません。",
+                "icon":   "🔴",
+                "label":  "サービスアカウントファイル未設定",
+            }
 
-    # Phase 4+: construct actual google-auth / gspread client here.
-    # Example (do not uncomment without Phase 4 implementation):
-    #   import gspread
-    #   from google.oauth2.service_account import Credentials
-    #   creds = Credentials.from_service_account_file(
-    #       str(ROOT / status["credential_file_path"]),
-    #       scopes=["https://spreadsheets.google.com/feeds",
-    #               "https://www.googleapis.com/auth/drive"],
-    #   )
-    #   return gspread.authorize(creds)
-    return None
+        cred_path = ROOT / path_str
+        if not cred_path.exists():
+            return {
+                **_base,
+                "status": "file_missing",
+                "error":  f"認証ファイルが見つかりません: {path_str}",
+                "icon":   "🔴",
+                "label":  f"ファイルなし: {path_str}",
+            }
+
+        try:
+            import gspread  # type: ignore[import-untyped]
+            from google.oauth2.service_account import Credentials  # type: ignore[import-untyped]
+
+            _SCOPES = [
+                "https://spreadsheets.google.com/feeds",
+                "https://www.googleapis.com/auth/drive",
+            ]
+            creds = Credentials.from_service_account_file(str(cred_path), scopes=_SCOPES)
+            client = gspread.authorize(creds)
+            return {
+                **_base,
+                "status": "connected",
+                "client": client,
+                "error":  None,
+                "icon":   "🟢",
+                "label":  "サービスアカウント接続済み",
+            }
+        except Exception as exc:
+            return {
+                **_base,
+                "status": "error",
+                "error":  f"gspread接続エラー: {type(exc).__name__}: {exc}",
+                "icon":   "🔴",
+                "label":  f"接続エラー: {type(exc).__name__}",
+            }
+
+    # ── OAuth (Phase 4-2+) ────────────────────────────────────────────────────
+    if auth_mode == "oauth":
+        return {
+            **_base,
+            "status": "oauth_pending",
+            "error":  "OAuthモードはPhase 4-2以降で実装予定です。",
+            "icon":   "🟡",
+            "label":  "OAuth: Phase 4-2以降",
+        }
+
+    return {
+        **_base,
+        "status": "unknown_mode",
+        "error":  f"不明な auth_mode: {auth_mode}",
+        "icon":   "🔴",
+        "label":  f"不明な認証モード: {auth_mode}",
+    }

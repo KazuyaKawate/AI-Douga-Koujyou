@@ -1,32 +1,40 @@
-"""sheet_writer — Google Sheets write abstraction for Creator Factory OS (v5.2 Phase 3).
+"""sheet_writer — Google Sheets write abstraction for Creator Factory OS (v5.2 Phase 4-1).
 
-TRIPLE-LOCK WRITE GUARD (all three must be true to write):
+QUAD-LOCK WRITE GUARD (all four must be true to write):
   1. auth_mode != 'disabled'
   2. dry_run == False
   3. manual_execute == True
+  4. allow_write == True   ← Phase 4-1: always False by default; Phase 4-2+ enables writes
 
-ADDITIONAL GUARDS (Phase 3):
-  4. gspread installed
-  5. google-auth installed
-  6. credential file exists
+DEPENDENCY GUARDS (checked after quad-lock):
+  5. gspread installed
+  6. google-auth installed
+  7. credential file exists
 
 Default behavior is always preview-only. Never crashes UI. Never writes by accident.
-Actual writes are Phase 4+ (live gspread call).
+Actual writes remain Phase 4-2+ (Phase 4-1 = read-only connection test only).
 """
 from __future__ import annotations
 
 from src.workspace.google_auth import get_auth_config, get_credential_status, get_dependency_status
 
 
-def _can_write(auth_mode: str, dry_run: bool, manual_execute: bool) -> tuple[bool, str]:
-    """Triple-lock write guard. All three conditions must be met to allow writes."""
+def _can_write(
+    auth_mode: str,
+    dry_run: bool,
+    manual_execute: bool,
+    allow_write: bool = False,
+) -> tuple[bool, str]:
+    """Quad-lock write guard. All four conditions must be met to allow writes."""
     if auth_mode == "disabled":
         return False, "auth_mode が 'disabled' のため書き込み不可"
     if dry_run:
         return False, "dry_run=True のため書き込み不可（プレビューのみ）"
     if not manual_execute:
         return False, "manual_execute=False のため書き込み不可（手動承認が必要）"
-    return True, "書き込み条件を満たしています（Phase 3+で実装予定）"
+    if not allow_write:
+        return False, "allow_write=False のため書き込み不可（Phase 4-1: 読み取り専用）"
+    return True, "書き込み条件を満たしています"
 
 
 def write_rows(
@@ -35,17 +43,18 @@ def write_rows(
     *,
     dry_run: bool = True,
     manual_execute: bool = False,
+    allow_write: bool = False,
     settings: dict | None = None,
 ) -> dict:
     """Write rows to a Google Sheet.
 
-    Default: preview-only (dry_run=True, manual_execute=False).
-    Actual write: requires dry_run=False AND manual_execute=True AND auth_mode != 'disabled'.
-    Phase 3+: will call gspread when all three guards pass.
+    Default: preview-only (dry_run=True, manual_execute=False, allow_write=False).
+    Phase 4-1: allow_write always defaults False — read-only phase.
+    Phase 4-2+: allow_write=True enables actual writes when all other guards pass.
     """
     auth_cfg = get_auth_config(settings)
     auth_mode = auth_cfg["auth_mode"]
-    can_write, reason = _can_write(auth_mode, dry_run, manual_execute)
+    can_write, reason = _can_write(auth_mode, dry_run, manual_execute, allow_write)
 
     base = {
         "executed":       False,
@@ -90,6 +99,6 @@ def get_writer_status(settings: dict | None = None) -> dict:
     return {
         "auth_mode":     auth_cfg["auth_mode"],
         "write_enabled": auth_cfg["auth_mode"] != "disabled",
-        "phase":         "Phase 3 (preview-only, gspread ready)",
-        "note":          "Actual writes require Phase 4+ gspread live integration",
+        "phase":         "Phase 4-1 (read-only; writes blocked by allow_write=False)",
+        "note":          "Writes enabled in Phase 4-2+ when allow_write=True and all guards pass",
     }

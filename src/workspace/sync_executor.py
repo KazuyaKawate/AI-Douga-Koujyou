@@ -21,8 +21,8 @@ from datetime import datetime, timezone
 
 from src.workspace.sync_validator import load_settings, get_enabled_targets
 from src.workspace.sheets_sync import read_local_data, get_mapping
-from src.workspace.google_auth import get_auth_config, get_credential_status
-from src.workspace.sheet_reader import read_sheet, get_reader_status
+from src.workspace.google_auth import get_auth_config, get_credential_status, build_client, get_dependency_status
+from src.workspace.sheet_reader import read_sheet, read_sheet_detail, get_reader_status
 from src.workspace.sheet_writer import write_rows, get_writer_status
 from src.workspace.sheet_diff import diff_records, summarize_diff
 
@@ -165,8 +165,84 @@ def get_connector_health(settings: dict | None = None) -> dict:
         "targets":          [t.get("target_id", "") for t in targets],
         "last_preview":     last_preview,
         "conflict_count":   0,
-        "phase":            "Phase 3 (gspread readiness)",
+        "phase":            "Phase 4-1 (read-only connection test)",
+        "deps_ready":       get_dependency_status()["all_ready"],
     }
+
+
+def test_read_connection(settings: dict | None = None) -> dict:
+    """Read-only connection test. Calls google_auth + sheet_reader. No writes, never crashes.
+
+    Returns a safe summary dict:
+      ok            — bool
+      auth_mode     — str
+      client_status — str (build_client status)
+      deps_ready    — bool
+      sheet_tested  — str (worksheet name used for test)
+      row_count     — int (-1 if not read)
+      source        — "live" | "sample" | "error" | "skipped"
+      error         — str | None
+      duration_ms   — int
+    """
+    import time
+    t0 = time.time()
+
+    if settings is None:
+        settings = load_settings()
+
+    auth_cfg = get_auth_config(settings)
+    auth_mode = auth_cfg["auth_mode"]
+    deps = get_dependency_status()
+
+    _base = {
+        "ok":            False,
+        "auth_mode":     auth_mode,
+        "client_status": "skipped",
+        "deps_ready":    deps["all_ready"],
+        "sheet_tested":  "",
+        "row_count":     -1,
+        "source":        "skipped",
+        "error":         None,
+        "duration_ms":   0,
+    }
+
+    if auth_mode == "disabled":
+        _base.update({
+            "ok":            True,
+            "client_status": "disabled",
+            "source":        "sample",
+            "error":         None,
+        })
+        _base["duration_ms"] = int((time.time() - t0) * 1000)
+        return _base
+
+    # Build client
+    client_result = build_client(settings)
+    _base["client_status"] = client_result["status"]
+
+    if client_result["status"] != "connected":
+        _base["error"] = client_result.get("error") or f"接続エラー: {client_result['status']}"
+        _base["duration_ms"] = int((time.time() - t0) * 1000)
+        return _base
+
+    # Pick a test worksheet from settings
+    gs_cfg = settings.get("google_sheets", {})
+    test_sheet = gs_cfg.get("worksheet_name", "").strip()
+    if not test_sheet:
+        # Fall back to first enabled target's sheet_name
+        targets = get_enabled_targets(settings)
+        test_sheet = targets[0]["sheet_name"] if targets else "KPI"
+    _base["sheet_tested"] = test_sheet
+
+    detail = read_sheet_detail(test_sheet, settings)
+    _base.update({
+        "ok":        detail["ok"],
+        "row_count": detail["row_count"],
+        "source":    detail["source"],
+        "error":     detail["error"],
+    })
+    _base["duration_ms"] = int((time.time() - t0) * 1000)
+    return _base
 
 
 def _block_reason(auth_mode: str, dry_run: bool, manual_execute: bool) -> str:

@@ -904,7 +904,7 @@ def check() -> bool:
         else:
             print("  [OK  ] .gitignore 認証保護パターン（credentials/, service_account, token.json）")
 
-    # gspread / google-auth
+    # gspread / google-auth (Phase 4-1: WARN if missing, not STATUS fail)
     import importlib.metadata as _imd
     def _pkg_ver(pkg: str) -> tuple[bool, str]:
         try:
@@ -914,11 +914,11 @@ def check() -> bool:
     _gs_ok, _gs_ver = _pkg_ver("gspread")
     _ga_ok, _ga_ver = _pkg_ver("google-auth")
     if _gs_ok and _ga_ok:
-        print(f"  [OK  ] gspread {_gs_ver} / google-auth {_ga_ver}  (Phase 4+ で使用)")
+        print(f"  [OK  ] gspread {_gs_ver} / google-auth {_ga_ver}  (Phase 4-1 read-only ready)")
     else:
         _missing_pkgs = [p for p, ok2 in [("gspread", _gs_ok), ("google-auth", _ga_ok)] if not ok2]
         print(f"  [----] gspread/google-auth 未インストール: {', '.join(_missing_pkgs)}"
-              "  → pip install gspread google-auth  (Phase 4+ まで不要)")
+              "  → pip install gspread google-auth  (auth_mode=disabled なら不要)")
 
     # Phase 3 composite readiness via sync_validator
     try:
@@ -939,6 +939,69 @@ def check() -> bool:
                 print(f"  [WARN]   → {_blk[:80]}")
     except Exception as exc:
         print(f"  [----] Phase 3 Readiness  → {exc}")
+
+    print()
+
+    # Google Sheets Phase 4-1 — Read-Only Connection Readiness
+    print("[ Google Sheets Phase 4-1: 読み取り専用接続準備状況 ]")
+
+    # service-account.local.json must NOT be tracked
+    _sa_local = ROOT / "credentials" / "service-account.local.json"
+    if _sa_local.exists():
+        print(f"  [OK  ] credentials/service-account.local.json  → ローカル存在確認")
+        # Verify it is NOT tracked by git
+        import subprocess as _sp
+        _git_ls = _sp.run(
+            ["git", "ls-files", "--error-unmatch", str(_sa_local)],
+            cwd=str(ROOT), capture_output=True, text=True,
+        )
+        if _git_ls.returncode == 0:
+            print("  [ERR ] service-account.local.json が git に追跡されています！コミットしないでください。")
+            ok = False
+        else:
+            print("  [OK  ] service-account.local.json は git に追跡されていません（安全）")
+    else:
+        print("  [----] credentials/service-account.local.json  → 未配置（接続テストには必要）")
+
+    # Committed auth_mode must remain disabled
+    try:
+        import sys as _sys7, json as _json7
+        _sys7.path.insert(0, str(ROOT))
+        _ws_cfg_path = ROOT / "config" / "workspace_settings.json"
+        if _ws_cfg_path.exists():
+            _ws_cfg_data = _json7.loads(_ws_cfg_path.read_text(encoding="utf-8"))
+            _committed_mode = _ws_cfg_data.get("connector", {}).get("auth_mode", "disabled")
+            if _committed_mode == "disabled":
+                print(f"  [OK  ] committed auth_mode=disabled（安全なデフォルト）")
+            else:
+                print(f"  [WARN] committed auth_mode={_committed_mode}（コミット前に 'disabled' に戻してください）")
+    except Exception as exc:
+        print(f"  [----] auth_mode チェック  → {exc}")
+
+    # Write execution still blocked (allow_write=False)
+    try:
+        from src.workspace.sheet_writer import get_writer_status as _gws41
+        _ws41 = _gws41()
+        print(
+            f"  [OK  ] sheet_writer  phase={_ws41['phase']}  "
+            f"write_enabled={_ws41['write_enabled']}"
+        )
+    except Exception as exc:
+        print(f"  [----] sheet_writer status  → {exc}")
+
+    # test_read_connection import check
+    try:
+        from src.workspace.sync_executor import test_read_connection as _trc
+        _trc_result = _trc()
+        _trc_ok = _trc_result["ok"]
+        _trc_src = _trc_result["source"]
+        print(
+            f"  [{'OK  ' if _trc_ok else 'WARN'}] test_read_connection  "
+            f"(status={_trc_result['client_status']}, source={_trc_src}, "
+            f"rows={_trc_result['row_count']}, {_trc_result['duration_ms']}ms)"
+        )
+    except Exception as exc:
+        print(f"  [----] test_read_connection  → {exc}")
 
     print()
 

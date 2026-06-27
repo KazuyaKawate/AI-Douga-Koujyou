@@ -6,6 +6,35 @@ Versions are cumulative; each release builds on the previous stable base.
 
 ---
 
+## [v5.2 Phase 4-1] — 2026-06-27 — Google Sheets Read-Only Connection
+
+**Codename:** Google Sheets Read-Only Connection  
+**Upgrade path:** v5.2 Phase 3 → v5.2 Phase 4-1 (additive, no breaking changes)
+
+### Added
+- `src/workspace/google_auth.build_client()` — fully implemented; builds live gspread client for `service_account` mode (lazy imports gspread + google.oauth2); returns structured `{status, client, auth_mode, error, icon, label}` dict; never crashes; OAuth returns `"oauth_pending"` placeholder for Phase 4-2+
+- `src/workspace/sheet_reader.read_sheet_detail()` — rich return dict `{ok, rows, row_count, source, error, sheet_name, auth_mode}`; calls live gspread for service_account mode
+- `src/workspace/sync_executor.test_read_connection()` — read-only connection test; builds client, calls `read_sheet_detail()`, returns safe summary `{ok, auth_mode, client_status, deps_ready, sheet_tested, row_count, source, error, duration_ms}`
+
+### Changed
+- `src/workspace/google_auth.py` — `build_client()` now constructs real gspread.Client for service_account; adds OAuth pending stub; dep + file checks before any import attempt; all paths return safe dict
+- `src/workspace/sheet_reader.py` — `read_sheet()` now calls `build_client()` and real `gspread` API for service_account mode; resolves `spreadsheet_id` from `google_sheets` or legacy field; `get_reader_status()` phase label updated to Phase 4-1
+- `src/workspace/sheet_writer.py` — quad-lock write guard added: 4th lock `allow_write=False` (always False in Phase 4-1, enabling Phase 4-2+ opt-in); `get_writer_status()` phase label updated
+- `src/workspace/sync_executor.py` — imports `build_client`, `get_dependency_status`, `read_sheet_detail`; `get_connector_health()` phase label updated; `deps_ready` added to health dict
+- `.gitignore` — added explicit `credentials/service-account.local.json` line
+- `config/workspace_settings.json` — `meta.version` → "5.2 Phase 4-1"; `credential_paths.service_account_file` → `"credentials/service-account.local.json"`
+- `pages/25_Development_Studio.py` — Tab 10: Phase 4-1 section added with dependency metrics (gspread, google-auth), credential file status, auth_mode, spreadsheet_id, worksheet_name, "Read Connection Test" button (calls `test_read_connection()`), success/error detail display, pip install hint on deps_missing
+- `scripts/check_project.py` — Phase 4-1 section: service-account.local.json tracking check, committed auth_mode=disabled check, `sheet_writer` write-blocked check, `test_read_connection()` import + execution result; missing packages are WARN not STATUS fail
+
+### Design decisions
+- `allow_write=False` is the 4th lock in `write_rows()`; existing call sites (`run_execute`) continue to pass `manual_execute=True` but will still be blocked by `allow_write` — no risk of accidental writes in Phase 4-1
+- `build_client()` uses lazy imports (`import gspread` inside function body) — module loads cleanly even when gspread is not installed
+- `test_read_connection()` picks test worksheet from `google_sheets.worksheet_name` or falls back to first enabled target's `sheet_name`
+- `credentials/service-account.local.json` is explicitly named in `.gitignore`; health check verifies it is NOT tracked by git
+- gspread/google-auth missing → WARN in health check, never STATUS fail; auth_mode=disabled is always the safe fallback
+
+---
+
 ## [v5.2 Phase 3] — 2026-06-27 — Google Sheets Credential Safety & gspread Readiness
 
 **Codename:** Google Sheets Credential Safety & gspread Readiness  

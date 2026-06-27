@@ -633,8 +633,13 @@ with tabs[9]:
         from src.workspace.sync_executor import (
             run_preview as _ex_preview,
             get_connector_health as _ex_health,
+            test_read_connection as _ex_test_read,
         )
-        from src.workspace.google_auth import get_auth_config as _ws_auth_cfg, get_credential_status as _ws_cred_status
+        from src.workspace.google_auth import (
+            get_auth_config as _ws_auth_cfg,
+            get_credential_status as _ws_cred_status,
+            get_dependency_status as _ws_dep_status,
+        )
         from src.workspace.sync_history import get_summary as _ws_hist_sum, get_recent as _ws_hist_recent
         from src.workspace.sync_models import STATUS_ICONS as _ws_status_icons
 
@@ -796,6 +801,106 @@ with tabs[9]:
 
         st.divider()
 
+        # ── Phase 4-1: Read-Only Connection Test ──────────────────────────────
+        st.markdown("**🔌 Phase 4-1: 読み取り接続テスト**")
+        st.caption(
+            "gspread サービスアカウント認証で Google Sheets を **読み取り専用** で接続します。"
+            "書き込みは Phase 4-2+ まで無効。auth_mode=disabled のままではサンプルデータを返します。"
+        )
+
+        # Status grid
+        _deps41   = _ws_dep_status()
+        _gs_cfg   = _ws_settings.get("google_sheets", {})
+        _conn_cfg = _ws_settings.get("connector", {})
+        _cred_cfg = _ws_settings.get("credential_paths", {})
+        _cred_file_path = _conn_cfg.get("service_account_file", "") or _cred_cfg.get("service_account_file", "")
+
+        p41c1, p41c2, p41c3 = st.columns(3)
+        p41c1.metric(
+            "📦 gspread",
+            f"✅ {_deps41['gspread_version']}" if _deps41["gspread_installed"] else "❌ 未インストール",
+        )
+        p41c2.metric(
+            "📦 google-auth",
+            f"✅ {_deps41['google_auth_version']}" if _deps41["google_auth_installed"] else "❌ 未インストール",
+        )
+        p41c3.metric(
+            "🔑 auth_mode",
+            _ws_auth["auth_mode"],
+        )
+
+        p41c4, p41c5, p41c6 = st.columns(3)
+        _cred_exists = bool(_cred_file_path) and (ROOT / _cred_file_path).exists()
+        p41c4.metric(
+            "📄 認証ファイル",
+            "✅ 存在" if _cred_exists else ("⬜ パス未設定" if not _cred_file_path else "🔴 ファイルなし"),
+        )
+        p41c5.metric(
+            "🆔 spreadsheet_id",
+            "✅ 設定済み" if _gs_cfg.get("spreadsheet_id", "").strip() else "⬜ 未設定",
+        )
+        p41c6.metric(
+            "📋 worksheet_name",
+            _gs_cfg.get("worksheet_name", "") or "⬜ 未設定",
+        )
+
+        if not _deps41["all_ready"]:
+            st.info(
+                f"📦 **依存パッケージ未インストール:** `{_deps41['install_hint']}`  \n"
+                "インストール後、ページをリロードしてください。auth_mode=disabled のままでも動作します。"
+            )
+
+        # Read Connection Test button
+        _read_btn_col, _ = st.columns([1, 3])
+        with _read_btn_col:
+            if st.button(
+                "🔌 読み取り接続テスト",
+                type="secondary",
+                use_container_width=True,
+                key="ws_read_test",
+            ):
+                with st.spinner("接続テスト中…"):
+                    try:
+                        _rt = _ex_test_read(_ws_settings)
+                        if _rt["ok"]:
+                            _src_label = {"live": "ライブ読み取り", "sample": "サンプルデータ", "error": "エラー"}.get(_rt["source"], _rt["source"])
+                            st.success(
+                                f"✅ 接続テスト成功  |  "
+                                f"ソース: {_src_label}  |  "
+                                f"行数: {_rt['row_count']}  |  "
+                                f"シート: `{_rt['sheet_tested'] or '(disabled)'}` |  "
+                                f"{_rt['duration_ms']}ms"
+                            )
+                        else:
+                            st.error(
+                                f"🔴 接続テスト失敗  |  "
+                                f"ステータス: {_rt['client_status']}  |  "
+                                f"エラー: {_rt.get('error', '不明')}"
+                            )
+                            if _rt["client_status"] == "deps_missing":
+                                st.code("pip install gspread google-auth", language="bash")
+                            elif _rt["client_status"] == "no_file_configured":
+                                st.info(
+                                    "**connector.service_account_file** を設定してください。  \n"
+                                    "`credentials/service-account.local.json` を配置し、"
+                                    "`config/workspace_settings.json` を更新してください。"
+                                )
+                            elif _rt["client_status"] == "file_missing":
+                                st.info(
+                                    f"`{_cred_file_path}` が見つかりません。  \n"
+                                    "Google Cloud Console からサービスアカウントJSONをダウンロードし、"
+                                    "`credentials/service-account.local.json` に配置してください。"
+                                )
+                    except Exception as exc:
+                        st.error(f"接続テストエラー: {exc}")
+
+        st.caption(
+            "⚠️ **書き込みは無効**（Phase 4-1 は読み取り専用）。"
+            "写し込みは Phase 4-2 以降で `allow_write=True` が有効になる予定。"
+        )
+
+        st.divider()
+
         # ── Manual Dry Run button ─────────────────────────────────────────────
         st.markdown("**手動ドライラン**")
         st.caption("ローカルデータを読み取り、同期プレビューを生成します。外部API通信なし。")
@@ -820,7 +925,7 @@ with tabs[9]:
         # ── Manual Execute button (disabled by default) ───────────────────────
         st.markdown("**⚡ 手動実行（Google Sheetsへの書き込み）**")
         st.warning(
-            "⚠️ Phase 3 では実際の書き込みは実装されていません（Phase 4+ で gspread ライブ統合予定）。  \n"
+            "⚠️ Phase 4-1 では書き込みは無効です（`allow_write=False`）。Phase 4-2+ で有効化予定。  \n"
             "実行ボタンは **auth_mode が 'disabled' の間は常に無効** です。"
         )
         _exec_enabled = _ws_auth["auth_mode"] != "disabled" and _ws_cred["ready"]

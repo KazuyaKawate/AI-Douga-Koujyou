@@ -23,6 +23,8 @@ config/secrets.*
 # credentials/ フォルダ内のJSONファイルはすべて除外（.gitkeepのみ追跡）
 credentials/
 !credentials/.gitkeep
+# ローカル専用サービスアカウントファイル（明示的除外）
+credentials/service-account.local.json
 secrets/
 *.service-account.json
 *service_account*.json

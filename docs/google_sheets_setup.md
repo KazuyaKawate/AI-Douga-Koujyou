@@ -1,4 +1,4 @@
-# Google Sheets セットアップガイド — Creator Factory OS v5.2 Phase 3
+# Google Sheets セットアップガイド — Creator Factory OS v5.2 Phase 4-1
 
 > **重要:** このガイドはオプション設定です。  
 > `auth_mode` のデフォルトは `"disabled"` のまま維持されます。  
@@ -17,15 +17,30 @@
 
 ---
 
-## 前提パッケージ（オプション）
+## Phase 4-1: 読み取り専用接続（現フェーズ）
 
-Google Sheets連携には以下のパッケージが必要です。インストールしない場合はドライランモードで動作します。
+**Phase 4-1** から、サービスアカウントを使った **Google Sheets への読み取り接続** が可能になりました。
+
+| フェーズ | 機能 | 状態 |
+|---------|------|------|
+| Phase 3 | 安全性確認・依存パッケージチェック | ✅ 完了 |
+| **Phase 4-1** | **サービスアカウントで読み取り専用接続** | ✅ 現フェーズ |
+| Phase 4-2 | 書き込み有効化（`allow_write=True`） | 🔲 予定 |
+| Phase 4-3 | OAuth 認証 | 🔲 予定 |
+
+---
+
+## 前提パッケージ（Phase 4-1 接続に必要）
+
+Google Sheets 読み取りには以下のパッケージが必要です。インストールしない場合は `auth_mode=disabled` のままドライランモードで動作します。
 
 ```bash
 pip install gspread google-auth
 ```
 
-インストール後、Development Studio → Workspace Sync タブで依存パッケージのステータスが更新されます。
+インストール後、Development Studio → Workspace Sync タブで依存パッケージのステータスが ✅ に更新されます。
+
+> **注意:** `auth_mode=disabled` のままであれば、これらのパッケージなしですべての機能が動作します。
 
 ---
 
@@ -44,13 +59,14 @@ pip install gspread google-auth
 1. **APIs & Services → Credentials** を開く
 2. **Create Credentials → Service Account** をクリック
 3. サービスアカウント名を入力（例: `creator-factory-sync`）
-4. ロールは **Editor** または **Viewer** を付与
+4. ロールは **Editor** または **Viewer** を付与（Phase 4-1 は読み取りのみ = Viewer で十分）
 5. 作成後、サービスアカウントをクリック → **Keys タブ** → **Add Key → JSON**
-6. ダウンロードされたJSONファイルをプロジェクトの `credentials/` フォルダに配置:
+6. ダウンロードされたJSONファイルを **必ず** 以下のパスに配置:
    ```
-   credentials/service-account.json
+   credentials/service-account.local.json
    ```
-   ※ このファイルは `.gitignore` により自動的に除外されます
+   ※ `.gitignore` に `credentials/` および `credentials/service-account.local.json` が明示的に追加されているためコミットされません  
+   ※ `git status` で表示されないことを必ず確認してください
 
 ---
 
@@ -69,14 +85,18 @@ pip install gspread google-auth
 
 ## Step 4: config/workspace_settings.json の更新
 
-`config/workspace_settings.json` の `connector` セクションと `google_sheets` セクションを更新します:
+`config/workspace_settings.json` の `connector`・`credential_paths`・`google_sheets` セクションをローカル環境向けに更新します:
 
 ```json
 {
   "connector": {
     "auth_mode": "service_account",
-    "service_account_file": "credentials/service-account.json",
+    "service_account_file": "credentials/service-account.local.json",
     "oauth_client_file": ""
+  },
+  "credential_paths": {
+    "service_account_file": "credentials/service-account.local.json",
+    "oauth_client_file": "credentials/oauth-client.local.json"
   },
   "google_sheets": {
     "spreadsheet_id": "YOUR_SPREADSHEET_ID_HERE",
@@ -86,27 +106,30 @@ pip install gspread google-auth
 }
 ```
 
-**注意:**
-- `auth_mode` を `"service_account"` に変更
-- `service_account_file` にローカルパスを設定（ファイル内容は記載しない）
-- `spreadsheet_id` に実際のIDを設定
+> **重要:** `config/workspace_settings.json` に変更した場合、コミット前に必ず `auth_mode` を `"disabled"` に戻してください。`auth_mode=disabled` がリポジトリ上の安全なデフォルトです。
 
 ---
 
-## Step 5: gspread readiness チェック
+## Step 5: 読み取り接続テスト (Phase 4-1)
 
-Development Studio → Tab 10 (Workspace Sync) → **Phase 3 Readiness Checklist** で以下を確認:
+1. `pip install gspread google-auth` を実行（未インストールの場合）
+2. Streamlit アプリを起動: `streamlit run Home.py`
+3. **Development Studio → Tab 10 (Workspace Sync)** を開く
+4. **Phase 4-1: 読み取り接続テスト** セクションで以下を確認:
 
 | チェック項目 | 期待値 |
 |-------------|--------|
-| gspread インストール | ✅ |
-| google-auth インストール | ✅ |
-| auth_mode | service_account |
-| 認証ファイルパス設定 | ✅ |
-| 認証ファイル存在確認 | ✅ |
-| spreadsheet_id 設定 | ✅ |
+| 📦 gspread | ✅ バージョン表示 |
+| 📦 google-auth | ✅ バージョン表示 |
+| 🔑 auth_mode | `service_account` |
+| 📄 認証ファイル | ✅ 存在 |
+| 🆔 spreadsheet_id | ✅ 設定済み |
+| 📋 worksheet_name | シート名表示 |
 
-すべて ✅ になると **Manual Execute** ボタンが有効化されます（Phase 3+ 実装後）。
+5. **「🔌 読み取り接続テスト」** ボタンをクリック
+6. 成功: `✅ 接続テスト成功 | ソース: ライブ読み取り | 行数: XX`
+
+> **書き込みは Phase 4-2 まで無効。** Phase 4-1 は読み取り専用です。`allow_write=False` が常に書き込みをブロックします。
 
 ---
 
