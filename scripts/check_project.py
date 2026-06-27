@@ -78,13 +78,19 @@ REQUIRED_FILES = [
     "pages/25_Development_Studio.py",
     "pages/26_AI_CEO.py",
     "pages/27_Approval_Center.py",
-    # Workspace Sync (v5.2)
+    # Workspace Sync (v5.2 Phase 1)
     "src/workspace/__init__.py",
     "src/workspace/sync_models.py",
     "src/workspace/sync_history.py",
     "src/workspace/sync_validator.py",
     "src/workspace/sheets_sync.py",
     "src/workspace/sync_engine.py",
+    # Google Sheets Connector (v5.2 Phase 2)
+    "src/workspace/google_auth.py",
+    "src/workspace/sheet_reader.py",
+    "src/workspace/sheet_writer.py",
+    "src/workspace/sheet_diff.py",
+    "src/workspace/sync_executor.py",
     # Module SDK (v5.1)
     "src/sdk/__init__.py",
     "src/sdk/module_manifest.py",
@@ -728,11 +734,17 @@ def check() -> bool:
             _ws_targets = _ws_cfg.get("sync_targets", [])
             _ws_enabled = sum(1 for t in _ws_targets if t.get("enabled", True))
             _ws_dry = _ws_cfg.get("dry_run_default", True)
+            _ws_auth_mode = _ws_cfg.get("connector", {}).get("auth_mode", "disabled")
             print(
                 f"  [OK  ] config/workspace_settings.json  "
                 f"({len(_ws_targets)} ターゲット, {_ws_enabled} 有効, "
-                f"dry_run={_ws_dry}, enabled={_ws_cfg.get('enabled', False)})"
+                f"dry_run={_ws_dry}, enabled={_ws_cfg.get('enabled', False)}, "
+                f"auth_mode={_ws_auth_mode})"
             )
+            if _ws_auth_mode != "disabled":
+                print(f"  [WARN] auth_mode={_ws_auth_mode}  認証ファイルをコミットしないでください。")
+            else:
+                print("  [OK  ] auth_mode=disabled (デフォルト: 安全)")
         except Exception as exc:
             print(f"  [ERR ] config/workspace_settings.json  → {exc}")
             ok = False
@@ -769,6 +781,82 @@ def check() -> bool:
         print(f"  [OK  ] reports/workspace/  ({len(_ws_rpts)} ファイル)")
     else:
         print("  [----] reports/workspace/  (未作成)")
+
+    print()
+
+    # Google Sheets Connector (v5.2 Phase 2)
+    print("[ Google Sheets Connector (v5.2 Phase 2) ]")
+    _connector_modules = [
+        "src/workspace/google_auth.py",
+        "src/workspace/sheet_reader.py",
+        "src/workspace/sheet_writer.py",
+        "src/workspace/sheet_diff.py",
+        "src/workspace/sync_executor.py",
+    ]
+    for _cm in _connector_modules:
+        _cp = ROOT / _cm
+        if _cp.exists():
+            print(f"  [OK  ] {_cm}  ({_cp.stat().st_size / 1024:.1f} KB)")
+        else:
+            print(f"  [MISS] {_cm}")
+            ok = False
+
+    # Validate no credential files are committed
+    _cred_names = (
+        "google_credentials.json", "service_account.json",
+        "credentials.json", "client_secret.json",
+        "oauth_client.json", "token.json",
+    )
+    _cred_found = False
+    for _cn in _cred_names:
+        for _cp2 in (ROOT / _cn, ROOT / "config" / _cn):
+            if _cp2.exists():
+                print(f"  [WARN] 認証ファイルが検出されました: {_cp2.relative_to(ROOT)}"
+                      "  → .gitignore に追加してください。")
+                _cred_found = True
+    if not _cred_found:
+        print("  [OK  ] 認証ファイルなし（安全）")
+
+    # Validate auth_mode defaults to disabled
+    try:
+        import sys as _sys4
+        _sys4.path.insert(0, str(ROOT))
+        from src.workspace.google_auth import get_auth_config as _ga_cfg
+        _ac = _ga_cfg()
+        if _ac["auth_mode"] == "disabled":
+            print(f"  [OK  ] auth_mode=disabled (デフォルト設定確認)")
+        else:
+            print(f"  [WARN] auth_mode={_ac['auth_mode']}  デフォルトは 'disabled' 推奨")
+    except Exception as exc:
+        print(f"  [----] google_auth.get_auth_config  → {exc}")
+
+    # Validate sync_executor imports correctly
+    try:
+        import sys as _sys5
+        _sys5.path.insert(0, str(ROOT))
+        from src.workspace.sync_executor import run_preview as _se_prev, get_connector_health as _se_hlth
+        _seh = _se_hlth()
+        print(
+            f"  [OK  ] sync_executor  "
+            f"(auth_mode={_seh['auth_mode']}, "
+            f"targets={_seh['target_count']}, "
+            f"phase={_seh['phase']})"
+        )
+    except Exception as exc:
+        print(f"  [ERR ] sync_executor  → {exc}")
+        ok = False
+
+    # py_compile all connector modules
+    import py_compile as _pyc
+    for _cm2 in _connector_modules:
+        _cp3 = ROOT / _cm2
+        if _cp3.exists():
+            try:
+                _pyc.compile(str(_cp3), doraise=True)
+                print(f"  [OK  ] py_compile: {_cm2}")
+            except _pyc.PyCompileError as exc:
+                print(f"  [ERR ] py_compile: {_cm2}  → {exc}")
+                ok = False
 
     print()
 

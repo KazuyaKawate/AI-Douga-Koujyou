@@ -605,100 +605,162 @@ with tabs[8]:
 with tabs[9]:
     st.subheader("🔄 Google Workspace Sync")
     st.caption(
-        "v5.2 · ローカルJSON → Google Sheets マッピング。"
-        "**手動同期のみ。自動実行なし。ドライラン デフォルト。外部API不使用（Phase 1）。**"
+        "v5.2 Phase 2 · ローカルJSON → Google Sheets コネクター基盤。"
+        "**手動同期のみ。自動実行なし。ドライランデフォルト。認証情報はリポジトリに保存しない。**"
+    )
+
+    st.error(
+        "🔒 **セキュリティ警告: 認証情報はリポジトリに保存しないでください。**  \n"
+        "`service_account_file` / `oauth_client_file` はローカルパスのみ設定可能。"
+        "実際のJSONファイルは `.gitignore` に追加し、コミットしないでください。"
     )
 
     try:
-        from src.workspace.sync_validator import load_settings as _ws_load_settings, \
-            validate_settings as _ws_validate, get_connection_status as _ws_conn_status, \
-            get_enabled_targets as _ws_targets
-        from src.workspace.sync_engine import generate_preview as _ws_preview, \
-            run_dry_run as _ws_dry_run, get_sync_health as _ws_health
-        from src.workspace.sync_history import get_summary as _ws_hist_sum, \
-            get_recent as _ws_hist_recent
+        from src.workspace.sync_validator import (
+            load_settings as _ws_load_settings,
+            validate_settings as _ws_validate,
+            get_connection_status as _ws_conn_status,
+            get_enabled_targets as _ws_targets,
+            validate_connector_settings as _ws_validate_conn,
+            check_no_credentials_committed as _ws_cred_check,
+        )
+        from src.workspace.sync_engine import (
+            generate_preview as _ws_preview,
+            run_dry_run as _ws_dry_run,
+            get_sync_health as _ws_sync_health,
+        )
+        from src.workspace.sync_executor import (
+            run_preview as _ex_preview,
+            get_connector_health as _ex_health,
+        )
+        from src.workspace.google_auth import get_auth_config as _ws_auth_cfg, get_credential_status as _ws_cred_status
+        from src.workspace.sync_history import get_summary as _ws_hist_sum, get_recent as _ws_hist_recent
         from src.workspace.sync_models import STATUS_ICONS as _ws_status_icons
 
-        _ws_settings = _ws_load_settings()
-        _ws_conn     = _ws_conn_status(_ws_settings)
-        _ws_hist     = _ws_hist_sum()
-        _ws_health   = _ws_health(_ws_settings)
+        _ws_settings    = _ws_load_settings()
+        _ws_conn        = _ws_conn_status(_ws_settings)
+        _ws_hist        = _ws_hist_sum()
+        _ws_auth        = _ws_auth_cfg(_ws_settings)
+        _ws_cred        = _ws_cred_status(_ws_settings)
+        _ex_hlth        = _ex_health(_ws_settings)
 
-        # Connection Status Banner
+        # ── Auth mode + credential status ─────────────────────────────────────
+        st.divider()
+        st.markdown("**🔑 認証モード & クレデンシャルステータス**")
+
+        am1, am2, am3 = st.columns(3)
+        am1.metric("🔑 Auth Mode",       _ws_auth["auth_mode"])
+        am2.metric("🔐 Credential",      f"{_ws_cred['icon']} {_ws_cred['label']}")
+        am3.metric("🔍 Dry-Run Default", "✅ ON" if _ws_settings.get("dry_run_default", True) else "⚠️ OFF")
+
+        _cred_safe, _cred_warns = _ws_cred_check()
+        if not _cred_safe:
+            for w in _cred_warns:
+                st.error(f"🚨 {w}")
+        else:
+            st.success("✅ 認証ファイルはリポジトリルートに存在しません（安全）")
+
+        st.divider()
+
+        # ── Connection Status Banner ──────────────────────────────────────────
+        st.markdown("**🔌 接続ステータス**")
         if _ws_conn["status"] == "unconfigured":
             st.warning(
                 "⚫ **Workspace Sync 未設定**  \n"
-                "`config/workspace_settings.json` に `spreadsheet_id` と "
-                "`google_credentials_path` を設定してください。"
+                "`config/workspace_settings.json` の `connector.auth_mode` を設定してください。"
             )
         elif _ws_conn["status"] == "no_credentials":
-            st.error(
-                "🔴 **Google認証ファイルなし**  \n"
+            st.warning(
+                "🔴 **Google認証ファイルなし** — auth_mode が 'disabled' です。  \n"
                 "Google Cloud ConsoleからService Account JSONをダウンロードし、"
-                "`config/google_credentials.json` に配置してください。"
+                "`config/workspace_settings.json` の `connector` セクションを設定してください。"
             )
-        elif _ws_conn["status"] in ("no_spreadsheet", "disabled"):
-            st.warning(f"{_ws_conn['icon']} **{_ws_conn['label']}** — 設定を確認してください。")
         else:
             st.info(
-                f"{_ws_conn['icon']} **{_ws_conn['label']}**  \n"
-                "Phase 1: ローカルデータの読み取り・プレビュー生成のみ。"
-                "実際のSheets書き込みはPhase 2で実装予定。"
+                f"{_ws_conn['icon']} **{_ws_conn['label']}** — "
+                "Phase 2: コネクター基盤。Phase 3+ でgspread実際書き込み実装予定。"
             )
 
         st.divider()
 
-        # Summary metrics
+        # ── Summary metrics ──────────────────────────────────────────────────
         wsm1, wsm2, wsm3, wsm4, wsm5 = st.columns(5)
         wsm1.metric("🔌 接続",       f"{_ws_conn['icon']} {_ws_conn['label']}")
-        wsm2.metric("🔍 ドライラン", "✅ ON" if _ws_conn["dry_run_default"] else "⚠️ OFF")
-        wsm3.metric("📊 同期総数",   _ws_hist["total_syncs"])
-        wsm4.metric("✅ 成功",       _ws_hist["successful"])
-        wsm5.metric("⚠️ 競合総数",   _ws_hist["total_conflicts"])
+        wsm2.metric("📊 同期総数",   _ws_hist["total_syncs"])
+        wsm3.metric("✅ 成功",       _ws_hist["successful"])
+        wsm4.metric("⚠️ 競合総数",   _ws_hist["total_conflicts"])
+        wsm5.metric("📋 有効ターゲット", _ex_hlth["target_count"])
 
         st.divider()
 
-        # Validation
-        _ws_valid, _ws_errors = _ws_validate(_ws_settings)
-        st.markdown("**設定バリデーション**")
-        if _ws_valid:
-            st.success("✅ 設定は有効です（Phase 2で接続可能）")
-        else:
-            for e in _ws_errors:
-                st.warning(f"⚠️ {e}")
-
-        st.divider()
-
-        # Sync Preview
-        st.markdown("**同期プレビュー（ドライラン）**")
-        st.caption("以下はローカルJSONから読み取ったデータ行数です。実際のAPI通信は行いません。")
-
+        # ── Sheet target list ────────────────────────────────────────────────
+        st.markdown("**📋 同期ターゲット一覧**")
         _ws_enabled_targets = _ws_targets(_ws_settings)
         if not _ws_enabled_targets:
             st.caption("有効な同期ターゲットがありません。`config/workspace_settings.json` を確認してください。")
         else:
-            _ws_previews = _ws_preview(_ws_settings)
-            for pv in _ws_previews:
-                with st.expander(
-                    f"{'✅' if pv['ready'] else '❌'} **{pv['target_name']}** → "
-                    f"シート: `{pv['sheet_name']}`  |  "
-                    f"ローカルファイル: `{pv['local_file']}`  |  "
-                    f"行数: {pv['rows_total']}",
-                    expanded=False
-                ):
-                    if pv.get("error"):
-                        st.error(f"エラー: {pv['error']}")
-                    else:
-                        pvc1, pvc2, pvc3 = st.columns(3)
-                        pvc1.metric("📊 総行数",   pv["rows_total"])
-                        pvc2.metric("🆕 新規行",   pv["rows_new"])
-                        pvc3.metric("⚠️ 競合",     pv["conflict_count"])
+            for _t in _ws_enabled_targets:
+                st.caption(
+                    f"• `{_t.get('target_id', '?')}` → シート: **{_t.get('sheet_name', '?')}** "
+                    f"| ローカル: `{_t.get('local_file', '?')}`"
+                )
 
         st.divider()
 
-        # Manual Dry Run button
+        # ── Diff preview (using sync_executor) ───────────────────────────────
+        st.markdown("**🔍 差分プレビュー（コネクター）**")
+        st.caption(
+            "ローカルJSONとシートデータ（auth_mode=disabled の場合はサンプルデータ）を比較します。"
+            "APIへの実際の通信は行いません。"
+        )
+
+        if st.button("🔍 差分プレビューを実行", type="secondary", key="ws_diff_preview"):
+            with st.spinner("差分を計算中…"):
+                try:
+                    _prev = _ex_preview(_ws_settings)
+                    st.success(
+                        f"✅ プレビュー完了  |  "
+                        f"ターゲット: {_prev['target_count']}  |  "
+                        f"競合: {_prev['total_conflicts']}  |  "
+                        f"{_prev['duration_ms']}ms"
+                    )
+                    for _tp in _prev["targets"]:
+                        _diff = _tp.get("diff") or {}
+                        _sum  = _diff.get("summary", {})
+                        with st.expander(
+                            f"{'✅' if _tp['ready'] else '❌'} **{_tp['target_name']}** → "
+                            f"シート: `{_tp['sheet_name']}` | {_tp.get('diff_summary', '')}",
+                            expanded=False,
+                        ):
+                            if _tp.get("error"):
+                                st.error(f"エラー: {_tp['error']}")
+                            else:
+                                dpc1, dpc2, dpc3, dpc4, dpc5 = st.columns(5)
+                                dpc1.metric("🆕 追加",     _sum.get("added", 0))
+                                dpc2.metric("✏️ 更新",     _sum.get("updated", 0))
+                                dpc3.metric("🗑️ 削除",     _sum.get("removed", 0))
+                                dpc4.metric("⚠️ 競合",     _sum.get("conflicts", 0))
+                                dpc5.metric("✅ 変更なし", _sum.get("unchanged", 0))
+                except Exception as exc:
+                    st.error(f"差分プレビューエラー: {exc}")
+
+        st.divider()
+
+        # ── Validation ───────────────────────────────────────────────────────
+        st.markdown("**⚙️ 設定バリデーション**")
+        _ws_valid, _ws_errors = _ws_validate(_ws_settings)
+        _conn_valid, _conn_errors = _ws_validate_conn(_ws_settings)
+        if _ws_valid and _conn_valid:
+            st.success("✅ 設定は有効です")
+        else:
+            for e in _ws_errors + _conn_errors:
+                st.warning(f"⚠️ {e}")
+
+        st.divider()
+
+        # ── Manual Dry Run button ─────────────────────────────────────────────
         st.markdown("**手動ドライラン**")
-        st.caption("ローカルデータを読み取り、プレビューを生成します。外部API通信なし。")
+        st.caption("ローカルデータを読み取り、同期プレビューを生成します。外部API通信なし。")
         _dr_btn_col, _ = st.columns([1, 3])
         with _dr_btn_col:
             if st.button("🔍 ドライラン実行", type="primary", use_container_width=True,
@@ -717,14 +779,37 @@ with tabs[9]:
 
         st.divider()
 
-        # Sync History
+        # ── Manual Execute button (disabled by default) ───────────────────────
+        st.markdown("**⚡ 手動実行（Google Sheetsへの書き込み）**")
+        st.warning(
+            "⚠️ Phase 2 では実際の書き込みは実装されていません（Phase 3+ で gspread 統合予定）。  \n"
+            "実行ボタンは **auth_mode が 'disabled' の間は常に無効** です。"
+        )
+        _exec_enabled = _ws_auth["auth_mode"] != "disabled" and _ws_cred["ready"]
+        _exec_col, _ = st.columns([1, 3])
+        with _exec_col:
+            st.button(
+                "⚡ 手動実行（本番書き込み）",
+                type="primary",
+                use_container_width=True,
+                key="ws_manual_exec",
+                disabled=True,
+                help=(
+                    "auth_mode='disabled' のため無効。"
+                    "Phase 3+ (gspread) 実装後に有効になります。"
+                ),
+            )
+
+        st.divider()
+
+        # ── Sync History ─────────────────────────────────────────────────────
         st.markdown("**同期履歴 (直近10件)**")
         _ws_recent = _ws_hist_recent(10)
         if not _ws_recent:
             st.caption("同期履歴なし。ドライランを実行すると履歴が記録されます。")
         else:
             for rec in _ws_recent:
-                s_icon = _ws_status_icons.get(rec.get("status", ""), "❓")
+                s_icon   = _ws_status_icons.get(rec.get("status", ""), "❓")
                 dr_badge = "🔍 Dry" if rec.get("dry_run") else "⚡ Real"
                 st.caption(
                     f"{s_icon} `{rec.get('timestamp', '?')}` — "

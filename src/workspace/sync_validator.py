@@ -98,3 +98,70 @@ def get_enabled_targets(settings: dict | None = None) -> list[dict]:
     if settings is None:
         settings = load_settings()
     return [t for t in settings.get("sync_targets", []) if t.get("enabled", True)]
+
+
+# ── Phase 2: Connector validation ─────────────────────────────────────────────
+
+_CREDENTIAL_PATTERNS = (
+    "google_credentials.json",
+    "service_account.json",
+    "credentials.json",
+    "client_secret.json",
+    "oauth_client.json",
+    "token.json",
+)
+
+
+def validate_connector_settings(settings: dict | None = None) -> tuple[bool, list[str]]:
+    """Validate Phase 2 connector configuration. Read-only, no API calls."""
+    if settings is None:
+        settings = load_settings()
+    errors: list[str] = []
+
+    connector = settings.get("connector", {})
+    auth_mode = connector.get("auth_mode", "disabled")
+    if auth_mode not in ("disabled", "service_account", "oauth"):
+        errors.append(
+            f"connector.auth_mode が無効な値です: '{auth_mode}'. "
+            "disabled / service_account / oauth のいずれかを指定してください。"
+        )
+
+    if auth_mode == "disabled":
+        return True, []
+
+    if auth_mode == "service_account":
+        sa_file = connector.get("service_account_file", "").strip()
+        if not sa_file:
+            errors.append("connector.service_account_file が設定されていません。")
+        elif (ROOT / sa_file).exists():
+            pass
+        else:
+            errors.append(f"サービスアカウントファイルが見つかりません: {sa_file}")
+
+    if auth_mode == "oauth":
+        oc_file = connector.get("oauth_client_file", "").strip()
+        if not oc_file:
+            errors.append("connector.oauth_client_file が設定されていません。")
+        elif not (ROOT / oc_file).exists():
+            errors.append(f"OAuthクライアントファイルが見つかりません: {oc_file}")
+
+    return len(errors) == 0, errors
+
+
+def check_no_credentials_committed() -> tuple[bool, list[str]]:
+    """Confirm that known credential file patterns are not present in the project root.
+
+    This is a safety check — credential files must never be committed.
+    Returns (safe, warnings).
+    """
+    warnings: list[str] = []
+    for name in _CREDENTIAL_PATTERNS:
+        # Check root and config/ directory
+        for candidate in (ROOT / name, ROOT / "config" / name):
+            if candidate.exists():
+                warnings.append(
+                    f"認証ファイルが検出されました: {candidate.relative_to(ROOT)}  "
+                    "このファイルをリポジトリにコミットしないでください。"
+                    ".gitignore に追加してください。"
+                )
+    return len(warnings) == 0, warnings

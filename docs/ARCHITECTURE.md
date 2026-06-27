@@ -3,6 +3,7 @@
 ## 概要
 
 Creator Factory OS はローカルファースト・JSONファースト設計の Streamlit マルチページアプリです。  
+**v5.2 Phase 2** で **Google Sheets Connector 基盤** を追加。5モジュール: `google_auth.py`（認証モード設定ローダー、デフォルト`disabled`、認証情報はリポジトリにコミットしない）、`sheet_reader.py`（読み取り抽象）、`sheet_writer.py`（トリプルロック書き込みガード）、`sheet_diff.py`（純粋差分エンジン）、`sync_executor.py`（オーケストレーター）。認証情報は `.gitignore` で管理し、`check_no_credentials_committed()` で実行時に検証。Phase 3+ で gspread 統合予定。  
 **v5.2 Phase 1** で **Google Workspace Sync 基盤 (`src/workspace/`)** を実装。ローカルJSON → Google Sheets マッピング定義、ドライランモード、手動同期のみ、外部API不使用（Phase 1）。  
 **v5.1 Phase 2** で **Module SDK 自己登録基盤** を実装。`MODULE_INFO` スキーマを拡張し、`module_id`・`display_name`・`sdk_version`・`minimum_os_version`・`entrypoint`・`package_path`・`status` フィールドを追加。`ModuleRegistry.export_registry()` で `config/module_registry.json` にスナップショットをエクスポート（オンデマンド、自動実行なし）。Development Studio に "📦 Module SDK" タブを追加し、全モジュールの MANIFEST 情報を一覧表示。  
 **v5.1 Phase 1** で **Module SDK (`src/sdk/`)** と **Approval Center (`src/approval/`)** を追加。Module SDKはすべてのモジュールを`MODULE_INFO`スキーマで記述する統一マニフェストシステム。Approval Centerは人間承認ゲートウェイ — AI CEO推奨・自動化ワークフロー・DevStudio決定をレビューするUIです。自動実行なし。承認ボタンはキューJSONのみ更新します。  

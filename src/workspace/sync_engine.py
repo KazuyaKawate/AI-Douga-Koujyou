@@ -1,10 +1,12 @@
-"""sync_engine — Sync orchestration for Google Workspace Sync (v5.2).
+"""sync_engine — Sync orchestration for Google Workspace Sync (v5.2 Phase 2).
 
 All operations:
-  - Dry-run by default (dry_run=True enforced in Phase 1).
+  - Dry-run by default (dry_run=True).
   - Never executed automatically.
   - Only triggered by explicit user action (manual button click).
-  - No external API calls. Actual Sheets writes are Phase 2+ (google-auth + gspread).
+  - Phase 1: no external API calls.
+  - Phase 2: google_auth / sheet_reader / sheet_writer / sheet_diff / sync_executor added.
+             Actual Sheets writes remain Phase 3+ (gspread integration).
 """
 from __future__ import annotations
 import time
@@ -127,16 +129,24 @@ def run_sync(settings: dict | None = None) -> dict:
 
 
 def get_sync_health(settings: dict | None = None) -> dict:
-    """Return sync health summary. Read-only. Safe for AI CEO integration."""
+    """Return sync health summary. Read-only. Safe for AI CEO / dashboard integration."""
     from src.workspace.sync_history import get_summary
     from src.workspace.sync_validator import get_connection_status
 
     if settings is None:
         settings = load_settings()
 
-    hist = get_summary()
-    conn = get_connection_status(settings)
+    hist    = get_summary()
+    conn    = get_connection_status(settings)
     targets = get_enabled_targets(settings)
+
+    # Phase 2: include connector health if available
+    connector_health: dict = {}
+    try:
+        from src.workspace.sync_executor import get_connector_health
+        connector_health = get_connector_health(settings)
+    except Exception:
+        pass
 
     return {
         "available":         bool(settings),
@@ -149,4 +159,5 @@ def get_sync_health(settings: dict | None = None) -> dict:
         "total_syncs":       hist["total_syncs"],
         "total_conflicts":   hist["total_conflicts"],
         "pending_targets":   len(targets),
+        "connector":         connector_health,
     }

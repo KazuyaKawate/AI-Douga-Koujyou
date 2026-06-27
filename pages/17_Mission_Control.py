@@ -805,24 +805,31 @@ with ac_c2:
 
 st.divider()
 
-# ── Section 7.14: Workspace Sync ─────────────────────────────────────────────
+# ── Section 7.14: Workspace Sync / Google Sheets Connector ───────────────────
 
-st.subheader("🔄 Workspace Sync")
+st.subheader("🔄 Workspace Sync / Google Sheets Connector")
 
 ws_c1, ws_c2 = st.columns([3, 2])
 
 with ws_c1:
-    st.markdown("**Google Workspace Sync — ローカルJSON → Google Sheets**")
+    st.markdown("**ローカルJSON → Google Sheets コネクター基盤（Phase 2）**")
     try:
         from src.workspace.sync_engine import get_sync_health as _ws_mc_health
         from src.workspace.sync_validator import get_connection_status as _ws_mc_conn
-        _wmh = _ws_mc_health()
-        _wmc = _ws_mc_conn()
+        from src.workspace.sync_executor import get_connector_health as _ws_mc_conn_hlth
+        _wmh  = _ws_mc_health()
+        _wmc  = _ws_mc_conn()
+        _wsch = _ws_mc_conn_hlth()
         wmc1, wmc2, wmc3, wmc4 = st.columns(4)
-        wmc1.metric("🔌 接続",       f"{_wmc['icon']} {_wmc['label']}")
-        wmc2.metric("🔍 ドライラン",  "✅ ON" if _wmh["dry_run_default"] else "⚠️ OFF")
-        wmc3.metric("📊 同期総数",    _wmh["total_syncs"])
-        wmc4.metric("⚠️ 競合",       _wmh["total_conflicts"])
+        wmc1.metric("🔌 接続",           f"{_wmc['icon']} {_wmc['label']}")
+        wmc2.metric("🔑 Auth Mode",      _wsch["auth_mode"])
+        wmc3.metric("📋 有効ターゲット",  _wsch["target_count"])
+        wmc4.metric("⚠️ 競合",           _wmh["total_conflicts"])
+        wmc5, wmc6, wmc7, wmc8 = st.columns(4)
+        wmc5.metric("🔍 Dry-Run",        "✅ ON" if _wsch["dry_run"] else "⚠️ OFF")
+        wmc6.metric("📊 同期総数",        _wmh["total_syncs"])
+        wmc7.metric("🕐 最終プレビュー",  _wsch.get("last_preview", "—") or "—")
+        wmc8.metric("⚠️ 競合（プレビュー）", _wsch.get("conflict_count", 0))
     except Exception:
         st.caption("Workspace Sync データを読み込めませんでした。")
 

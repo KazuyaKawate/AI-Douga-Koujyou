@@ -1,5 +1,6 @@
 # 🎯 Creator Factory OS — v5.2 — Google Workspace Sync Foundation
 
+**v5.2 Phase 2:** **🔗 Google Sheets Connector 基盤** — 5モジュール追加: `google_auth.py`（認証モード設定、デフォルト`disabled`、認証情報はリポジトリに保存しない）、`sheet_reader.py`（読み取り抽象、`disabled`時はサンプルデータ）、`sheet_writer.py`（トリプルロック書き込みガード: `auth_mode != disabled` AND `dry_run=False` AND `manual_execute=True`）、`sheet_diff.py`（ローカルJSONとシートの差分: added/updated/removed/conflicts/unchanged）、`sync_executor.py`（オーケストレーター: プレビュー・差分・実行）。Phase 3+ でgspread統合予定。  
 **v5.2 Phase 1:** **🔄 Google Workspace Sync 基盤** — ローカルJSON → Google Sheets マッピング。手動同期のみ。ドライランデフォルト。Phase 1はローカルデータ読み取り・プレビュー生成のみ（外部API不使用）。  
 **v5.1 Phase 2:** **📦 Module SDK 自己登録基盤** — `MODULE_INFO` スキーマ拡張（module_id・entrypoint・status・package_path 等）。`ModuleRegistry.export_registry()` で registry スナップショットを生成。Development Studio に "Module SDK" タブ追加。  
 **v5.1 Phase 1:** **✅ Approval Center** — AI CEO・自動化・DevStudio からのアクションをレビューする人間承認ゲートウェイ。自動実行なし。  

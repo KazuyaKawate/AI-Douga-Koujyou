@@ -48,5 +48,11 @@
   "auto_sync": false,
   "sync_interval_minutes": 0,
   "last_sync": null,
-  "notification_on_conflict": true
+  "notification_on_conflict": true,
+  "connector": {
+    "auth_mode": "disabled",
+    "service_account_file": "",
+    "oauth_client_file": "",
+    "last_preview": null
+  }
 }

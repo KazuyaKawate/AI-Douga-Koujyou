@@ -196,18 +196,25 @@ try:
 except Exception:
     pass
 
-# ── Workspace Sync Summary (v5.2) ────────────────────────────────────────────
+# ── Workspace Sync Summary (v5.2 Phase 2) ────────────────────────────────────
 try:
     from src.workspace.sync_engine import get_sync_health as _ws_health
     from src.workspace.sync_validator import get_connection_status as _ws_conn
-    _wsh = _ws_health()
-    _wsc = _ws_conn()
-    st.markdown("##### 🔄 Workspace Sync サマリー")
+    from src.workspace.sync_executor import get_connector_health as _ws_conn_hlth
+    _wsh  = _ws_health()
+    _wsc  = _ws_conn()
+    _wsch = _ws_conn_hlth()
+    st.markdown("##### 🔄 Workspace Sync / Google Sheets Connector サマリー")
     ws1, ws2, ws3, ws4 = st.columns(4)
     ws1.metric("🔌 接続ステータス", f"{_wsc['icon']} {_wsc['label']}")
     ws2.metric("🕐 最終同期",       _wsh["last_sync"] if _wsh["last_sync"] != "—" else "未実行")
     ws3.metric("📊 同期総数",       _wsh["total_syncs"])
     ws4.metric("⚠️ 競合数",         _wsh["total_conflicts"])
+    wsc1, wsc2, wsc3, wsc4 = st.columns(4)
+    wsc1.metric("🔑 Auth Mode",      _wsch["auth_mode"])
+    wsc2.metric("🔍 Dry-Run",        "✅ ON" if _wsch["dry_run"] else "⚠️ OFF")
+    wsc3.metric("📋 有効ターゲット",  _wsch["target_count"])
+    wsc4.metric("⚠️ 競合（プレビュー）", _wsch["conflict_count"])
     st.page_link("pages/25_Development_Studio.py", label="🔄 Workspace Sync を開く →")
     st.divider()
 except Exception:

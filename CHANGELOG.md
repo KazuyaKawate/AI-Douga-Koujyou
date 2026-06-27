@@ -6,6 +6,38 @@ Versions are cumulative; each release builds on the previous stable base.
 
 ---
 
+## [v5.2 Phase 2] — 2026-06-27 — Google Sheets Connector Foundation
+
+**Codename:** Google Sheets Connector Foundation  
+**Upgrade path:** v5.2 Phase 1 → v5.2 Phase 2 (additive, no breaking changes)
+
+### Added
+- `src/workspace/google_auth.py` — credential configuration loader; `get_auth_config()`, `get_credential_status()`, `build_client()` placeholder; `auth_mode` defaults to `"disabled"`; never reads credential file contents; never committed credentials
+- `src/workspace/sheet_reader.py` — read abstraction; `read_sheet()` returns SAMPLE_SHEET_DATA when `auth_mode="disabled"` (no API call); `get_reader_status()`; Phase 3+ API hook ready
+- `src/workspace/sheet_writer.py` — write abstraction with triple-lock guard (`auth_mode != disabled` AND `dry_run=False` AND `manual_execute=True`); default preview-only; `write_rows()`, `get_writer_status()`; Phase 3+ gspread hook ready
+- `src/workspace/sheet_diff.py` — pure diff engine; `diff_records()` returns `added / updated / removed / conflicts / unchanged`; `summarize_diff()` one-liner; no I/O
+- `src/workspace/sync_executor.py` — orchestrator; `run_preview()` (steps 1-5, no writes), `run_execute()` (step 6, triple-locked), `get_connector_health()` (dashboard-safe read-only)
+
+### Changed
+- `src/workspace/sync_engine.py` — updated docstring to Phase 2; `get_sync_health()` now includes `connector` sub-dict from `sync_executor.get_connector_health()`
+- `src/workspace/sheets_sync.py` — added `key_field` to all 5 `SHEET_MAPPINGS` entries (used by `sheet_diff.diff_records()`)
+- `src/workspace/sync_validator.py` — added `validate_connector_settings()` (validates auth_mode, file paths), `check_no_credentials_committed()` (scans root + config/ for known credential file patterns)
+- `config/workspace_settings.json` — added `connector` section: `auth_mode="disabled"`, `service_account_file=""`, `oauth_client_file=""`, `last_preview=null`
+- `pages/25_Development_Studio.py` — Tab 10 (Workspace Sync) upgraded to Phase 2: security warning banner, auth mode + credential status display, `check_no_credentials_committed()` result, connection status, full summary metrics, sheet target list, diff preview button (calls `sync_executor.run_preview()`), connector validation, manual dry-run button, manual execute button (disabled when `auth_mode=disabled`), sync history
+- `pages/8_Dashboard.py` — Workspace Sync summary expanded: added `auth_mode`, `dry_run`, `target_count`, `conflict_count` (connector health row)
+- `pages/17_Mission_Control.py` — Section 7.14 expanded: renamed to "Workspace Sync / Google Sheets Connector", added 8 metrics (connection, auth_mode, targets, conflicts, dry-run, sync total, last_preview, conflict_count)
+- `pages/26_AI_CEO.py` — CEO Brief Workspace Sync section expanded: added 4 connector metrics (auth_mode, targets, last_preview, conflict_count) when `connector` dict present in snapshot
+- `scripts/check_project.py` — added 5 new connector files to `REQUIRED_FILES`; `Workspace Sync データ` section now shows `auth_mode`; new `Google Sheets Connector (v5.2 Phase 2)` section: module file existence + size, credential-file scan, auth_mode default check, `sync_executor` import test, `py_compile` of all 5 connector modules
+
+### Design decisions
+- Triple-lock write guard (`auth_mode`, `dry_run`, `manual_execute`) is enforced in code, not just configuration
+- `auth_mode="disabled"` is the only safe default — all operations are dry-run until explicitly reconfigured locally
+- Credential files are NEVER stored in the repository; `check_no_credentials_committed()` enforces this at health-check time
+- `sheet_diff.py` is pure logic (no I/O) — testable in isolation without any Google API or file system access
+- Phase 3+ gspread integration requires only filling in two marked stubs: `build_client()` in `google_auth.py` and the API call section in `sheet_reader.read_sheet()` / `sheet_writer.write_rows()`
+
+---
+
 ## [v5.2 Phase 1] — 2026-06-27 — Google Workspace Sync Foundation
 
 **Codename:** Google Workspace Sync Foundation  

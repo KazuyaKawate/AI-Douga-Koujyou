@@ -14,6 +14,7 @@ SHEET_MAPPINGS: dict[str, dict] = {
     "kpi_targets": {
         "sheet_name": "KPI",
         "data_key":   None,
+        "key_field":  "date",
         "columns": [
             ("date",                 "日付"),
             ("revenue_target",       "売上目標"),
@@ -25,6 +26,7 @@ SHEET_MAPPINGS: dict[str, dict] = {
     "revenue_expense": {
         "sheet_name": "Revenue",
         "data_key":   None,
+        "key_field":  "id",
         "columns": [
             ("today.revenue",  "今日の売上"),
             ("today.expense",  "今日の経費"),
@@ -35,6 +37,7 @@ SHEET_MAPPINGS: dict[str, dict] = {
     "note_articles": {
         "sheet_name": "Notes",
         "data_key":   "articles",
+        "key_field":  "article_id",
         "columns": [
             ("article_id",     "記事ID"),
             ("title",          "タイトル"),
@@ -47,6 +50,7 @@ SHEET_MAPPINGS: dict[str, dict] = {
     "sns_posts": {
         "sheet_name": "SNS",
         "data_key":   "posts",
+        "key_field":  "post_id",
         "columns": [
             ("post_id",        "投稿ID"),
             ("platform",       "プラットフォーム"),
@@ -57,6 +61,7 @@ SHEET_MAPPINGS: dict[str, dict] = {
     "sales_leads": {
         "sheet_name": "Sales",
         "data_key":   "leads",
+        "key_field":  "lead_id",
         "columns": [
             ("lead_id",      "リードID"),
             ("name",         "名前"),

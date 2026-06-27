@@ -153,13 +153,20 @@ with tabs[0]:
     _ws = snap.get("workspace_sync", {})
     if _ws:
         st.divider()
-        st.subheader("🔄 Workspace Sync Health")
+        st.subheader("🔄 Workspace Sync / Google Sheets Connector Health")
         ws1, ws2, ws3, ws4 = st.columns(4)
         ws1.metric("🔌 接続ステータス",
                    f"{_ws.get('connection_icon', '⚫')} {_ws.get('connection_status', '—')}")
         ws2.metric("🔍 ドライラン",   "✅ ON" if _ws.get("dry_run_default", True) else "⚠️ OFF")
         ws3.metric("📊 同期履歴",     _ws.get("total_syncs", 0))
         ws4.metric("🕐 最終同期",     _ws.get("last_sync", "未実行"))
+        _conn = _ws.get("connector", {})
+        if _conn:
+            wsc1, wsc2, wsc3, wsc4 = st.columns(4)
+            wsc1.metric("🔑 Auth Mode",      _conn.get("auth_mode", "disabled"))
+            wsc2.metric("📋 有効ターゲット",  _conn.get("target_count", 0))
+            wsc3.metric("🕐 最終プレビュー",  _conn.get("last_preview") or "—")
+            wsc4.metric("⚠️ 競合（プレビュー）", _conn.get("conflict_count", 0))
         st.caption("⚠️ Workspace Sync は手動実行のみ。AI CEO は同期を実行しません。")
 
     if recommendations:
