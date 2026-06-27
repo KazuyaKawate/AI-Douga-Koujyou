@@ -1,4 +1,4 @@
-"""Project health check script for Creator Factory OS (AI動画工場 v4.8)."""
+"""Project health check script for Creator Factory OS (AI動画工場 v5.0-beta)."""
 import io
 import sys
 from pathlib import Path
@@ -21,6 +21,7 @@ REQUIRED_FOLDERS = [
     "reports/monthly",
     "reports/analytics",
     "reports/automation",
+    "reports/devstudio",
     "src",
     "src/agents",
     "src/core",
@@ -31,6 +32,7 @@ REQUIRED_FOLDERS = [
     "src/factories/accounting",
     "src/factories/analytics",
     "src/factories/automation",
+    "src/devstudio",
     "src/devtools",
     "src/hq",
     "src/utils",
@@ -67,6 +69,16 @@ REQUIRED_FILES = [
     "pages/22_Accounting_Factory.py",
     "pages/23_Analytics_Factory.py",
     "pages/24_Automation_Factory.py",
+    "pages/25_Development_Studio.py",
+    # Dev Studio — OS Management
+    "src/devstudio/__init__.py",
+    "src/devstudio/roadmap_manager.py",
+    "src/devstudio/release_manager.py",
+    "src/devstudio/git_status_reader.py",
+    "src/devstudio/healthcheck_reader.py",
+    "src/devstudio/decision_log_manager.py",
+    "src/devstudio/meeting_log_manager.py",
+    "src/devstudio/spreadsheet_exporter.py",
     # Factories — 自動化工場
     "src/factories/automation/__init__.py",
     "src/factories/automation/automation_rules.py",
@@ -211,6 +223,12 @@ OPTIONAL_FILES = [
     "config/automation_workflows.json",
     "config/automation_runs.json",
     "config/automation_settings.json",
+    # Dev Studio config (v5.0-beta)
+    "config/devstudio_roadmap.json",
+    "config/devstudio_releases.json",
+    "config/devstudio_decisions.json",
+    "config/devstudio_meetings.json",
+    "config/devstudio_settings.json",
 ]
 
 
@@ -219,7 +237,7 @@ def check() -> bool:
     width = 60
 
     print("=" * width)
-    print("  Creator Factory OS v4.8 — Project Health Check")
+    print("  Creator Factory OS v5.0-beta — Project Health Check")
     print("=" * width)
     print(f"  Root: {ROOT}\n")
 
@@ -366,6 +384,38 @@ def check() -> bool:
         print(f"  [OK  ] reports/automation/  ({len(auto_rpts)} レポート)")
     else:
         print("  [----] reports/automation/  (未作成)")
+
+    print()
+
+    # Development Studio (v5.0-beta)
+    print("[ Development Studio データ ]")
+    _ds_cfgs = [
+        ("config/devstudio_roadmap.json",   "roadmap"),
+        ("config/devstudio_releases.json",  "releases"),
+        ("config/devstudio_decisions.json", "decisions"),
+        ("config/devstudio_meetings.json",  "meetings"),
+        ("config/devstudio_settings.json",  None),
+    ]
+    for cfg_name, key in _ds_cfgs:
+        p = ROOT / cfg_name
+        if p.exists():
+            try:
+                data = json.loads(p.read_text(encoding="utf-8"))
+                if key and key in data:
+                    print(f"  [OK  ] {cfg_name}  ({len(data[key])} {key})")
+                else:
+                    print(f"  [OK  ] {cfg_name}")
+            except Exception as exc:
+                print(f"  [ERR ] {cfg_name}  → JSONパースエラー: {exc}")
+                ok = False
+        else:
+            print(f"  [----] {cfg_name}  (未作成)")
+    ds_reports_dir = ROOT / "reports" / "devstudio"
+    if ds_reports_dir.exists():
+        ds_csvs = list(ds_reports_dir.glob("*.csv"))
+        print(f"  [OK  ] reports/devstudio/  ({len(ds_csvs)} CSVファイル)")
+    else:
+        print("  [----] reports/devstudio/  (未作成)")
 
     print()
 

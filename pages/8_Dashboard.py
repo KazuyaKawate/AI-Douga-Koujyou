@@ -120,6 +120,27 @@ try:
 except Exception:
     pass
 
+# ── Development Studio Summary (v5.0-beta) ────────────────────────────────────
+try:
+    from src.devstudio.roadmap_manager import get_summary as _ds_rm_sum
+    from src.devstudio.decision_log_manager import get_open_count as _ds_open_dec
+    from src.devstudio.release_manager import get_latest_release as _ds_latest_rel
+    _ds_rm = _ds_rm_sum()
+    _ds_od = _ds_open_dec()
+    _ds_lr = _ds_latest_rel()
+    st.markdown("##### 🛠️ Development Studio サマリー")
+    ds1, ds2, ds3, ds4 = st.columns(4)
+    ds1.metric("🗺️ Roadmap",        _ds_rm["total"])
+    ds2.metric("🔄 In Progress",    _ds_rm["in_progress"])
+    ds3.metric("✅ Completed",      _ds_rm["completed"])
+    ds4.metric("📋 Open Decisions", _ds_od)
+    if _ds_lr:
+        st.caption(f"Latest Release: v{_ds_lr['version']} — {_ds_lr['title']} ({_ds_lr.get('date', '')})")
+    st.page_link("pages/25_Development_Studio.py", label="🛠️ Development Studio を開く →")
+    st.divider()
+except Exception:
+    pass
+
 # ── SNS Factory Summary (v4.4) ─────────────────────────────────────────────────
 try:
     import json as _json2

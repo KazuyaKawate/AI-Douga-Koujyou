@@ -1,4 +1,6 @@
-# 🎯 Creator Factory OS — v4.8 Automation Factory
+# 🎯 Creator Factory OS — v5.0 Beta — Development Studio
+
+**v5.0 Beta が始まりました。** 最初のマイルストーンは **🛠️ Development Studio** — OS開発の司令塔です。ロードマップ・リリース・決定ログ・ミーティングノートを一元管理し、ヘルスチェックとGitステータスをリアルタイムで確認できます。
 
 **Creator Factory OS** は、ソロクリエイターのための統合型デイリーオペレーティングシステムです。  
 毎朝アプリを開くと **Mission Control** が起動し、今日のKPI・タスク・工場状態・財務スナップショットを一画面で確認できます。  

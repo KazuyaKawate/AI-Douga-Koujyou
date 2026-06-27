@@ -683,6 +683,44 @@ with auto_c2:
 
 st.divider()
 
+# ── Section 7.11: Development Studio ─────────────────────────────────────────
+
+st.subheader("🛠️ Development Studio")
+
+ds_c1, ds_c2 = st.columns([3, 2])
+
+with ds_c1:
+    st.markdown("**OS Development HQ — Roadmap · Releases · Decisions · Meeting Notes**")
+    try:
+        from src.devstudio.roadmap_manager import get_summary as _ds_rm_sum
+        from src.devstudio.decision_log_manager import get_open_count as _ds_open_dec
+        from src.devstudio.release_manager import get_latest_release as _ds_latest_rel
+        from src.devstudio.meeting_log_manager import get_all_meetings as _ds_mtgs
+        _ds_rm = _ds_rm_sum()
+        _ds_od = _ds_open_dec()
+        _ds_lr = _ds_latest_rel()
+        _ds_mt = len(_ds_mtgs())
+        dsc1, dsc2, dsc3, dsc4 = st.columns(4)
+        dsc1.metric("🗺️ Roadmap Items",  _ds_rm["total"])
+        dsc2.metric("🔄 In Progress",    _ds_rm["in_progress"])
+        dsc3.metric("📋 Open Decisions", _ds_od)
+        dsc4.metric("📝 Meetings",       _ds_mt)
+        if _ds_lr:
+            st.caption(f"Latest Release: v{_ds_lr['version']} — {_ds_lr['title']}")
+    except Exception:
+        st.caption("Development Studio データを読み込めませんでした。")
+
+with ds_c2:
+    ds_page = ROOT / "pages" / "25_Development_Studio.py"
+    if ds_page.exists():
+        st.page_link("pages/25_Development_Studio.py", label="🛠️ Development Studio を開く →",
+                     use_container_width=True)
+    else:
+        st.button("🛠️ Development Studio 🚧", disabled=True, use_container_width=True,
+                  key="nav_devstudio", help="Coming Soon")
+
+st.divider()
+
 # ── Section 8: Daily Report ───────────────────────────────────────────────────
 
 st.subheader("📝 Daily Report")

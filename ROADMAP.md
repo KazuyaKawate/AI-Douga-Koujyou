@@ -42,6 +42,9 @@ Creator Factory OS rebrand. Mission Control daily command center. KPI, task list
 ### ✅ v4.5 — Sales Factory
 `pages/21_Sales_Factory.py` — Full CRM: lead management (8 sources, 4 ranks, status lifecycle), deal pipeline (7 stages with weighted forecast), follow-up manager (overdue detection, today/week views, mark-done → `sales_calls` KPI), proposal tracker (5 response statuses), rule-based sales forecast (pipeline/weighted/conversion/monthly projection). Mission Control Section 7.6 sales card + `sync_from_sales()`. `src/factories/sales/` data layer.
 
+### ✅ v5.0-beta — Development Studio _(2026-06-27)_
+`pages/25_Development_Studio.py` — OS development headquarters. 8-tab management interface: Overview (version, registry counts, open decisions, recent meetings), Roadmap Manager (CRUD with status lifecycle), Release Manager (health tracking), Decision Log (impact/status tracking), Meeting Notes (agenda/decisions/next actions), Health Check (run-on-demand scripts/check_project.py), Git Status (read-only branch/commit/dirty status), Spreadsheet Export (CSV to reports/devstudio/). `src/devstudio/` package (7 modules). No FactoryRegistry registration — this is an OS Management tool. Mission Control Section 7.11 Dev Studio card. Dashboard Dev Studio summary strip.
+
 ### ✅ v4.8 — Automation Factory
 `pages/24_Automation_Factory.py` — 6-tab workflow automation layer: Dashboard (6 metrics, enabled workflow list, recent runs, quick dry-run button), Workflows (CRUD with enable/disable toggle), Templates (5 built-in templates with one-click install), Run Log (paginated history, filter by dry/real), Report (generate + export Markdown), Settings (dry_run_default, max_runs, log_retention). `src/factories/automation/` package (7 modules): `automation_rules.py` (6 trigger types, 6 action types, 5 templates), `workflow_manager.py` (CRUD + run counter), `trigger_engine.py` (READ-ONLY trigger evaluation), `action_engine.py` (draft-only actions, dry_run=True gating), `automation_runner.py` (orchestration), `automation_reporter.py` (run log + Markdown export). Safe-first: all actions create drafts; no auto-publishing; dry_run=True default; `_automation_source` flag on all generated items. Mission Control Section 7.10 automation card. Dashboard automation strip.
 
@@ -98,7 +101,9 @@ Connect the factories to each other. Completing a video in AI動画工場 auto-p
 
 ---
 
-### 🔲 v5.0 — Creator Factory OS — Full Platform _(Target: 2027-Q1)_
+### 🔄 v5.0 — Creator Factory OS — Full Platform _(In Beta from 2026-06-27)_
+
+**v5.0-beta started** with Development Studio as Milestone 1. Subsequent milestones TBD.
 
 **Goal:** Every section of the creator's business runs inside one app.
 

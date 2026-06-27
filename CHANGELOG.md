@@ -6,6 +6,43 @@ Versions are cumulative; each release builds on the previous stable base.
 
 ---
 
+## [v5.0-beta] — 2026-06-27 — Development Studio
+
+**Codename:** Development Studio  
+**Upgrade path:** v4.8 → v5.0-beta (additive, no breaking changes)
+
+### Added
+- `pages/25_Development_Studio.py` — 8-tab OS development HQ page (Overview / Roadmap / Releases / Decision Log / Meeting Notes / Health Check / Git Status / Spreadsheet Export)
+- `src/devstudio/__init__.py` — package marker
+- `src/devstudio/roadmap_manager.py` — roadmap CRUD (planned/in_progress/completed/blocked/archived)
+- `src/devstudio/release_manager.py` — release record CRUD with health status tracking
+- `src/devstudio/decision_log_manager.py` — decision log CRUD (open/accepted/rejected/superseded)
+- `src/devstudio/meeting_log_manager.py` — meeting notes CRUD
+- `src/devstudio/git_status_reader.py` — read-only git status (branch, latest commit, dirty/clean)
+- `src/devstudio/healthcheck_reader.py` — run-on-demand health check via scripts/check_project.py
+- `src/devstudio/spreadsheet_exporter.py` — CSV export to `reports/devstudio/`
+- `config/devstudio_roadmap.json` — roadmap data store
+- `config/devstudio_releases.json` — release record store
+- `config/devstudio_decisions.json` — decision log store
+- `config/devstudio_meetings.json` — meeting notes store
+- `config/devstudio_settings.json` — Dev Studio settings
+- `reports/devstudio/` — CSV export directory
+
+### Changed
+- `pages/17_Mission_Control.py` — Section 7.11 Development Studio card (roadmap count, in-progress, open decisions, meetings)
+- `pages/8_Dashboard.py` — Development Studio summary strip (roadmap / in-progress / completed / open decisions)
+- `app.py` — v5.0-beta; Development Studio in WORKFLOW with in-progress count
+- `scripts/check_project.py` — v5.0-beta; `src/devstudio/` folder, 8 devstudio files, 5 devstudio config files, `reports/devstudio/` folder
+
+### Architecture
+- Development Studio is an **OS Management** module, NOT a Factory. Not registered in FactoryRegistry.
+- All data stored as local JSON files under `config/devstudio_*.json`
+- Git status reader is strictly read-only — no write operations
+- Health check runs only on explicit user button click — never automatic
+- CSV export writes to `reports/devstudio/` — compatible with spreadsheet management ledger
+
+---
+
 ## [v4.8] — 2026-06-27 — Automation Factory
 
 **Codename:** Automation Factory

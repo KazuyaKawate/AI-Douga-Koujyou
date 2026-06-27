@@ -1,0 +1,12 @@
+{
+  "meta": {
+    "version": "5.0-beta",
+    "created_at": "2026-06-27"
+  },
+  "current_version": "5.0-beta",
+  "next_milestone": "Development Studio GA",
+  "export_dir": "reports/devstudio",
+  "auto_export_on_release": false,
+  "show_git_status": true,
+  "show_health_check": true
+}

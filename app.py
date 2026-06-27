@@ -17,7 +17,7 @@ st.set_page_config(
 )
 
 st.title("🎯 Creator Factory OS")
-st.caption("AIツールを組み合わせた動画制作自動化プラットフォーム | v4.8 — Automation Factory")
+st.caption("AIツールを組み合わせた動画制作自動化プラットフォーム | v5.0-beta — Development Studio")
 
 st.divider()
 
@@ -46,6 +46,7 @@ WORKFLOW = [
     ("🎭", "AI Director",      "シーン演出計画・ビジュアルディレクション",   None),
     ("📁", "プロジェクト管理", "シリーズ管理・一括操作・統計・設定",         None),
     ("🤖", "AI Studio",        "マルチエージェント制作スタジオ",             None),
+    ("🛠️", "Development Studio", "OS開発HQ — ロードマップ・決定ログ・リリース管理", None),
 ]
 
 st.subheader("制作フロー")
@@ -178,6 +179,12 @@ for col, (icon, title, desc, folder) in zip(cols, WORKFLOW):
             count = sum(1 for f in _td.glob("task_*.json")) if _td.exists() else 0
         except Exception:
             count = 0
+    elif title == "Development Studio":
+        try:
+            from src.devstudio.roadmap_manager import get_summary as _ds_sum
+            count = _ds_sum()["in_progress"]
+        except Exception:
+            count = 0
     else:
         count = count_files(PROJECT_ROOT / folder)
     col.metric(label=f"{icon} {title}", value=count, help=desc)
@@ -223,8 +230,9 @@ with col1:
     st.info("👈 左のサイドバーから各ページを選択して作業を開始してください。")
 with col2:
     st.markdown("""
-**クイックスタート v4.8**
-1. 🗂️ **Projects** でプロジェクトとシステム健全性を確認
+**クイックスタート v5.0-beta**
+1. 🛠️ **Development Studio** でロードマップ・決定・リリースを管理
+2. 🗂️ **Projects** でプロジェクトとシステム健全性を確認
 2. 🎯 **Mission Control** で今日のKPI・タスク・工場状態を確認
 3. 📝 **note投稿工場** で記事を作成・スコアリング・収益管理
 4. 📱 **SNS投稿工場** でプラットフォーム別投稿を生成・スケジュール
