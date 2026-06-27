@@ -81,3 +81,6 @@ build/
 # バックアップ（ローカルのみ）
 backups/
 !backups/.gitkeep
+
+# Claude Code ローカルメモリ（コミット不要）
+.claude/

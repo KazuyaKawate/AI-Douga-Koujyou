@@ -1,0 +1,27 @@
+{
+  "project": {
+    "default_output_folder": "output",
+    "default_episode_length": "3分",
+    "default_scene_count": 4,
+    "video_aspect_ratio": "16:9",
+    "fps": 30,
+    "resolution": "1920x1080"
+  },
+  "ai": {
+    "model": "gpt-4o-mini",
+    "dev_mode": true,
+    "cost_saving": true,
+    "temperature": 0.8,
+    "max_tokens": 3000
+  },
+  "generation": {
+    "image_provider": "Manual",
+    "video_provider": "Manual",
+    "voice_provider": "Manual"
+  },
+  "export": {
+    "youtube_shorts": false,
+    "tiktok": false,
+    "instagram_reels": false
+  }
+}

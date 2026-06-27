@@ -1,0 +1,7 @@
+{
+  "break_even_monthly": 50000,
+  "large_expense_threshold": 10000,
+  "high_subscription_ratio": 30,
+  "currency": "JPY",
+  "meta": {"version": "4.6", "updated_at": "2026-06-27"}
+}

@@ -151,3 +151,35 @@ def sync_from_sales(factory_data: dict) -> dict:
     except Exception:
         pass
     return factory_data
+
+
+def sync_from_accounting(factory_data: dict) -> dict:
+    """Sync 会計監査工場 factory status from accounting data (optional import)."""
+    try:
+        from src.factories.accounting.revenue_manager import load_revenue, get_factory_summary as rev_sum
+        from src.factories.accounting.audit_checker import check_audits, get_audit_summary
+        from src.factories.accounting.expense_manager import load_expenses
+        from src.factories.accounting.subscription_manager import load_subscriptions
+        rev_data = load_revenue()
+        exp_data = load_expenses()
+        sub_data = load_subscriptions()
+        r_s = rev_sum(rev_data)
+        warnings = check_audits(rev_data, exp_data, sub_data)
+        audit_s = get_audit_summary(warnings)
+        if "会計監査工場" in factory_data:
+            fd = factory_data["会計監査工場"]
+            fd["completed_today"] = 1 if r_s["today_revenue"] > 0 else 0
+            fd["active_items"] = r_s["confirmed_count"]
+            fd["warning_count"] = audit_s["errors"] + audit_s["warning"]
+            if fd["warning_count"] > 0:
+                fd["status"] = "warning"
+                fd["next_action"] = f"⚠️ 監査アラート {fd['warning_count']}件"
+            elif r_s["today_revenue"] > 0:
+                fd["status"] = "active"
+                fd["next_action"] = f"本日売上 ¥{r_s['today_revenue']:,}"
+            elif r_s["month_revenue"] > 0:
+                fd["status"] = "active"
+                fd["next_action"] = f"今月売上 ¥{r_s['month_revenue']:,}"
+    except Exception:
+        pass
+    return factory_data
