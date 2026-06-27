@@ -25,7 +25,7 @@ from src.hq.factory_status import (
 )
 from src.hq.daily_report import generate_report, export_report
 
-APP_VERSION = "4.7"
+APP_VERSION = "4.8"
 TODAY = date.today()
 
 st.set_page_config(page_title="Mission Control | Creator Factory OS", page_icon="🎯", layout="wide")
@@ -35,8 +35,8 @@ st.set_page_config(page_title="Mission Control | Creator Factory OS", page_icon=
 st.title("🎯 Creator Factory OS")
 h1, h2, h3 = st.columns(3)
 h1.caption(f"📅 {TODAY.strftime('%Y年%m月%d日 (%A)')}")
-h2.caption(f"🔨 Build: v{APP_VERSION} Analytics Factory")
-h3.caption(f"✅ Status: v{APP_VERSION} Analytics Factory")
+h2.caption(f"🔨 Build: v{APP_VERSION} Automation Factory")
+h3.caption(f"✅ Status: v{APP_VERSION} Automation Factory")
 
 st.divider()
 
@@ -647,6 +647,39 @@ with anl_c2:
     else:
         st.button("📊 アナリティクス工場 🚧", disabled=True, use_container_width=True,
                   key="nav_analytics", help="Coming Soon")
+
+st.divider()
+
+# ── Section 7.10: Automation Factory ─────────────────────────────────────────
+
+st.subheader("⚙️ 自動化工場")
+
+auto_c1, auto_c2 = st.columns([3, 2])
+
+with auto_c1:
+    st.markdown("**ルールベース工場間ワークフロー自動化 — 安全優先・ドライランデフォルト**")
+    try:
+        from src.factories.automation.workflow_manager   import get_workflow_summary as _auto_wfs
+        from src.factories.automation.automation_reporter import get_run_summary as _auto_rs
+        _awsum = _auto_wfs()
+        _arsum = _auto_rs()
+        auc1, auc2, auc3, auc4 = st.columns(4)
+        auc1.metric("🔧 ワークフロー数",  _awsum["total"])
+        auc2.metric("🟢 有効",            _awsum["enabled"])
+        auc3.metric("▶️ 総実行回数",      _arsum["total_runs"])
+        auc4.metric("✅ 成功アクション",  _arsum["successful"])
+        st.caption(f"ドライラン実行: {_arsum['dry_run_count']} 件 | 最終実行: {_arsum['last_run']}")
+    except Exception:
+        st.caption("自動化データを読み込めませんでした。")
+
+with auto_c2:
+    auto_page = ROOT / "pages" / "24_Automation_Factory.py"
+    if auto_page.exists():
+        st.page_link("pages/24_Automation_Factory.py", label="⚙️ 自動化工場を開く →",
+                     use_container_width=True)
+    else:
+        st.button("⚙️ 自動化工場 🚧", disabled=True, use_container_width=True,
+                  key="nav_automation", help="Coming Soon")
 
 st.divider()
 

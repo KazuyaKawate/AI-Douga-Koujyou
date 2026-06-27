@@ -17,7 +17,7 @@ st.set_page_config(
 )
 
 st.title("🎯 Creator Factory OS")
-st.caption("AIツールを組み合わせた動画制作自動化プラットフォーム | v4.7 — Analytics Factory")
+st.caption("AIツールを組み合わせた動画制作自動化プラットフォーム | v4.8 — Automation Factory")
 
 st.divider()
 
@@ -28,6 +28,7 @@ WORKFLOW = [
     ("💼", "営業工場",          "CRM・リード管理・商談・フォロー・売上予測",   None),
     ("💰", "会計監査工場",       "収支管理・ROI・サブスク・監査・月次レポート", None),
     ("📊", "アナリティクス工場", "全工場・KPI・ROI・プロジェクト分析・インサイト", None),
+    ("⚙️", "自動化工場",        "ルールベース工場間ワークフロー自動化",          None),
     ("🔍", "承認アシスタント",  "Claude Codeの承認プロンプトをリスク分類",    None),
     ("⚡", "一発生成",           "AIで全工程を自動生成",                    "project"),
     ("🎞️", "エピソード管理",    "EP制作フロー全体を管理",                  "project"),
@@ -96,6 +97,14 @@ for col, (icon, title, desc, folder) in zip(cols, WORKFLOW):
             _anp = PROJECT_ROOT / "config" / "analytics_snapshots.json"
             _and = _json.loads(_anp.read_text(encoding="utf-8")) if _anp.exists() else {}
             count = len(_and.get("snapshots", []))
+        except Exception:
+            count = 0
+    elif title == "自動化工場":
+        try:
+            import json as _json
+            _awp = PROJECT_ROOT / "config" / "automation_workflows.json"
+            _awd = _json.loads(_awp.read_text(encoding="utf-8")) if _awp.exists() else {}
+            count = sum(1 for w in _awd.get("workflows", []) if w.get("enabled"))
         except Exception:
             count = 0
     elif title == "承認アシスタント":
@@ -214,7 +223,7 @@ with col1:
     st.info("👈 左のサイドバーから各ページを選択して作業を開始してください。")
 with col2:
     st.markdown("""
-**クイックスタート v4.7**
+**クイックスタート v4.8**
 1. 🗂️ **Projects** でプロジェクトとシステム健全性を確認
 2. 🎯 **Mission Control** で今日のKPI・タスク・工場状態を確認
 3. 📝 **note投稿工場** で記事を作成・スコアリング・収益管理
@@ -222,6 +231,7 @@ with col2:
 5. 💼 **営業工場** でリード管理・商談・フォロー・売上予測
 6. 💰 **会計監査工場** で収支・ROI・サブスク・監査・月次レポート
 7. 📊 **アナリティクス工場** で全工場・KPI・ROI・インサイト分析
+8. ⚙️ **自動化工場** でルールベースワークフローを設定・実行
 2. ⚙️ スタジオ設定 でプロジェクト・AI設定を構成
 3. 🧑 キャラクター管理 でキャラクターを作成してデフォルト設定
 4. 🏞️ 背景管理 でロケーション・カメラ設定を登録

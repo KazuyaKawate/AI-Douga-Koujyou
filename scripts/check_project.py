@@ -1,4 +1,4 @@
-"""Project health check script for Creator Factory OS (AI動画工場 v4.7)."""
+"""Project health check script for Creator Factory OS (AI動画工場 v4.8)."""
 import io
 import sys
 from pathlib import Path
@@ -20,6 +20,7 @@ REQUIRED_FOLDERS = [
     "reports/daily",
     "reports/monthly",
     "reports/analytics",
+    "reports/automation",
     "src",
     "src/agents",
     "src/core",
@@ -29,6 +30,7 @@ REQUIRED_FOLDERS = [
     "src/factories/sales",
     "src/factories/accounting",
     "src/factories/analytics",
+    "src/factories/automation",
     "src/devtools",
     "src/hq",
     "src/utils",
@@ -64,6 +66,15 @@ REQUIRED_FILES = [
     "pages/21_Sales_Factory.py",
     "pages/22_Accounting_Factory.py",
     "pages/23_Analytics_Factory.py",
+    "pages/24_Automation_Factory.py",
+    # Factories — 自動化工場
+    "src/factories/automation/__init__.py",
+    "src/factories/automation/automation_rules.py",
+    "src/factories/automation/workflow_manager.py",
+    "src/factories/automation/trigger_engine.py",
+    "src/factories/automation/action_engine.py",
+    "src/factories/automation/automation_runner.py",
+    "src/factories/automation/automation_reporter.py",
     # Factories — アナリティクス工場
     "src/factories/analytics/__init__.py",
     "src/factories/analytics/analytics_collector.py",
@@ -197,6 +208,9 @@ OPTIONAL_FILES = [
     "config/factory_events.json",
     "config/analytics_settings.json",
     "config/analytics_snapshots.json",
+    "config/automation_workflows.json",
+    "config/automation_runs.json",
+    "config/automation_settings.json",
 ]
 
 
@@ -205,7 +219,7 @@ def check() -> bool:
     width = 60
 
     print("=" * width)
-    print("  Creator Factory OS v4.7 — Project Health Check")
+    print("  Creator Factory OS v4.8 — Project Health Check")
     print("=" * width)
     print(f"  Root: {ROOT}\n")
 
@@ -322,6 +336,36 @@ def check() -> bool:
         print(f"  [OK  ] reports/analytics/  ({len(anl_rpts)} レポート)")
     else:
         print("  [----] reports/analytics/  (未作成)")
+
+    print()
+
+    # Automation Factory (v4.8)
+    print("[ Automation Factory データ ]")
+    _auto_cfgs = [
+        ("config/automation_workflows.json", "workflows"),
+        ("config/automation_runs.json",      "runs"),
+        ("config/automation_settings.json",  "meta"),
+    ]
+    for cfg_name, key in _auto_cfgs:
+        p = ROOT / cfg_name
+        if p.exists():
+            try:
+                data = json.loads(p.read_text(encoding="utf-8"))
+                if key in ("workflows", "runs"):
+                    print(f"  [OK  ] {cfg_name}  ({len(data.get(key, []))} 件)")
+                else:
+                    print(f"  [OK  ] {cfg_name}  (dry_run_default={data.get('dry_run_default', True)})")
+            except Exception as exc:
+                print(f"  [ERR ] {cfg_name}  → JSONパースエラー: {exc}")
+                ok = False
+        else:
+            print(f"  [----] {cfg_name}  (未作成)")
+    auto_reports_dir = ROOT / "reports" / "automation"
+    if auto_reports_dir.exists():
+        auto_rpts = list(auto_reports_dir.glob("*_automation_report.md"))
+        print(f"  [OK  ] reports/automation/  ({len(auto_rpts)} レポート)")
+    else:
+        print("  [----] reports/automation/  (未作成)")
 
     print()
 

@@ -1,0 +1,8 @@
+{
+  "workflows": [],
+  "meta": {
+    "version": "4.8",
+    "created_at": "2026-06-27",
+    "note": "Workflows are seeded from automation_rules.WORKFLOW_TEMPLATES on first load."
+  }
+}

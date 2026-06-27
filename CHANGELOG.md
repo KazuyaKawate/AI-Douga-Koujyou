@@ -6,6 +6,44 @@ Versions are cumulative; each release builds on the previous stable base.
 
 ---
 
+## [v4.8] — 2026-06-27 — Automation Factory
+
+**Codename:** Automation Factory
+**Upgrade path:** v4.7 → v4.8 (additive, no breaking changes)
+
+### Added
+- `src/factories/automation/__init__.py` — package marker
+- `src/factories/automation/automation_rules.py` — 6 trigger types, 6 action types, 5 built-in workflow templates
+- `src/factories/automation/workflow_manager.py` — workflow CRUD, enable/disable, run counter
+- `src/factories/automation/trigger_engine.py` — read-only trigger evaluation (status_changed, kpi_below_target, new_item_created, revenue_recorded, warning_detected, manual_run)
+- `src/factories/automation/action_engine.py` — draft-only action execution; 6 action types; dry_run=True gating
+- `src/factories/automation/automation_runner.py` — orchestrates trigger→action→log per workflow
+- `src/factories/automation/automation_reporter.py` — run log (max 200), report generation, Markdown export
+- `pages/24_Automation_Factory.py` — 6-tab UI: Dashboard / Workflows / Templates / Run Log / Report / Settings
+- `config/automation_workflows.json` — workflow store (seeded from templates on first load)
+- `config/automation_runs.json` — run history (max 200 entries)
+- `config/automation_settings.json` — dry_run_default: true, max_runs: 200
+- `reports/automation/` — automation report export folder
+
+### Changed
+- `src/core/factory_registry.py` — added 自動化工場 to FACTORY_CATALOG (v4.8, 2 config files, 5 dependencies)
+- `src/core/factory_interfaces.py` — added 自動化工場 → ⚙️ to FACTORY_ICONS
+- `config/projects.json` — added 自動化工場 to default project factories list
+- `pages/17_Mission_Control.py` — v4.8; Section 7.10 Automation Factory card (workflow count, enabled, run count, success count)
+- `pages/8_Dashboard.py` — v4.8; Automation Factory summary strip at top (6 metrics)
+- `app.py` — v4.8; 自動化工場 in WORKFLOW with enabled workflow count
+- `scripts/check_project.py` — v4.8; `reports/automation/` folder, 7 automation files, 3 automation config files, Automation data section
+
+### Architecture
+- All automation actions are draft-only — no auto-publishing, no auto-confirmation
+- Dry-run mode (`dry_run=True`) is default at every level: settings, runner, action engine
+- All items created by automation are marked `_automation_source: true` for auditability
+- Trigger evaluation is READ-ONLY — no writes in trigger_engine.py
+- Lazy imports inside all cross-factory function calls to prevent circular imports
+- Run history capped at 200 entries in automation_runs.json
+
+---
+
 ## [v4.7] — 2026-06-27 — Analytics Factory
 
 **Codename:** Analytics Factory

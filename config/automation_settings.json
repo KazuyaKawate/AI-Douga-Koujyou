@@ -1,0 +1,11 @@
+{
+  "dry_run_default": true,
+  "max_runs": 200,
+  "run_limit_per_workflow": 10,
+  "log_retention_days": 30,
+  "auto_run_on_startup": false,
+  "meta": {
+    "version": "4.8",
+    "updated_at": "2026-06-27"
+  }
+}

@@ -94,6 +94,19 @@ FACTORY_CATALOG: dict[str, FactoryCatalogEntry] = {
         "dependencies": ["note投稿工場", "SNS投稿工場", "営業工場", "会計監査工場"],
         "description":  "全工場・KPI・ROI・プロジェクト分析・インサイト生成",
     },
+    "自動化工場": {
+        "name":         "自動化工場",
+        "icon":         "⚙️",
+        "version":      "4.8",
+        "module_path":  "src.factories.automation",
+        "page":         "pages/24_Automation_Factory.py",
+        "config_files": [
+            "config/automation_workflows.json",
+            "config/automation_runs.json",
+        ],
+        "dependencies": ["note投稿工場", "SNS投稿工場", "営業工場", "会計監査工場", "アナリティクス工場"],
+        "description":  "ルールベース工場間ワークフロー自動化（安全優先・ドライランデフォルト）",
+    },
 }
 
 

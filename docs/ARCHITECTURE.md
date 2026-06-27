@@ -1,4 +1,4 @@
-# アーキテクチャ — Creator Factory OS v4.7
+# アーキテクチャ — Creator Factory OS v4.8
 
 ## 概要
 

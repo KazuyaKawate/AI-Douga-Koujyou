@@ -15,7 +15,26 @@ from src.director.director_planner import plan_exists as director_plan_exists
 
 st.set_page_config(page_title="制作ダッシュボード", page_icon="📊", layout="wide")
 st.title("📊 制作ダッシュボード")
-st.caption("全エピソードの制作進捗を一覧管理 | v4.7")
+st.caption("全エピソードの制作進捗を一覧管理 | v4.8")
+
+# ── Automation Factory Summary (v4.8) ─────────────────────────────────────────
+try:
+    from src.factories.automation.workflow_manager    import get_workflow_summary as _auto_wf
+    from src.factories.automation.automation_reporter import get_run_summary as _auto_rs
+    _awf = _auto_wf()
+    _ars = _auto_rs()
+    st.markdown("##### ⚙️ Automation Factory サマリー")
+    am1, am2, am3, am4, am5, am6 = st.columns(6)
+    am1.metric("🔧 ワークフロー",  _awf["total"])
+    am2.metric("🟢 有効",          _awf["enabled"])
+    am3.metric("▶️ 総実行",       _ars["total_runs"])
+    am4.metric("✅ 成功",          _ars["successful"])
+    am5.metric("🛡️ DRY実行",      _ars["dry_run_count"])
+    am6.metric("⚡ 実実行",        _ars["real_count"])
+    st.page_link("pages/24_Automation_Factory.py", label="⚙️ 自動化工場を開く →")
+    st.divider()
+except Exception:
+    pass
 
 # ── Analytics Factory Summary (v4.7) ──────────────────────────────────────────
 try:
