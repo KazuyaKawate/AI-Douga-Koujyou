@@ -17,7 +17,12 @@ st.set_page_config(
 )
 
 st.title("🎯 Creator Factory OS")
-st.caption("AIツールを組み合わせた動画制作自動化プラットフォーム | v5.0-beta — Development Studio")
+try:
+    from src.core.version import OS_VERSION as _OS_VER, OS_CODENAME as _OS_CODE
+    _caption = f"AIツールを組み合わせた動画制作自動化プラットフォーム | v{_OS_VER} — {_OS_CODE}"
+except Exception:
+    _caption = "AIツールを組み合わせた動画制作自動化プラットフォーム | v5.1 — Module SDK + Approval Center"
+st.caption(_caption)
 
 st.divider()
 
@@ -48,6 +53,7 @@ WORKFLOW = [
     ("🤖", "AI Studio",        "マルチエージェント制作スタジオ",             None),
     ("🛠️", "Development Studio", "OS開発HQ — ロードマップ・決定ログ・リリース管理", None),
     ("🧠", "AI CEO",           "エグゼクティブ分析・優先度・リスク・推奨アクション", None),
+    ("✅", "Approval Center",  "人間承認ゲートウェイ — AI CEO・自動化・DevStudio", None),
 ]
 
 st.subheader("制作フロー")
@@ -195,6 +201,12 @@ for col, (icon, title, desc, folder) in zip(cols, WORKFLOW):
             _ccr = _ceo_risks(_ccs)
             _cch = _ceo_health(_ccs, _ccr)
             count = _cch["score"]
+        except Exception:
+            count = 0
+    elif title == "Approval Center":
+        try:
+            from src.approval.approval_queue import get_summary as _ac_s
+            count = _ac_s()["pending_count"]
         except Exception:
             count = 0
     else:

@@ -1,0 +1,9 @@
+{
+  "meta": {
+    "version": "5.1",
+    "created_at": "2026-06-27T00:00:00",
+    "description": "Approval Center queue — pending and reviewed actions"
+  },
+  "pending": [],
+  "history": []
+}

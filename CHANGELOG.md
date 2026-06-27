@@ -6,6 +6,40 @@ Versions are cumulative; each release builds on the previous stable base.
 
 ---
 
+## [v5.1 Phase 1] — 2026-06-27 — Module SDK + Approval Center
+
+**Codename:** Module SDK + Approval Center Foundation  
+**Upgrade path:** v5.0-beta Phase 2 (AI CEO Core) → v5.1 Phase 1 (additive, no breaking changes)
+
+### Added
+- `pages/27_Approval_Center.py` — 5-tab human-approval gateway (Pending / Approved / Rejected / New Request / Summary)
+- `src/approval/__init__.py` — package marker; module_type = "utility"
+- `src/approval/approval_models.py` — ApprovalItem data model, status/risk/source constants, `make_item()`
+- `src/approval/approval_queue.py` — queue CRUD over `config/approval_queue.json`; approve/reject/expire/delete; never executes
+- `src/approval/risk_analyzer.py` — rule-based risk analysis for pending items (high/medium/low/none)
+- `src/approval/command_preview.py` — human-readable action previews; `preview_action()`, `get_short_summary()`
+- `src/sdk/__init__.py` — Module SDK package marker; version = "5.1"
+- `src/sdk/module_manifest.py` — `ModuleInfo` TypedDict + `make_manifest()` helper + `BUILTIN_MANIFESTS` for all 11 modules
+- `src/sdk/module_loader.py` — manifest discovery (built-ins + dynamic import scan); backward compatible
+- `src/sdk/module_validator.py` — `validate_manifest()`, `validate_all()` with error reporting
+- `src/sdk/registry_builder.py` — `ModuleRegistry` class: `get_all()`, `get_by_type()`, `get_summary()`
+- `config/approval_queue.json` — approval queue store (pending + history)
+
+### Changed
+- `pages/17_Mission_Control.py` — Section 7.13 Approval Center card (pending, high-risk, approved, rejected counts)
+- `pages/8_Dashboard.py` — Approval Center summary strip (4 metrics + page link)
+- `app.py` — Approval Center added to WORKFLOW list with pending count metric
+- `scripts/check_project.py` — v5.1 title; added `src/sdk/`, `src/approval/`, `pages/27` to required lists; Module SDK + Approval Center data sections
+
+### Design decisions
+- Approval Center is display-only: "Approve" button updates queue JSON only, never executes commands
+- Live Inbox aggregates AI CEO recommendations + disabled Automation workflows + open DevStudio decisions
+- Module SDK built-ins cover all 11 current modules; future modules can export MODULE_MANIFEST from __init__.py
+- `src/approval/` excluded from FactoryRegistry (module_type = "utility")
+- `src/sdk/` excluded from FactoryRegistry (no factory behavior)
+
+---
+
 ## [v5.0-beta Phase 2] — 2026-06-27 — AI CEO Core
 
 **Codename:** AI CEO Core  

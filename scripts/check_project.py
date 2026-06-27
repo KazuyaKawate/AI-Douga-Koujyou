@@ -1,4 +1,4 @@
-"""Project health check script for Creator Factory OS (AI動画工場 v5.0-beta)."""
+"""Project health check script for Creator Factory OS (AI動画工場 v5.1)."""
 import io
 import sys
 from pathlib import Path
@@ -34,8 +34,10 @@ REQUIRED_FOLDERS = [
     "src/factories/analytics",
     "src/factories/automation",
     "src/aiceo",
+    "src/approval",
     "src/devstudio",
     "src/devtools",
+    "src/sdk",
     "src/hq",
     "src/utils",
     "src/pipeline",
@@ -73,6 +75,19 @@ REQUIRED_FILES = [
     "pages/24_Automation_Factory.py",
     "pages/25_Development_Studio.py",
     "pages/26_AI_CEO.py",
+    "pages/27_Approval_Center.py",
+    # Module SDK (v5.1)
+    "src/sdk/__init__.py",
+    "src/sdk/module_manifest.py",
+    "src/sdk/module_loader.py",
+    "src/sdk/module_validator.py",
+    "src/sdk/registry_builder.py",
+    # Approval Center (v5.1)
+    "src/approval/__init__.py",
+    "src/approval/approval_models.py",
+    "src/approval/approval_queue.py",
+    "src/approval/risk_analyzer.py",
+    "src/approval/command_preview.py",
     # AI CEO Core — Executive Module (v5.0-beta)
     "src/aiceo/__init__.py",
     "src/aiceo/executive_engine.py",
@@ -144,6 +159,8 @@ REQUIRED_FILES = [
     "src/factories/note/revenue_tracker.py",
     "src/factories/note/repurpose_engine.py",
     "src/factories/note/integration_bridge.py",
+    # Core — version (v5.1)
+    "src/core/version.py",
     # Core — architecture layer (v4.5.1)
     "src/core/factory_base.py",
     "src/core/factory_interfaces.py",
@@ -245,6 +262,8 @@ OPTIONAL_FILES = [
     "config/devstudio_decisions.json",
     "config/devstudio_meetings.json",
     "config/devstudio_settings.json",
+    # Approval Center config (v5.1)
+    "config/approval_queue.json",
 ]
 
 
@@ -252,8 +271,14 @@ def check() -> bool:
     ok = True
     width = 60
 
+    try:
+        import sys as _sv; _sv.path.insert(0, str(ROOT))
+        from src.core.version import OS_VERSION as _V, OS_CODENAME as _C
+        _title = f"Creator Factory OS v{_V} — {_C}"
+    except Exception:
+        _title = "Creator Factory OS v5.1 — Project Health Check"
     print("=" * width)
-    print("  Creator Factory OS v5.0-beta — Project Health Check")
+    print(f"  {_title}")
     print("=" * width)
     print(f"  Root: {ROOT}\n")
 
@@ -464,6 +489,47 @@ def check() -> bool:
 
     print()
 
+    # Module SDK + Approval Center (v5.1)
+    print("[ Module SDK データ ]")
+    _sdk_cfgs: list[tuple[str, str | None]] = []
+    for cfg_name, key in _sdk_cfgs:
+        p = ROOT / cfg_name
+        if p.exists():
+            try:
+                data = json.loads(p.read_text(encoding="utf-8"))
+                print(f"  [OK  ] {cfg_name}")
+            except Exception as exc:
+                print(f"  [ERR ] {cfg_name}  → JSONパースエラー: {exc}")
+                ok = False
+        else:
+            print(f"  [----] {cfg_name}  (未作成)")
+    try:
+        import sys as _sys2
+        _sys2.path.insert(0, str(ROOT))
+        from src.sdk.registry_builder import ModuleRegistry as _MR
+        _mr_sum = _MR.get_summary()
+        print(f"  [OK  ] ModuleRegistry  ({_mr_sum['total']} モジュール, {_mr_sum['factories']} 工場)")
+    except Exception as exc:
+        print(f"  [----] ModuleRegistry  → {exc}")
+
+    print()
+
+    print("[ Approval Center データ ]")
+    approval_queue_path = ROOT / "config" / "approval_queue.json"
+    if approval_queue_path.exists():
+        try:
+            data = json.loads(approval_queue_path.read_text(encoding="utf-8"))
+            pending_count = len(data.get("pending", []))
+            history_count = len(data.get("history", []))
+            print(f"  [OK  ] config/approval_queue.json  (pending: {pending_count}, history: {history_count})")
+        except Exception as exc:
+            print(f"  [ERR ] config/approval_queue.json  → JSONパースエラー: {exc}")
+            ok = False
+    else:
+        print("  [----] config/approval_queue.json  (未作成)")
+
+    print()
+
     # Core Architecture (v4.5.1)
     print("[ Core Architecture ]")
     _core_cfgs = [
@@ -653,7 +719,6 @@ def check() -> bool:
     else:
         print("  STATUS: NG — 不足ファイルがあります ❌")
     print("=" * width)
-
     return ok
 
 

@@ -1,8 +1,9 @@
-# アーキテクチャ — Creator Factory OS v5.0-beta
+# アーキテクチャ — Creator Factory OS v5.1
 
 ## 概要
 
 Creator Factory OS はローカルファースト・JSONファースト設計の Streamlit マルチページアプリです。  
+**v5.1 Phase 1** で **Module SDK (`src/sdk/`)** と **Approval Center (`src/approval/`)** を追加。Module SDKはすべてのモジュールを`MODULE_INFO`スキーマで記述する統一マニフェストシステム。Approval Centerは人間承認ゲートウェイ — AI CEO推奨・自動化ワークフロー・DevStudio決定をレビューするUIです。自動実行なし。承認ボタンはキューJSONのみ更新します。  
 **v5.0-beta Phase 2** で **AI CEO Core (`src/aiceo/`)** を追加。OSの全データを横断分析する**エグゼクティブモジュール**。健全度スコア・優先度ランキング・リスク識別・機会発見・推奨アクション生成を行います。FactoryではなくExecutive Moduleとして分類します。外部API不使用・自動実行なし・読み取り専用。  
 **v5.0-beta Phase 1** で **Development Studio (`src/devstudio/`)** を追加。OS開発HQとしてロードマップ・リリース・決定ログ・ミーティングノートを管理します。Development StudioはFactory ではなく **OS Management** モジュールです。FactoryRegistryには登録しません。  
 v4.8 で **Automation Factory (`src/factories/automation/`)** を追加。v4.7 で **Analytics Factory** 。v4.4 で **SNS Factory (`src/factories/sns/`)** を追加し、7プラットフォーム対応のSNS投稿管理工場が稼働しました。  

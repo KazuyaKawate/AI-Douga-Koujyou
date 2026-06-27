@@ -763,6 +763,37 @@ with ds_c2:
 
 st.divider()
 
+# ── Section 7.13: Approval Center ────────────────────────────────────────────
+
+st.subheader("✅ Approval Center")
+
+ac_c1, ac_c2 = st.columns([3, 2])
+
+with ac_c1:
+    st.markdown("**Human Approval Gateway — AI CEO · Automation · Development Studio**")
+    try:
+        from src.approval.approval_queue import get_summary as _ac_sum
+        from src.approval.approval_models import RISK_ICONS as _ac_ricons
+        _acs = _ac_sum()
+        acc1, acc2, acc3, acc4 = st.columns(4)
+        acc1.metric("⏳ Pending",      _acs["pending_count"])
+        acc2.metric("🔴 High Risk",    _acs["high_risk_count"])
+        acc3.metric("✅ Approved",     _acs["approved_count"])
+        acc4.metric("❌ Rejected",     _acs["rejected_count"])
+    except Exception:
+        st.caption("Approval Center データを読み込めませんでした。")
+
+with ac_c2:
+    ac_page = ROOT / "pages" / "27_Approval_Center.py"
+    if ac_page.exists():
+        st.page_link("pages/27_Approval_Center.py", label="✅ Approval Center を開く →",
+                     use_container_width=True)
+    else:
+        st.button("✅ Approval Center 🚧", disabled=True, use_container_width=True,
+                  key="nav_approval_center", help="Coming Soon")
+
+st.divider()
+
 # ── Section 8: Daily Report ───────────────────────────────────────────────────
 
 st.subheader("📝 Daily Report")

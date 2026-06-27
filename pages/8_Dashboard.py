@@ -166,6 +166,21 @@ try:
 except Exception:
     pass
 
+# ── Approval Center Summary (v5.1) ────────────────────────────────────────────
+try:
+    from src.approval.approval_queue import get_summary as _ac_sum
+    _acs = _ac_sum()
+    st.markdown("##### ✅ Approval Center サマリー")
+    ap1, ap2, ap3, ap4 = st.columns(4)
+    ap1.metric("⏳ Pending",     _acs["pending_count"])
+    ap2.metric("🔴 High Risk",   _acs["high_risk_count"])
+    ap3.metric("✅ Approved",    _acs["approved_count"])
+    ap4.metric("❌ Rejected",    _acs["rejected_count"])
+    st.page_link("pages/27_Approval_Center.py", label="✅ Approval Center を開く →")
+    st.divider()
+except Exception:
+    pass
+
 # ── SNS Factory Summary (v4.4) ─────────────────────────────────────────────────
 try:
     import json as _json2
