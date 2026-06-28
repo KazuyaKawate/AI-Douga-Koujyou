@@ -1,7 +1,7 @@
 from .router import AIRouter
 from .task import AITask, TaskType
 from .response import AIResponse, ProviderHealth
-from .logger import BaseRouterLogger, LogEntry, NullLogger
+from .logger import BaseRouterLogger, LogEntry, NullLogger, SheetsRouterLogger
 
 __all__ = [
     "AIRouter",
@@ -12,4 +12,5 @@ __all__ = [
     "BaseRouterLogger",
     "LogEntry",
     "NullLogger",
+    "SheetsRouterLogger",
 ]

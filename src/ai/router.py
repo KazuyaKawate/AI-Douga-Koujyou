@@ -115,14 +115,15 @@ class AIRouter:
     def _emit_log(self, resp: AIResponse, task_key: str) -> None:
         meta = resp.metadata or {}
         entry = LogEntry(
-            timestamp=datetime.datetime.now(),
             task_type=task_key,
             provider=resp.provider,
-            duration_ms=resp.duration_ms,
-            ok=resp.ok,
+            model=resp.model,
+            latency_ms=resp.duration_ms,
+            success=resp.ok,
             input_tokens=meta.get("input_tokens"),
             output_tokens=meta.get("output_tokens"),
-            error=resp.error,
+            cost_usd=meta.get("cost_usd"),
+            error_message=resp.error,
         )
         self._logger.log(entry)
 
