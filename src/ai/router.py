@@ -118,6 +118,10 @@ class AIRouter:
 
     def _emit_log(self, resp: AIResponse, task_key: str) -> None:
         meta = resp.metadata or {}
+        # input_tokens / output_tokens / cost_usd は専用フィールドへ
+        # それ以外（timeout_sec / latency_ms / finish_reason 等）は metadata に残す
+        _dedicated = {"input_tokens", "output_tokens", "cost_usd"}
+        log_meta = {k: v for k, v in meta.items() if k not in _dedicated} or None
         entry = LogEntry(
             task_type=task_key,
             provider=resp.provider,
@@ -128,6 +132,7 @@ class AIRouter:
             output_tokens=meta.get("output_tokens"),
             cost_usd=meta.get("cost_usd"),
             error_message=resp.error,
+            metadata=log_meta,
         )
         self._logger.log(entry)
 
