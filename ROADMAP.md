@@ -42,6 +42,9 @@ Creator Factory OS rebrand. Mission Control daily command center. KPI, task list
 ### ✅ v4.5 — Sales Factory
 `pages/21_Sales_Factory.py` — Full CRM: lead management (8 sources, 4 ranks, status lifecycle), deal pipeline (7 stages with weighted forecast), follow-up manager (overdue detection, today/week views, mark-done → `sales_calls` KPI), proposal tracker (5 response statuses), rule-based sales forecast (pipeline/weighted/conversion/monthly projection). Mission Control Section 7.6 sales card + `sync_from_sales()`. `src/factories/sales/` data layer.
 
+### ✅ v5.2 Phase 4-4 — Test Worksheet Append _(2026-06-28)_
+`run_test_write()` added to `sync_executor`: appends exactly one tagged test row (`_phase`, `_ts`, `_source`, `_status`) to `test_worksheet_name` (from `workspace_local.json`). Production worksheets blocked by `_PRODUCTION_WORKSHEETS` frozenset. `allow_write=True` passed only from the UI write button — never committed. Health-check write guard bug fixed (`allow_write` checked instead of `write_enabled`). Dev Studio Phase 4-4 panel: dry-run preview → checkbox confirmation → write button → rollback instructions. `get_local_config_status()` gains `test_worksheet_name` / `has_test_worksheet`. Phase 4-5 = production worksheet sync (KPI / Revenue / Notes).
+
 ### ✅ v5.2 Phase 4-3 — Live Read-Only Connection Verified _(2026-06-28)_
 First end-to-end live `test_read_connection()` run against a real spreadsheet. `gspread` + service account connected via `load_merged_settings()`. KPI sheet read successfully (0 rows — sheet empty, connection confirmed). Phase labels updated in `sheet_reader.py`, `sheet_writer.py`, `sync_executor.py`. `allow_write=False` maintained; `committed auth_mode=disabled` unchanged. `config/workspace_local.json` + `credentials/service-account.local.json` remain local-only, never committed. Phase 4-4 = write enable via `allow_write=True`.
 

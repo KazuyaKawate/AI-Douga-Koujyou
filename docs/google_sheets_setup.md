@@ -1,4 +1,4 @@
-# Google Sheets セットアップガイド — Creator Factory OS v5.2 Phase 4-3
+# Google Sheets セットアップガイド — Creator Factory OS v5.2 Phase 4-4
 
 > **重要:** このガイドはオプション設定です。  
 > `auth_mode` のデフォルトは `"disabled"` のまま維持されます。  
@@ -17,18 +17,19 @@
 
 ---
 
-## Phase 4-3: ライブ読み取り接続確認（現フェーズ）
+## Phase 4-4: テストシート書き込み（現フェーズ）
 
-**Phase 4-3** で、実際のスプレッドシートへの **ライブ読み取り接続を確認** しました。
+**Phase 4-4** で、孤立テストシートへの **安全な書き込みを実装** しました。
 
 | フェーズ | 機能 | 状態 |
 |---------|------|------|
 | Phase 3 | 安全性確認・依存パッケージチェック | ✅ 完了 |
 | Phase 4-1 | gspread 接続コード実装（build_client / read_sheet / test_read_connection） | ✅ 完了 |
 | Phase 4-2 | ローカル設定上書き（workspace_local.json）& 読み取り接続テスト | ✅ 完了 |
-| **Phase 4-3** | **ライブ読み取り接続確認（service_account + 実スプレッドシート）** | ✅ 現フェーズ |
-| Phase 4-4 | 書き込み有効化（`allow_write=True`） | 🔲 予定 |
-| Phase 4-5 | OAuth 認証 | 🔲 予定 |
+| Phase 4-3 | ライブ読み取り接続確認（service_account + 実スプレッドシート） | ✅ 完了 |
+| **Phase 4-4** | **テストシート書き込み（run_test_write / 1行追記 / 本番シート保護）** | ✅ 現フェーズ |
+| Phase 4-5 | 本番シート同期（KPI / Revenue / Notes） | 🔲 予定 |
+| Phase 4-6 | OAuth 認証 | 🔲 予定 |
 
 ---
 

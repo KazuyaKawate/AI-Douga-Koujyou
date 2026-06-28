@@ -636,6 +636,7 @@ with tabs[9]:
             run_preview as _ex_preview,
             get_connector_health as _ex_health,
             test_read_connection as _ex_test_read,
+            run_test_write as _ex_test_write,
         )
         from src.workspace.google_auth import (
             get_auth_config as _ws_auth_cfg,
@@ -958,8 +959,9 @@ with tabs[9]:
                         st.error(f"接続テストエラー: {exc}")
 
         st.caption(
-            "⚠️ **書き込みは無効**（Phase 4-2 は読み取り専用 — `allow_write=False`）。"
-            "Phase 4-3 以降でライブ書き込みを有効化予定。"
+            "Phase 4-3 で読み取り接続確認済み。"
+            "Phase 4-4 でテストシート（`test_worksheet_name`）への書き込みが可能になりました。"
+            "本番シート（KPI / Revenue / Notes）への書き込みは Phase 4-5 以降で有効化予定。"
         )
 
         st.divider()
@@ -985,26 +987,102 @@ with tabs[9]:
 
         st.divider()
 
-        # ── Manual Execute button (disabled by default) ───────────────────────
-        st.markdown("**⚡ 手動実行（Google Sheetsへの書き込み）**")
-        st.warning(
-            "⚠️ Phase 4-2 では書き込みは無効です（`allow_write=False`）。Phase 4-3 以降で有効化予定。  \n"
-            "実行ボタンは **committed auth_mode が 'disabled' の間は常に無効** です。"
+        # ── Phase 4-4: Test Worksheet Append ─────────────────────────────────
+        st.markdown("**✏️ Phase 4-4: テストシート書き込み（孤立ワークシートのみ）**")
+        st.caption(
+            "本番シート（KPI / Revenue / Notes / SNS / Sales）には書き込みません。  \n"
+            "`test_worksheet_name` で指定した孤立テストシートに **1 行だけ** 追記します。"
         )
-        _exec_enabled = _ws_auth["auth_mode"] != "disabled" and _ws_cred["ready"]
-        _exec_col, _ = st.columns([1, 3])
-        with _exec_col:
-            st.button(
-                "⚡ 手動実行（本番書き込み）",
-                type="primary",
-                use_container_width=True,
-                key="ws_manual_exec",
-                disabled=True,
-                help=(
-                    "auth_mode='disabled' のため無効。"
-                    "Phase 4+ (gspread ライブ) 実装後に有効になります。"
-                ),
+
+        _p44_tw = _ws_local.get("test_worksheet_name", "").strip()
+        _PROD_WS44 = {"KPI", "Revenue", "Notes", "SNS", "Sales"}
+
+        _p44c1, _p44c2, _p44c3 = st.columns(3)
+        _p44c1.metric(
+            "📋 test_worksheet_name",
+            _p44_tw if _p44_tw else "⬜ 未設定",
+        )
+        _p44c2.metric(
+            "🔒 本番シート保護",
+            "✅ 安全" if (_p44_tw and _p44_tw not in _PROD_WS44) else (
+                "🔴 本番シート名" if _p44_tw in _PROD_WS44 else "⬜ 未設定"
+            ),
+        )
+        _p44c3.metric(
+            "🔑 認証",
+            "✅ 接続済み" if _ws_auth["auth_mode"] == "service_account" else f"⬜ {_ws_auth['auth_mode']}",
+        )
+
+        if not _p44_tw:
+            st.warning(
+                "**`test_worksheet_name` が未設定です。**  \n"
+                "`config/workspace_local.json` に以下を追加してください:  \n"
+                '`"test_worksheet_name": "Phase4-4-Test"`  \n'
+                "また Google Sheets でこのシートを事前に作成してください（ヘッダー行不要）。"
             )
+        elif _p44_tw in _PROD_WS44:
+            st.error(
+                f"**`{_p44_tw}` は本番シートです。**  \n"
+                "別のシート名（例: `Phase4-4-Test`）を `test_worksheet_name` に設定してください。"
+            )
+        else:
+            if st.button("🔍 ドライランプレビュー（書き込まない）", key="p44_dryrun", type="secondary"):
+                with st.spinner("プレビュー中…"):
+                    try:
+                        _p44_dr = _ex_test_write(_ws_merged, dry_run=True, manual_execute=False)
+                        if _p44_dr["ok"]:
+                            st.info(
+                                f"**プレビュー（書き込みなし）**  \n"
+                                f"シート: `{_p44_dr['worksheet']}`  \n"
+                                f"追記予定行: `{_p44_dr['row_data']}`"
+                            )
+                            st.session_state["p44_preview_ok"] = True
+                        else:
+                            st.error(f"プレビューエラー: {_p44_dr['error']}")
+                            st.session_state["p44_preview_ok"] = False
+                    except Exception as exc:
+                        st.error(f"プレビューエラー: {exc}")
+                        st.session_state["p44_preview_ok"] = False
+
+            _p44_confirmed = st.checkbox(
+                "プレビューを確認しました。テストシートに 1 行だけ追記します（既存データは変更されません）",
+                key="p44_confirm",
+            )
+
+            if _p44_confirmed:
+                if st.button("⚠️ テスト書き込みを実行", key="p44_write", type="primary"):
+                    with st.spinner("書き込み中…"):
+                        try:
+                            _p44_result = _ex_test_write(
+                                _ws_merged,
+                                dry_run=False,
+                                manual_execute=True,
+                            )
+                            if _p44_result["ok"] and _p44_result["executed"]:
+                                st.success(
+                                    f"✅ テスト書き込み成功  \n"
+                                    f"シート: `{_p44_result['worksheet']}`  \n"
+                                    f"追記行: `{_p44_result['row_data']}`  \n"
+                                    f"処理時間: {_p44_result['duration_ms']}ms"
+                                )
+                                st.warning(
+                                    "**ロールバック手順:**  \n"
+                                    f"1. Google Sheets で `{_p44_result['worksheet']}` シートを開く  \n"
+                                    "2. 追記された最終行を右クリック → 「行を削除」  \n"
+                                    "3. または Ctrl+Z（Google Sheets の元に戻す）"
+                                )
+                            else:
+                                st.error(
+                                    f"書き込み失敗: "
+                                    f"{_p44_result.get('error') or '不明なエラー'}"
+                                )
+                        except Exception as exc:
+                            st.error(f"書き込みエラー: {exc}")
+
+        st.caption(
+            "⚠️ **`allow_write=True` は UI ボタン経由でのみ有効。コミット済みコードに含まれません。"
+            "本番シートへの書き込みは Phase 4-5 以降。**"
+        )
 
         st.divider()
 

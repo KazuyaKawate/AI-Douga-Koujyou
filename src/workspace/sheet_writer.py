@@ -16,7 +16,7 @@ Actual writes remain Phase 4-4+ (Phase 4-3 = live read-only connection verified)
 """
 from __future__ import annotations
 
-from src.workspace.google_auth import get_auth_config, get_credential_status, get_dependency_status
+from src.workspace.google_auth import get_auth_config, get_credential_status, get_dependency_status, build_client
 
 
 def _can_write(
@@ -83,8 +83,36 @@ def write_rows(
         base["reason"] = f"認証エラー: {cred['label']}"
         return base
 
-    # Phase 4-4+: actual gspread write goes here.
-    base["reason"] = "Phase 4-4+ で gspread 書き込み実装予定（現在: Phase 4-3 読み取り専用）"
+    # Resolve settings for spreadsheet_id lookup
+    _write_settings = settings
+    if _write_settings is None:
+        from src.workspace.sync_validator import load_merged_settings as _lms_w
+        _write_settings = _lms_w()
+
+    # Actual gspread append (Phase 4-4+)
+    try:
+        client_result = build_client(_write_settings)
+        if client_result["status"] != "connected":
+            base["reason"] = f"接続エラー: {client_result['status']}"
+            return base
+        spreadsheet_id = (
+            _write_settings.get("google_sheets", {}).get("spreadsheet_id", "").strip()
+            or _write_settings.get("spreadsheet_id", "").strip()
+        )
+        if not spreadsheet_id:
+            base["reason"] = "spreadsheet_id が未設定です。config/workspace_local.json を確認してください。"
+            return base
+        client       = client_result["client"]
+        spreadsheet  = client.open_by_key(spreadsheet_id)
+        worksheet_obj = spreadsheet.worksheet(sheet_name)
+        for row in rows:
+            values = list(row.values())
+            worksheet_obj.append_row(values, value_input_option="USER_ENTERED")
+        base["executed"]     = True
+        base["rows_written"] = len(rows)
+        base["reason"]       = f"{len(rows)}行を追記しました（シート: {sheet_name}）"
+    except Exception as exc:
+        base["reason"] = f"書き込みエラー: {type(exc).__name__}: {exc}"
     return base
 
 
@@ -99,6 +127,7 @@ def get_writer_status(settings: dict | None = None) -> dict:
     return {
         "auth_mode":     auth_cfg["auth_mode"],
         "write_enabled": auth_cfg["auth_mode"] != "disabled",
-        "phase":         "Phase 4-3 (read-only; writes blocked by allow_write=False)",
-        "note":          "Writes enabled in Phase 4-4+ when allow_write=True and all guards pass",
+        "allow_write":   False,
+        "phase":         "Phase 4-4 (test worksheet append; allow_write=False in committed code)",
+        "note":          "allow_write=True is passed only from the UI write button — never committed",
     }

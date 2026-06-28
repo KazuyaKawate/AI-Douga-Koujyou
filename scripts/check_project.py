@@ -1066,17 +1066,72 @@ def check() -> bool:
     except Exception as exc:
         print(f"  [----] test_read_connection (merged)  → {exc}")
 
-    # write guard still blocked
+    # allow_write guard — must remain False in committed code
     try:
         from src.workspace.sheet_writer import get_writer_status as _gws42
         _ws42 = _gws42()
-        _p42_write_safe = not _ws42["write_enabled"]
+        _p42_allow_safe = not _ws42.get("allow_write", True)
         print(
-            f"  [{'OK  ' if _p42_write_safe else 'ERR '}] write guard  "
-            f"phase={_ws42['phase']}  write_enabled={_ws42['write_enabled']}"
+            f"  [{'OK  ' if _p42_allow_safe else 'ERR '}] allow_write guard  "
+            f"allow_write={_ws42.get('allow_write')}  phase={_ws42['phase']}"
         )
     except Exception as exc:
-        print(f"  [----] write guard  → {exc}")
+        print(f"  [----] allow_write guard  → {exc}")
+
+    print()
+
+    # Google Sheets Phase 4-4 — Test Worksheet Append
+    print("[ Google Sheets Phase 4-4: テストシート書き込み準備 ]")
+    import json as _json44
+    _local_cfg_path44 = ROOT / "config" / "workspace_local.json"
+    _PROD_WS44 = {"KPI", "Revenue", "Notes", "SNS", "Sales"}
+    _tw44 = ""
+    if _local_cfg_path44.exists():
+        try:
+            _lc44 = _json44.loads(_local_cfg_path44.read_text(encoding="utf-8"))
+            _tw44 = _lc44.get("test_worksheet_name", "").strip()
+            if _tw44:
+                if _tw44 in _PROD_WS44:
+                    print(f"  [ERR ] test_worksheet_name='{_tw44}' は本番シートです。別のシート名を指定してください。")
+                    ok = False
+                else:
+                    print(f"  [OK  ] test_worksheet_name={_tw44}（本番シートではない）")
+            else:
+                print("  [----] test_worksheet_name 未設定（Phase 4-4 書き込みテストには必要）")
+        except Exception as exc:
+            print(f"  [----] workspace_local.json 読み取り  → {exc}")
+    else:
+        print("  [----] workspace_local.json 未作成（Phase 4-4 書き込みテストには必要）")
+
+    # run_test_write dry-run
+    try:
+        from src.workspace.sync_validator import load_merged_settings as _lms44
+        from src.workspace.sync_executor import run_test_write as _rtw44
+        _ms44 = _lms44()
+        _dr44 = _rtw44(_ms44, dry_run=True, manual_execute=False)
+        if _dr44["ok"]:
+            print(
+                f"  [OK  ] run_test_write (dry_run)  "
+                f"worksheet={_dr44['worksheet']}  "
+                f"keys={list(_dr44['row_data'].keys())}  "
+                f"{_dr44['duration_ms']}ms"
+            )
+        else:
+            print(f"  [WARN] run_test_write (dry_run)  → {_dr44['error']}")
+    except Exception as exc:
+        print(f"  [----] run_test_write (dry_run)  → {exc}")
+
+    # allow_write guard (Phase 4-4 specific)
+    try:
+        from src.workspace.sheet_writer import get_writer_status as _gws44
+        _ws44 = _gws44()
+        _p44_allow_safe = not _ws44.get("allow_write", True)
+        print(
+            f"  [{'OK  ' if _p44_allow_safe else 'ERR '}] allow_write guard  "
+            f"allow_write={_ws44.get('allow_write')}  phase={_ws44['phase']}"
+        )
+    except Exception as exc:
+        print(f"  [----] allow_write guard  → {exc}")
 
     print()
 

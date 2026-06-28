@@ -85,6 +85,7 @@ def get_local_config_status() -> dict:
     sa     = local.get("service_account_file", "")
     sid    = local.get("spreadsheet_id", "").strip()
     ws     = local.get("worksheet_name", "").strip()
+    tw     = local.get("test_worksheet_name", "").strip()
     return {
         "exists":                   exists,
         "path":                     "config/workspace_local.json",
@@ -92,8 +93,10 @@ def get_local_config_status() -> dict:
         "service_account_file":     sa,
         "spreadsheet_id":           sid,
         "worksheet_name":           ws,
+        "test_worksheet_name":      tw,
         "has_spreadsheet_id":       bool(sid),
         "has_service_account_file": bool(sa),
+        "has_test_worksheet":       bool(tw),
         "is_active":                am not in ("", "disabled"),
     }
 

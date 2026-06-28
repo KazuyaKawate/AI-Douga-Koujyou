@@ -19,7 +19,7 @@ from __future__ import annotations
 import time
 from datetime import datetime, timezone
 
-from src.workspace.sync_validator import load_settings, load_merged_settings, get_enabled_targets
+from src.workspace.sync_validator import load_settings, load_merged_settings, load_local_settings, get_enabled_targets
 from src.workspace.sheets_sync import read_local_data, get_mapping
 from src.workspace.google_auth import get_auth_config, get_credential_status, build_client, get_dependency_status
 from src.workspace.sheet_reader import read_sheet, read_sheet_detail, get_reader_status
@@ -243,6 +243,108 @@ def test_read_connection(settings: dict | None = None) -> dict:
     })
     _base["duration_ms"] = int((time.time() - t0) * 1000)
     return _base
+
+
+_PRODUCTION_WORKSHEETS = frozenset({"KPI", "Revenue", "Notes", "SNS", "Sales"})
+
+
+def run_test_write(
+    settings: dict | None = None,
+    *,
+    dry_run: bool = True,
+    manual_execute: bool = False,
+) -> dict:
+    """Phase 4-4: Append exactly one tagged test row to test_worksheet_name only.
+
+    Never touches production worksheets (KPI / Revenue / Notes / SNS / Sales).
+    dry_run=True  (default) — preview only, no API write.
+    dry_run=False + manual_execute=True — appends one row.
+
+    Returns:
+      ok            — bool
+      executed      — bool
+      dry_run       — bool
+      worksheet     — str
+      row_data      — dict
+      rows_written  — int
+      error         — str | None
+      duration_ms   — int
+      phase         — str
+    """
+    import time
+    from datetime import datetime, timezone
+
+    t0 = time.time()
+
+    if settings is None:
+        settings = load_merged_settings()
+
+    local   = load_local_settings()
+    test_ws = local.get("test_worksheet_name", "").strip()
+
+    base = {
+        "ok":           False,
+        "executed":     False,
+        "dry_run":      dry_run,
+        "worksheet":    test_ws,
+        "row_data":     {},
+        "rows_written": 0,
+        "error":        None,
+        "duration_ms":  0,
+        "phase":        "Phase 4-4 (test worksheet append only)",
+    }
+
+    if not test_ws:
+        base["error"] = (
+            "test_worksheet_name が未設定です。"
+            "config/workspace_local.json に "
+            '\"test_worksheet_name\": \"Phase4-4-Test\" を追加してください。'
+        )
+        base["duration_ms"] = int((time.time() - t0) * 1000)
+        return base
+
+    if test_ws in _PRODUCTION_WORKSHEETS:
+        base["error"] = (
+            f"test_worksheet_name='{test_ws}' は本番シートです。"
+            "別のシート名（例: 'Phase4-4-Test'）を指定してください。"
+        )
+        base["duration_ms"] = int((time.time() - t0) * 1000)
+        return base
+
+    ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    test_row = {
+        "_phase":  "Phase 4-4 test",
+        "_ts":     ts,
+        "_source": "Creator Factory OS v5.2",
+        "_status": "test-write",
+    }
+    base["row_data"] = test_row
+
+    if dry_run:
+        base["ok"] = True
+        base["duration_ms"] = int((time.time() - t0) * 1000)
+        return base
+
+    if not manual_execute:
+        base["error"] = "manual_execute=False のため実行できません。UI の確認ボタンを使用してください。"
+        base["duration_ms"] = int((time.time() - t0) * 1000)
+        return base
+
+    result = write_rows(
+        test_ws,
+        [test_row],
+        dry_run=False,
+        manual_execute=True,
+        allow_write=True,
+        settings=settings,
+    )
+
+    base["ok"]           = result.get("executed", False)
+    base["executed"]     = result.get("executed", False)
+    base["rows_written"] = result.get("rows_written", 0)
+    base["error"]        = None if result.get("executed") else result.get("reason")
+    base["duration_ms"]  = int((time.time() - t0) * 1000)
+    return base
 
 
 def _block_reason(auth_mode: str, dry_run: bool, manual_execute: bool) -> str:

@@ -6,6 +6,30 @@ Versions are cumulative; each release builds on the previous stable base.
 
 ---
 
+## [v5.2 Phase 4-4] — 2026-06-28 — Google Sheets Test Worksheet Append
+
+**Codename:** Test Worksheet Append  
+**Upgrade path:** v5.2 Phase 4-3 → v5.2 Phase 4-4 (additive, no breaking changes)
+
+### What changed
+
+- **`src/workspace/sheet_writer.py`**: Implemented actual `gspread.append_row()` in `write_rows()`. Added `"allow_write": False` to `get_writer_status()` — fixes the Phase 4-2 health-check `[ERR]` bug (was checking `write_enabled` instead of `allow_write`). Added `build_client` import.
+- **`src/workspace/sync_executor.py`**: Added `run_test_write()` — dedicated Phase 4-4 function. Appends exactly one tagged test row to `test_worksheet_name`. Never touches production worksheets. Guards: `_PRODUCTION_WORKSHEETS` blocklist, `manual_execute=True`, `allow_write=True` (passed only from UI button, never committed). Added `load_local_settings` import.
+- **`src/workspace/sync_validator.py`**: Added `test_worksheet_name` and `has_test_worksheet` to `get_local_config_status()` return dict.
+- **`pages/25_Development_Studio.py`**: Added Phase 4-4 test write panel (test_worksheet_name check → dry-run preview → checkbox confirmation → write button → rollback instructions). Replaced the permanently-disabled "Manual Execute" button. Added `run_test_write` import.
+- **`scripts/check_project.py`**: Fixed write guard check (now checks `allow_write` not `write_enabled`). Added Phase 4-4 section: `test_worksheet_name` check, production worksheet blocklist, `run_test_write` dry-run, `allow_write` guard.
+- **`config/workspace_settings.json` meta**: `version` → `"5.2 Phase 4-4"`.
+
+### What did not change
+
+- `allow_write` parameter in `write_rows()` still defaults to `False` — never committed as `True`.
+- `config/workspace_settings.json` `auth_mode` remains `"disabled"` (safe committed default).
+- `dry_run_default: true`, `auto_sync: false` unchanged.
+- Production worksheets (KPI / Revenue / Notes / SNS / Sales) are blocked by `_PRODUCTION_WORKSHEETS` frozenset in `run_test_write()`.
+- `config/workspace_local.json` and `credentials/service-account.local.json` remain local-only, never committed.
+
+---
+
 ## [v5.2 Phase 4-3] — 2026-06-28 — Google Sheets Live Read-Only Connection Verified
 
 **Codename:** Live Read-Only Connection  
