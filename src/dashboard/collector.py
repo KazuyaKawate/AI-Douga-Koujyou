@@ -176,11 +176,22 @@ class DashboardCollector:
         except Exception as exc:
             return SnapshotStatus(exists=False, error=str(exc))
 
-    # ---- Task Queue (スタブ) ----------------------------------------
+    # ---- Task Queue -----------------------------------------------
 
     def _collect_task_queue(self) -> TaskQueueStats:
-        # Factory Mobile Inbox 実装後に接続予定
-        return TaskQueueStats(pending=0, running=0, completed_today=0)
+        """data/inbox_queue_stats.json から統計を読む。ファイル未生成時は 0 を返す。"""
+        try:
+            stats_path = Path("data/inbox_queue_stats.json")
+            if not stats_path.exists():
+                return TaskQueueStats()
+            data = json.loads(stats_path.read_text(encoding="utf-8"))
+            return TaskQueueStats(
+                pending=int(data.get("pending", 0)),
+                running=int(data.get("running", 0)),
+                completed_today=int(data.get("completed_today", 0)),
+            )
+        except Exception:
+            return TaskQueueStats()
 
     # ---- エラーログ -----------------------------------------------
 

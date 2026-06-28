@@ -1,0 +1,9 @@
+{
+  "_comment": "Factory Mobile Inbox 設定。APIキー・spreadsheet_id は workspace_local.json で管理。allow_write=false の間は Sheets への書き込みを行わない。",
+  "inbox_sheet":       "Factory_Inbox",
+  "outbox_sheet":      "Factory_Outbox",
+  "poll_interval_sec": 60,
+  "max_batch":         5,
+  "allow_write":       false,
+  "task_type_default": "default"
+}
