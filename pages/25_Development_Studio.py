@@ -656,555 +656,744 @@ with tabs[9]:
         _ws_cred        = _ws_cred_status(_ws_merged)
         _ex_hlth        = _ex_health(_ws_settings)
 
-        # ── Auth mode + credential status ─────────────────────────────────────
-        st.divider()
-        st.markdown("**🔑 認証モード & クレデンシャルステータス**")
-
-        am1, am2, am3 = st.columns(3)
-        am1.metric("🔑 Auth Mode",       _ws_auth["auth_mode"])
-        am2.metric("🔐 Credential",      f"{_ws_cred['icon']} {_ws_cred['label']}")
-        am3.metric("🔍 Dry-Run Default", "✅ ON" if _ws_settings.get("dry_run_default", True) else "⚠️ OFF")
-
-        _cred_safe, _cred_warns = _ws_cred_check()
-        if not _cred_safe:
-            for w in _cred_warns:
-                st.error(f"🚨 {w}")
+        # ── モード切り替え ─────────────────────────────────────────────────
+        _ws_mode_col, _ = st.columns([2, 4])
+        with _ws_mode_col:
+            _ws_mode_sel = st.radio(
+                "表示モード",
+                ["初心者モード", "詳細モード"],
+                horizontal=True,
+                index=0 if st.session_state.get("ws_mode", "beginner") == "beginner" else 1,
+                key="ws_mode_radio",
+            )
+        if _ws_mode_sel == "初心者モード":
+            st.session_state["ws_mode"] = "beginner"
         else:
-            st.success("✅ 認証ファイルはリポジトリルートに存在しません（安全）")
+            st.session_state["ws_mode"] = "advanced"
+        _beginner = (st.session_state.get("ws_mode", "beginner") == "beginner")
 
-        st.divider()
-
-        # ── Phase 3 Readiness Checklist ───────────────────────────────────────
-        st.markdown("**📋 Phase 3 準備状況チェックリスト**")
-        st.caption(
-            "gspread 統合（Phase 4+）前に必要なセキュリティ確認と依存パッケージ状況。"
-            "🔒 マークはセキュリティ必須項目。📦 マークはオプション（Phase 4+ で必要）。"
-        )
-
-        try:
-            _p3 = _ws_phase3_ready(_ws_settings)
-            _p3_checks = _p3.get("checks", [])
-
-            for _chk in _p3_checks:
-                _is_opt = _chk.get("optional", False)
-                _icon = "✅" if _chk["ok"] else ("📦" if _is_opt else "🔴")
-                _prefix = "📦 " if _is_opt else "🔒 "
-                _label_text = f"{_prefix}{_chk['label']}"
-                if _chk["ok"]:
-                    st.success(f"{_icon} **{_label_text}** — {_chk['detail']}")
-                elif _is_opt:
-                    st.info(f"{_icon} **{_label_text}** — {_chk['detail']}")
-                else:
-                    st.error(f"{_icon} **{_label_text}** — {_chk['detail']}")
-
-            if _p3["ready"]:
-                st.success(
-                    "🔒 **セキュリティチェック完了** — "
-                    "認証情報の保護が確認されました。"
+        def _fmt_err(err_str: str) -> tuple[str, str]:
+            """エラー文字列から（原因, 対処方法）を返す。"""
+            s = str(err_str or "")
+            if "WorksheetNotFound" in s:
+                name = s.split("WorksheetNotFound:")[-1].strip()
+                return (
+                    f"シート「{name}」が見つかりません",
+                    "Google Sheetsで同名のシートを作成してください（大文字・スペースに注意）",
                 )
-            else:
-                for _blk in _p3["blockers"]:
-                    st.warning(f"⚠️ {_blk}")
+            if "JSONDecodeError" in s or ("json" in s.lower() and "error" in s.lower()):
+                return (
+                    "設定ファイルの形式が正しくありません",
+                    "config/workspace_local.json のJSON形式を確認してください",
+                )
+            if "403" in s or "PERMISSION_DENIED" in s or "Forbidden" in s:
+                return (
+                    "アクセス権限がありません",
+                    "サービスアカウントをスプレッドシートの「編集者」として共有してください",
+                )
+            if "ConnectionError" in s or "TimeoutError" in s or "timeout" in s.lower():
+                return (
+                    "通信エラーが発生しました",
+                    "インターネット接続を確認してください",
+                )
+            if "disabled" in s or "auth_mode" in s:
+                return (
+                    "Google Sheets接続が無効化されています",
+                    "config/workspace_local.json で auth_mode を service_account に設定してください",
+                )
+            return "エラーが発生しました", s
 
-        except Exception as _p3_exc:
-            st.warning(f"Phase 3 チェック実行エラー: {_p3_exc}")
+        # ── Beginner Mode ───────────────────────────────────────────────────
+        if _beginner:
+            # ■ 同期状態
+            st.markdown("#### ■ 同期状態")
+            _bg_c1, _bg_c2, _bg_c3 = st.columns(3)
+            _bg_c1.metric("接続方式", _ws_auth["auth_mode"])
+            _bg_c2.metric("認証状態", f"{_ws_cred['icon']} {_ws_cred['label']}")
+            _bg_c3.metric("対象シート", "KPI / Revenue / Notes")
 
-        st.divider()
-
-        # ── Connection Status Banner ──────────────────────────────────────────
-        st.markdown("**🔌 接続ステータス**")
-        if _ws_conn["status"] == "unconfigured":
-            st.warning(
-                "⚫ **Workspace Sync 未設定**  \n"
-                "`config/workspace_settings.json` の `connector.auth_mode` を設定してください。"
-            )
-        elif _ws_conn["status"] == "no_credentials":
-            st.warning(
-                "🔴 **Google認証ファイルなし** — auth_mode が 'disabled' です。  \n"
-                "Google Cloud ConsoleからService Account JSONをダウンロードし、"
-                "`config/workspace_settings.json` の `connector` セクションを設定してください。"
-            )
-        else:
-            st.info(
-                f"{_ws_conn['icon']} **{_ws_conn['label']}** — "
-                "Phase 3: gspread 準備完了。Phase 4+ でライブ書き込み実装予定。"
-            )
-
-        st.divider()
-
-        # ── Summary metrics ──────────────────────────────────────────────────
-        wsm1, wsm2, wsm3, wsm4, wsm5 = st.columns(5)
-        wsm1.metric("🔌 接続",       f"{_ws_conn['icon']} {_ws_conn['label']}")
-        wsm2.metric("📊 同期総数",   _ws_hist["total_syncs"])
-        wsm3.metric("✅ 成功",       _ws_hist["successful"])
-        wsm4.metric("⚠️ 競合総数",   _ws_hist["total_conflicts"])
-        wsm5.metric("📋 有効ターゲット", _ex_hlth["target_count"])
-
-        st.divider()
-
-        # ── Sheet target list ────────────────────────────────────────────────
-        st.markdown("**📋 同期ターゲット一覧**")
-        _ws_enabled_targets = _ws_targets(_ws_settings)
-        if not _ws_enabled_targets:
-            st.caption("有効な同期ターゲットがありません。`config/workspace_settings.json` を確認してください。")
-        else:
-            for _t in _ws_enabled_targets:
-                st.caption(
-                    f"• `{_t.get('target_id', '?')}` → シート: **{_t.get('sheet_name', '?')}** "
-                    f"| ローカル: `{_t.get('local_file', '?')}`"
+            if _ws_auth["auth_mode"] != "service_account":
+                st.warning(
+                    "Google Sheetsに接続できていません。  \n"
+                    "`config/workspace_local.json` の `auth_mode` を "
+                    "`service_account` に設定してください。  \n"
+                    "設定方法は `docs/google_sheets_setup.md` をご覧ください。"
                 )
 
-        st.divider()
+            st.divider()
 
-        # ── Diff preview (using sync_executor) ───────────────────────────────
-        st.markdown("**🔍 差分プレビュー（コネクター）**")
-        st.caption(
-            "ローカルJSONとシートデータ（auth_mode=disabled の場合はサンプルデータ）を比較します。"
-            "APIへの実際の通信は行いません。"
-        )
-
-        if st.button("🔍 差分プレビューを実行", type="secondary", key="ws_diff_preview"):
-            with st.spinner("差分を計算中…"):
-                try:
-                    _prev = _ex_preview(_ws_settings)
-                    st.success(
-                        f"✅ プレビュー完了  |  "
-                        f"ターゲット: {_prev['target_count']}  |  "
-                        f"競合: {_prev['total_conflicts']}  |  "
-                        f"{_prev['duration_ms']}ms"
-                    )
-                    for _tp in _prev["targets"]:
-                        _diff = _tp.get("diff") or {}
-                        _sum  = _diff.get("summary", {})
-                        with st.expander(
-                            f"{'✅' if _tp['ready'] else '❌'} **{_tp['target_name']}** → "
-                            f"シート: `{_tp['sheet_name']}` | {_tp.get('diff_summary', '')}",
-                            expanded=False,
-                        ):
-                            if _tp.get("error"):
-                                st.error(f"エラー: {_tp['error']}")
-                            else:
-                                dpc1, dpc2, dpc3, dpc4, dpc5 = st.columns(5)
-                                dpc1.metric("🆕 追加",     _sum.get("added", 0))
-                                dpc2.metric("✏️ 更新",     _sum.get("updated", 0))
-                                dpc3.metric("🗑️ 削除",     _sum.get("removed", 0))
-                                dpc4.metric("⚠️ 競合",     _sum.get("conflicts", 0))
-                                dpc5.metric("✅ 変更なし", _sum.get("unchanged", 0))
-                except Exception as exc:
-                    st.error(f"差分プレビューエラー: {exc}")
-
-        st.divider()
-
-        # ── Validation ───────────────────────────────────────────────────────
-        st.markdown("**⚙️ 設定バリデーション**")
-        _ws_valid, _ws_errors = _ws_validate(_ws_settings)
-        _conn_valid, _conn_errors = _ws_validate_conn(_ws_settings)
-        if _ws_valid and _conn_valid:
-            st.success("✅ 設定は有効です")
-        else:
-            for e in _ws_errors + _conn_errors:
-                st.warning(f"⚠️ {e}")
-
-        st.divider()
-
-        # ── Phase 4-2: Local Config & Read-Only Connection Test ───────────────
-        st.markdown("**🔌 Phase 4-2: ローカル設定 & 読み取り接続テスト**")
-        st.caption(
-            "gspread サービスアカウント認証で Google Sheets を **読み取り専用** で接続します。  \n"
-            "設定は `config/workspace_local.json`（git除外）でローカル上書き可能。書き込みは無効。"
-        )
-
-        # ── Local config status ───────────────────────────────────────────────
-        _lcol_a, _lcol_b = st.columns([2, 3])
-        with _lcol_a:
-            _local_icon = "✅" if _ws_local["exists"] else "⬜"
-            st.markdown(f"**{_local_icon} `config/workspace_local.json`**")
-            if _ws_local["exists"]:
-                st.caption(
-                    f"auth_mode: `{_ws_local['auth_mode'] or '(未設定)'}` ·  "
-                    f"spreadsheet_id: {'✅ 設定済み' if _ws_local['has_spreadsheet_id'] else '⬜ 未設定'} ·  "
-                    f"cred file: {'✅ 設定済み' if _ws_local['has_service_account_file'] else '⬜ 未設定'}"
-                )
-            else:
-                st.caption(
-                    "`config/workspace_local.json` が見つかりません。  \n"
-                    "テンプレートを作成して spreadsheet_id・auth_mode を設定してください。"
-                )
-                with st.expander("workspace_local.json テンプレートを表示"):
-                    st.code(
-                        '{\n'
-                        '  "auth_mode": "service_account",\n'
-                        '  "service_account_file": "credentials/service-account.local.json",\n'
-                        '  "spreadsheet_id": "YOUR_SPREADSHEET_ID",\n'
-                        '  "worksheet_name": "KPI",\n'
-                        '  "range": ""\n'
-                        '}',
-                        language="json",
-                    )
-
-        # ── Dependency + connection status grid ───────────────────────────────
-        _deps42   = _ws_dep_status()
-        _gs_cfg42 = _ws_merged.get("google_sheets", {})
-        _conn_cfg42 = _ws_merged.get("connector", {})
-        _cred_cfg42 = _ws_merged.get("credential_paths", {})
-        _cred_file_path = (
-            _ws_local.get("service_account_file", "")
-            or _conn_cfg42.get("service_account_file", "")
-            or _cred_cfg42.get("service_account_file", "")
-        )
-
-        p42c1, p42c2, p42c3 = st.columns(3)
-        p42c1.metric(
-            "📦 gspread",
-            f"✅ {_deps42['gspread_version']}" if _deps42["gspread_installed"] else "❌ 未インストール",
-        )
-        p42c2.metric(
-            "📦 google-auth",
-            f"✅ {_deps42['google_auth_version']}" if _deps42["google_auth_installed"] else "❌ 未インストール",
-        )
-        p42c3.metric(
-            "🔑 auth_mode (実効値)",
-            _ws_auth["auth_mode"],
-            help="committed=disabled。workspace_local.json で service_account に上書き可能。",
-        )
-
-        p42c4, p42c5, p42c6 = st.columns(3)
-        _cred_exists42 = bool(_cred_file_path) and (ROOT / _cred_file_path).exists()
-        p42c4.metric(
-            "📄 認証ファイル",
-            "✅ 存在" if _cred_exists42 else ("⬜ パス未設定" if not _cred_file_path else "🔴 ファイルなし"),
-        )
-        p42c5.metric(
-            "🆔 spreadsheet_id",
-            "✅ 設定済み" if _gs_cfg42.get("spreadsheet_id", "").strip() else "⬜ 未設定",
-        )
-        p42c6.metric(
-            "📋 worksheet_name",
-            _gs_cfg42.get("worksheet_name", "") or "⬜ 未設定",
-        )
-
-        # ── Setup hints ───────────────────────────────────────────────────────
-        if not _deps42["all_ready"]:
-            st.warning(
-                f"📦 **依存パッケージ未インストール:** `{_deps42['install_hint']}`  \n"
-                "ターミナルで実行後、ページをリロードしてください。"
-                "`auth_mode=disabled` のままでもアプリは動作します。"
+            # ■ 差分プレビュー
+            st.markdown("#### ■ Google Sheetsへの同期")
+            st.caption(
+                "Google Sheetsへ書き込まれる内容を事前に確認します。"
+                "実際の書き込みは行われません。"
             )
-
-        if _deps42["all_ready"] and not _cred_exists42:
-            st.info(
-                "**認証ファイルが見つかりません。** 以下の手順で設定してください:  \n"
-                "1. Google Cloud Console → サービスアカウント作成 → JSON キー発行  \n"
-                "2. `credentials/service-account.local.json` に配置  \n"
-                "3. `config/workspace_local.json` の `auth_mode` を `\"service_account\"` に変更  \n"
-                "4. `spreadsheet_id` と `worksheet_name` を設定  \n"
-                "詳細: `docs/google_sheets_setup.md`"
-            )
-
-        if _deps42["all_ready"] and _cred_exists42 and not _gs_cfg42.get("spreadsheet_id", "").strip():
-            st.warning(
-                "**spreadsheet_id が未設定です。** `config/workspace_local.json` に設定してください:  \n"
-                '`"spreadsheet_id": "YOUR_SPREADSHEET_ID_HERE"`'
-            )
-
-        # ── Read Connection Test button ────────────────────────────────────────
-        _read_btn_col, _ = st.columns([1, 3])
-        with _read_btn_col:
-            if st.button(
-                "🔌 読み取り接続テスト",
-                type="secondary",
-                use_container_width=True,
-                key="ws_read_test",
-            ):
-                with st.spinner("接続テスト中…"):
+            if st.button("🔍 差分プレビュー", key="bg_preview", type="secondary"):
+                with st.spinner("確認中..."):
                     try:
-                        _rt = _ex_test_read(_ws_merged)  # use merged settings
-                        if _rt["ok"]:
-                            _src_label = {
-                                "live":   "ライブ読み取り",
-                                "sample": "サンプルデータ（disabled）",
-                                "error":  "エラー",
-                            }.get(_rt["source"], _rt["source"])
-                            st.success(
-                                f"✅ 接続テスト成功  |  "
-                                f"ソース: {_src_label}  |  "
-                                f"行数: {_rt['row_count']}  |  "
-                                f"シート: `{_rt['sheet_tested'] or '(disabled)'}` |  "
-                                f"{_rt['duration_ms']}ms"
-                            )
-                        else:
-                            st.error(
-                                f"🔴 接続テスト失敗  |  "
-                                f"ステータス: `{_rt['client_status']}`  |  "
-                                f"エラー: {_rt.get('error', '不明')}"
-                            )
-                            _cs = _rt["client_status"]
-                            if _cs == "deps_missing":
-                                st.code("pip install gspread google-auth", language="bash")
-                            elif _cs == "no_file_configured":
-                                st.info(
-                                    "`config/workspace_local.json` に `service_account_file` を設定してください。"
-                                )
-                            elif _cs == "file_missing":
-                                st.info(
-                                    f"`{_cred_file_path}` が見つかりません。  \n"
-                                    "Google Cloud Console からサービスアカウント JSON をダウンロードし "
-                                    "`credentials/service-account.local.json` に配置してください。"
-                                )
-                            elif _cs == "disabled":
-                                st.info(
-                                    "`config/workspace_local.json` の `auth_mode` を "
-                                    '`"service_account"` に変更してから再テストしてください。'
-                                )
-                    except Exception as exc:
-                        st.error(f"接続テストエラー: {exc}")
-
-        st.caption(
-            "Phase 4-3 で読み取り接続確認済み。"
-            "Phase 4-4 でテストシート（`test_worksheet_name`）への書き込みが可能になりました。"
-            "本番シート（KPI / Revenue / Notes）への書き込みは Phase 4-5 以降で有効化予定。"
-        )
-
-        st.divider()
-
-        # ── Manual Dry Run button ─────────────────────────────────────────────
-        st.markdown("**手動ドライラン**")
-        st.caption("ローカルデータを読み取り、同期プレビューを生成します。外部API通信なし。")
-        _dr_btn_col, _ = st.columns([1, 3])
-        with _dr_btn_col:
-            if st.button("🔍 ドライラン実行", type="primary", use_container_width=True,
-                         key="ws_dry_run"):
-                with st.spinner("ドライラン実行中…"):
-                    try:
-                        _dr_result = _ws_dry_run(_ws_settings)
-                        st.success(
-                            f"✅ ドライラン完了  |  "
-                            f"ターゲット: {_dr_result['targets']}  |  "
-                            f"総行数: {_dr_result['total_rows']}  |  "
-                            f"変更数: {_dr_result['total_changes']}"
+                        _bg_dr = _ex_prod_sync(
+                            _ws_merged,
+                            dry_run=True,
+                            manual_execute=False,
+                            allow_write=False,
                         )
-                    except Exception as exc:
-                        st.error(f"ドライランエラー: {exc}")
-
-        st.divider()
-
-        # ── Phase 4-4: Test Worksheet Append ─────────────────────────────────
-        st.markdown("**✏️ Phase 4-4: テストシート書き込み（孤立ワークシートのみ）**")
-        st.caption(
-            "本番シート（KPI / Revenue / Notes / SNS / Sales）には書き込みません。  \n"
-            "`test_worksheet_name` で指定した孤立テストシートに **1 行だけ** 追記します。"
-        )
-
-        _p44_tw = _ws_local.get("test_worksheet_name", "").strip()
-        _PROD_WS44 = {"KPI", "Revenue", "Notes", "SNS", "Sales"}
-
-        _p44c1, _p44c2, _p44c3 = st.columns(3)
-        _p44c1.metric(
-            "📋 test_worksheet_name",
-            _p44_tw if _p44_tw else "⬜ 未設定",
-        )
-        _p44c2.metric(
-            "🔒 本番シート保護",
-            "✅ 安全" if (_p44_tw and _p44_tw not in _PROD_WS44) else (
-                "🔴 本番シート名" if _p44_tw in _PROD_WS44 else "⬜ 未設定"
-            ),
-        )
-        _p44c3.metric(
-            "🔑 認証",
-            "✅ 接続済み" if _ws_auth["auth_mode"] == "service_account" else f"⬜ {_ws_auth['auth_mode']}",
-        )
-
-        if not _p44_tw:
-            st.warning(
-                "**`test_worksheet_name` が未設定です。**  \n"
-                "`config/workspace_local.json` に以下を追加してください:  \n"
-                '`"test_worksheet_name": "Phase4-4-Test"`  \n'
-                "また Google Sheets でこのシートを事前に作成してください（ヘッダー行不要）。"
-            )
-        elif _p44_tw in _PROD_WS44:
-            st.error(
-                f"**`{_p44_tw}` は本番シートです。**  \n"
-                "別のシート名（例: `Phase4-4-Test`）を `test_worksheet_name` に設定してください。"
-            )
-        else:
-            if st.button("🔍 ドライランプレビュー（書き込まない）", key="p44_dryrun", type="secondary"):
-                with st.spinner("プレビュー中…"):
-                    try:
-                        _p44_dr = _ex_test_write(_ws_merged, dry_run=True, manual_execute=False)
-                        if _p44_dr["ok"]:
-                            st.info(
-                                f"**プレビュー（書き込みなし）**  \n"
-                                f"シート: `{_p44_dr['worksheet']}`  \n"
-                                f"追記予定行: `{_p44_dr['row_data']}`"
-                            )
-                            st.session_state["p44_preview_ok"] = True
+                        if _bg_dr["ok"]:
+                            for _bg_t in _bg_dr["targets"]:
+                                if _bg_t.get("error"):
+                                    _cause, _fix = _fmt_err(_bg_t["error"])
+                                    st.error(
+                                        f"**[{_bg_t['sheet_name']}] {_cause}**  \n"
+                                        f"対処方法: {_fix}"
+                                    )
+                                else:
+                                    st.success(
+                                        f"[{_bg_t['sheet_name']}] "
+                                        f"{_bg_t['flat_rows']}行を同期予定"
+                                    )
+                            st.session_state["bg_preview_ok"] = True
                         else:
-                            st.error(f"プレビューエラー: {_p44_dr['error']}")
-                            st.session_state["p44_preview_ok"] = False
-                    except Exception as exc:
-                        st.error(f"プレビューエラー: {exc}")
-                        st.session_state["p44_preview_ok"] = False
+                            st.error("プレビューに失敗しました")
+                            st.session_state["bg_preview_ok"] = False
+                    except Exception as _bg_exc:
+                        _cause, _fix = _fmt_err(str(_bg_exc))
+                        st.error(f"**{_cause}**  \n対処方法: {_fix}")
+                        st.session_state["bg_preview_ok"] = False
 
-            _p44_confirmed = st.checkbox(
-                "プレビューを確認しました。テストシートに 1 行だけ追記します（既存データは変更されません）",
-                key="p44_confirm",
+            st.divider()
+
+            # ■ 本番同期ボタン
+            st.caption(
+                "確認した内容をGoogle Sheetsへ反映します。"
+                "追加・更新のみ行い、削除はしません。"
             )
-
-            if _p44_confirmed:
-                if st.button("⚠️ テスト書き込みを実行", key="p44_write", type="primary"):
-                    with st.spinner("書き込み中…"):
+            _bg_confirmed = st.checkbox(
+                "内容を確認しました。Google Sheetsへ同期します。",
+                key="bg_confirm",
+            )
+            if _bg_confirmed:
+                if st.button(
+                    "⚡ Google Sheetsに同期する",
+                    key="bg_write",
+                    type="primary",
+                ):
+                    with st.spinner("同期中..."):
                         try:
-                            _p44_result = _ex_test_write(
+                            _bg_res = _ex_prod_sync(
                                 _ws_merged,
                                 dry_run=False,
                                 manual_execute=True,
+                                allow_write=True,
                             )
-                            if _p44_result["ok"] and _p44_result["executed"]:
-                                st.success(
-                                    f"✅ テスト書き込み成功  \n"
-                                    f"シート: `{_p44_result['worksheet']}`  \n"
-                                    f"追記行: `{_p44_result['row_data']}`  \n"
-                                    f"処理時間: {_p44_result['duration_ms']}ms"
+                            if _bg_res["executed"]:
+                                _r_c1, _r_c2, _r_c3, _r_c4 = st.columns(4)
+                                _r_c1.metric("追加", f"{_bg_res['total_appended']}行")
+                                _r_c2.metric("更新", f"{_bg_res['total_updated']}行")
+                                _err_cnt = sum(
+                                    1 for _t in _bg_res["targets"] if _t.get("error")
                                 )
-                                st.warning(
-                                    "**ロールバック手順:**  \n"
-                                    f"1. Google Sheets で `{_p44_result['worksheet']}` シートを開く  \n"
-                                    "2. 追記された最終行を右クリック → 「行を削除」  \n"
-                                    "3. または Ctrl+Z（Google Sheets の元に戻す）"
+                                _r_c3.metric("エラー", f"{_err_cnt}件")
+                                _r_c4.metric(
+                                    "実行時間",
+                                    f"{_bg_res['duration_ms'] / 1000:.1f}秒",
+                                )
+                                if _err_cnt:
+                                    for _bg_t in _bg_res["targets"]:
+                                        if _bg_t.get("error"):
+                                            _cause, _fix = _fmt_err(_bg_t["error"])
+                                            st.error(
+                                                f"**[{_bg_t['sheet_name']}] {_cause}**  \n"
+                                                f"対処方法: {_fix}"
+                                            )
+                                else:
+                                    st.success("✅ 同期が完了しました")
+                                    st.caption(
+                                        "元に戻す場合は Google Sheets で Ctrl+Z を押すか、"
+                                        "「バージョン履歴」から復元してください。"
+                                    )
+                            else:
+                                _err_str = _bg_res.get("error") or ""
+                                if _err_str:
+                                    _cause, _fix = _fmt_err(_err_str)
+                                    st.error(
+                                        f"**{_cause}**  \n対処方法: {_fix}"
+                                    )
+                                else:
+                                    st.error("同期が実行されませんでした")
+                        except Exception as _bg_exc:
+                            _cause, _fix = _fmt_err(str(_bg_exc))
+                            st.error(f"**{_cause}**  \n対処方法: {_fix}")
+
+            st.divider()
+
+            # ■ 同期ログ
+            st.markdown("#### ■ 同期ログ")
+            st.caption("直近の同期実行結果を表示します。")
+            _bg_recent = _ws_hist_recent(5)
+            if not _bg_recent:
+                st.caption("同期履歴がありません。")
+            else:
+                for _bg_rec in _bg_recent:
+                    _s_icon = _ws_status_icons.get(_bg_rec.get("status", ""), "❓")
+                    _dr_b   = "確認のみ" if _bg_rec.get("dry_run") else "同期実行"
+                    st.caption(
+                        f"{_s_icon} `{_bg_rec.get('timestamp', '?')}` — "
+                        f"{_dr_b} · "
+                        f"追加:{_bg_rec.get('rows_synced', 0)}行 · "
+                        f"競合:{_bg_rec.get('conflicts', 0)}件"
+                    )
+
+
+        # ── 詳細モード（Advanced Mode）──────────────────────
+        if not _beginner:
+            # ── Auth mode + credential status ─────────────────────────────────────
+            st.divider()
+            st.markdown("**🔑 認証モード & クレデンシャルステータス**")
+
+            am1, am2, am3 = st.columns(3)
+            am1.metric("🔑 Auth Mode",       _ws_auth["auth_mode"])
+            am2.metric("🔐 Credential",      f"{_ws_cred['icon']} {_ws_cred['label']}")
+            am3.metric("🔍 Dry-Run Default", "✅ ON" if _ws_settings.get("dry_run_default", True) else "⚠️ OFF")
+
+            _cred_safe, _cred_warns = _ws_cred_check()
+            if not _cred_safe:
+                for w in _cred_warns:
+                    st.error(f"🚨 {w}")
+            else:
+                st.success("✅ 認証ファイルはリポジトリルートに存在しません（安全）")
+
+            st.divider()
+
+            # ── Phase 3 Readiness Checklist ───────────────────────────────────────
+            st.markdown("**📋 Phase 3 準備状況チェックリスト**")
+            st.caption(
+                "gspread 統合（Phase 4+）前に必要なセキュリティ確認と依存パッケージ状況。"
+                "🔒 マークはセキュリティ必須項目。📦 マークはオプション（Phase 4+ で必要）。"
+            )
+
+            try:
+                _p3 = _ws_phase3_ready(_ws_settings)
+                _p3_checks = _p3.get("checks", [])
+
+                for _chk in _p3_checks:
+                    _is_opt = _chk.get("optional", False)
+                    _icon = "✅" if _chk["ok"] else ("📦" if _is_opt else "🔴")
+                    _prefix = "📦 " if _is_opt else "🔒 "
+                    _label_text = f"{_prefix}{_chk['label']}"
+                    if _chk["ok"]:
+                        st.success(f"{_icon} **{_label_text}** — {_chk['detail']}")
+                    elif _is_opt:
+                        st.info(f"{_icon} **{_label_text}** — {_chk['detail']}")
+                    else:
+                        st.error(f"{_icon} **{_label_text}** — {_chk['detail']}")
+
+                if _p3["ready"]:
+                    st.success(
+                        "🔒 **セキュリティチェック完了** — "
+                        "認証情報の保護が確認されました。"
+                    )
+                else:
+                    for _blk in _p3["blockers"]:
+                        st.warning(f"⚠️ {_blk}")
+
+            except Exception as _p3_exc:
+                st.warning(f"Phase 3 チェック実行エラー: {_p3_exc}")
+
+            st.divider()
+
+            # ── Connection Status Banner ──────────────────────────────────────────
+            st.markdown("**🔌 接続ステータス**")
+            if _ws_conn["status"] == "unconfigured":
+                st.warning(
+                    "⚫ **Workspace Sync 未設定**  \n"
+                    "`config/workspace_settings.json` の `connector.auth_mode` を設定してください。"
+                )
+            elif _ws_conn["status"] == "no_credentials":
+                st.warning(
+                    "🔴 **Google認証ファイルなし** — auth_mode が 'disabled' です。  \n"
+                    "Google Cloud ConsoleからService Account JSONをダウンロードし、"
+                    "`config/workspace_settings.json` の `connector` セクションを設定してください。"
+                )
+            else:
+                st.info(
+                    f"{_ws_conn['icon']} **{_ws_conn['label']}** — "
+                    "Phase 3: gspread 準備完了。Phase 4+ でライブ書き込み実装予定。"
+                )
+
+            st.divider()
+
+            # ── Summary metrics ──────────────────────────────────────────────────
+            wsm1, wsm2, wsm3, wsm4, wsm5 = st.columns(5)
+            wsm1.metric("🔌 接続",       f"{_ws_conn['icon']} {_ws_conn['label']}")
+            wsm2.metric("📊 同期総数",   _ws_hist["total_syncs"])
+            wsm3.metric("✅ 成功",       _ws_hist["successful"])
+            wsm4.metric("⚠️ 競合総数",   _ws_hist["total_conflicts"])
+            wsm5.metric("📋 有効ターゲット", _ex_hlth["target_count"])
+
+            st.divider()
+
+            # ── Sheet target list ────────────────────────────────────────────────
+            st.markdown("**📋 同期ターゲット一覧**")
+            _ws_enabled_targets = _ws_targets(_ws_settings)
+            if not _ws_enabled_targets:
+                st.caption("有効な同期ターゲットがありません。`config/workspace_settings.json` を確認してください。")
+            else:
+                for _t in _ws_enabled_targets:
+                    st.caption(
+                        f"• `{_t.get('target_id', '?')}` → シート: **{_t.get('sheet_name', '?')}** "
+                        f"| ローカル: `{_t.get('local_file', '?')}`"
+                    )
+
+            st.divider()
+
+            # ── Diff preview (using sync_executor) ───────────────────────────────
+            st.markdown("**🔍 差分プレビュー（コネクター）**")
+            st.caption(
+                "ローカルJSONとシートデータ（auth_mode=disabled の場合はサンプルデータ）を比較します。"
+                "APIへの実際の通信は行いません。"
+            )
+
+            if st.button("🔍 差分プレビューを実行", type="secondary", key="ws_diff_preview"):
+                with st.spinner("差分を計算中…"):
+                    try:
+                        _prev = _ex_preview(_ws_settings)
+                        st.success(
+                            f"✅ プレビュー完了  |  "
+                            f"ターゲット: {_prev['target_count']}  |  "
+                            f"競合: {_prev['total_conflicts']}  |  "
+                            f"{_prev['duration_ms']}ms"
+                        )
+                        for _tp in _prev["targets"]:
+                            _diff = _tp.get("diff") or {}
+                            _sum  = _diff.get("summary", {})
+                            with st.expander(
+                                f"{'✅' if _tp['ready'] else '❌'} **{_tp['target_name']}** → "
+                                f"シート: `{_tp['sheet_name']}` | {_tp.get('diff_summary', '')}",
+                                expanded=False,
+                            ):
+                                if _tp.get("error"):
+                                    st.error(f"エラー: {_tp['error']}")
+                                else:
+                                    dpc1, dpc2, dpc3, dpc4, dpc5 = st.columns(5)
+                                    dpc1.metric("🆕 追加",     _sum.get("added", 0))
+                                    dpc2.metric("✏️ 更新",     _sum.get("updated", 0))
+                                    dpc3.metric("🗑️ 削除",     _sum.get("removed", 0))
+                                    dpc4.metric("⚠️ 競合",     _sum.get("conflicts", 0))
+                                    dpc5.metric("✅ 変更なし", _sum.get("unchanged", 0))
+                    except Exception as exc:
+                        st.error(f"差分プレビューエラー: {exc}")
+
+            st.divider()
+
+            # ── Validation ───────────────────────────────────────────────────────
+            st.markdown("**⚙️ 設定バリデーション**")
+            _ws_valid, _ws_errors = _ws_validate(_ws_settings)
+            _conn_valid, _conn_errors = _ws_validate_conn(_ws_settings)
+            if _ws_valid and _conn_valid:
+                st.success("✅ 設定は有効です")
+            else:
+                for e in _ws_errors + _conn_errors:
+                    st.warning(f"⚠️ {e}")
+
+            st.divider()
+
+            # ── Phase 4-2: Local Config & Read-Only Connection Test ───────────────
+            st.markdown("**🔌 Phase 4-2: ローカル設定 & 読み取り接続テスト**")
+            st.caption(
+                "gspread サービスアカウント認証で Google Sheets を **読み取り専用** で接続します。  \n"
+                "設定は `config/workspace_local.json`（git除外）でローカル上書き可能。書き込みは無効。"
+            )
+
+            # ── Local config status ───────────────────────────────────────────────
+            _lcol_a, _lcol_b = st.columns([2, 3])
+            with _lcol_a:
+                _local_icon = "✅" if _ws_local["exists"] else "⬜"
+                st.markdown(f"**{_local_icon} `config/workspace_local.json`**")
+                if _ws_local["exists"]:
+                    st.caption(
+                        f"auth_mode: `{_ws_local['auth_mode'] or '(未設定)'}` ·  "
+                        f"spreadsheet_id: {'✅ 設定済み' if _ws_local['has_spreadsheet_id'] else '⬜ 未設定'} ·  "
+                        f"cred file: {'✅ 設定済み' if _ws_local['has_service_account_file'] else '⬜ 未設定'}"
+                    )
+                else:
+                    st.caption(
+                        "`config/workspace_local.json` が見つかりません。  \n"
+                        "テンプレートを作成して spreadsheet_id・auth_mode を設定してください。"
+                    )
+                    with st.expander("workspace_local.json テンプレートを表示"):
+                        st.code(
+                            '{\n'
+                            '  "auth_mode": "service_account",\n'
+                            '  "service_account_file": "credentials/service-account.local.json",\n'
+                            '  "spreadsheet_id": "YOUR_SPREADSHEET_ID",\n'
+                            '  "worksheet_name": "KPI",\n'
+                            '  "range": ""\n'
+                            '}',
+                            language="json",
+                        )
+
+            # ── Dependency + connection status grid ───────────────────────────────
+            _deps42   = _ws_dep_status()
+            _gs_cfg42 = _ws_merged.get("google_sheets", {})
+            _conn_cfg42 = _ws_merged.get("connector", {})
+            _cred_cfg42 = _ws_merged.get("credential_paths", {})
+            _cred_file_path = (
+                _ws_local.get("service_account_file", "")
+                or _conn_cfg42.get("service_account_file", "")
+                or _cred_cfg42.get("service_account_file", "")
+            )
+
+            p42c1, p42c2, p42c3 = st.columns(3)
+            p42c1.metric(
+                "📦 gspread",
+                f"✅ {_deps42['gspread_version']}" if _deps42["gspread_installed"] else "❌ 未インストール",
+            )
+            p42c2.metric(
+                "📦 google-auth",
+                f"✅ {_deps42['google_auth_version']}" if _deps42["google_auth_installed"] else "❌ 未インストール",
+            )
+            p42c3.metric(
+                "🔑 auth_mode (実効値)",
+                _ws_auth["auth_mode"],
+                help="committed=disabled。workspace_local.json で service_account に上書き可能。",
+            )
+
+            p42c4, p42c5, p42c6 = st.columns(3)
+            _cred_exists42 = bool(_cred_file_path) and (ROOT / _cred_file_path).exists()
+            p42c4.metric(
+                "📄 認証ファイル",
+                "✅ 存在" if _cred_exists42 else ("⬜ パス未設定" if not _cred_file_path else "🔴 ファイルなし"),
+            )
+            p42c5.metric(
+                "🆔 spreadsheet_id",
+                "✅ 設定済み" if _gs_cfg42.get("spreadsheet_id", "").strip() else "⬜ 未設定",
+            )
+            p42c6.metric(
+                "📋 worksheet_name",
+                _gs_cfg42.get("worksheet_name", "") or "⬜ 未設定",
+            )
+
+            # ── Setup hints ───────────────────────────────────────────────────────
+            if not _deps42["all_ready"]:
+                st.warning(
+                    f"📦 **依存パッケージ未インストール:** `{_deps42['install_hint']}`  \n"
+                    "ターミナルで実行後、ページをリロードしてください。"
+                    "`auth_mode=disabled` のままでもアプリは動作します。"
+                )
+
+            if _deps42["all_ready"] and not _cred_exists42:
+                st.info(
+                    "**認証ファイルが見つかりません。** 以下の手順で設定してください:  \n"
+                    "1. Google Cloud Console → サービスアカウント作成 → JSON キー発行  \n"
+                    "2. `credentials/service-account.local.json` に配置  \n"
+                    "3. `config/workspace_local.json` の `auth_mode` を `\"service_account\"` に変更  \n"
+                    "4. `spreadsheet_id` と `worksheet_name` を設定  \n"
+                    "詳細: `docs/google_sheets_setup.md`"
+                )
+
+            if _deps42["all_ready"] and _cred_exists42 and not _gs_cfg42.get("spreadsheet_id", "").strip():
+                st.warning(
+                    "**spreadsheet_id が未設定です。** `config/workspace_local.json` に設定してください:  \n"
+                    '`"spreadsheet_id": "YOUR_SPREADSHEET_ID_HERE"`'
+                )
+
+            # ── Read Connection Test button ────────────────────────────────────────
+            _read_btn_col, _ = st.columns([1, 3])
+            with _read_btn_col:
+                if st.button(
+                    "🔌 読み取り接続テスト",
+                    type="secondary",
+                    use_container_width=True,
+                    key="ws_read_test",
+                ):
+                    with st.spinner("接続テスト中…"):
+                        try:
+                            _rt = _ex_test_read(_ws_merged)  # use merged settings
+                            if _rt["ok"]:
+                                _src_label = {
+                                    "live":   "ライブ読み取り",
+                                    "sample": "サンプルデータ（disabled）",
+                                    "error":  "エラー",
+                                }.get(_rt["source"], _rt["source"])
+                                st.success(
+                                    f"✅ 接続テスト成功  |  "
+                                    f"ソース: {_src_label}  |  "
+                                    f"行数: {_rt['row_count']}  |  "
+                                    f"シート: `{_rt['sheet_tested'] or '(disabled)'}` |  "
+                                    f"{_rt['duration_ms']}ms"
                                 )
                             else:
                                 st.error(
-                                    f"書き込み失敗: "
-                                    f"{_p44_result.get('error') or '不明なエラー'}"
+                                    f"🔴 接続テスト失敗  |  "
+                                    f"ステータス: `{_rt['client_status']}`  |  "
+                                    f"エラー: {_rt.get('error', '不明')}"
                                 )
-                        except Exception as exc:
-                            st.error(f"書き込みエラー: {exc}")
-
-        st.caption(
-            "⚠️ **`allow_write=True` は UI ボタン経由でのみ有効。コミット済みコードに含まれません。"
-            "本番シートへの書き込みは Phase 4-5 以降。**"
-        )
-
-        st.divider()
-
-        # ── Phase 4-5: 本番シート同期（KPI / Revenue / Notes）──────────────
-        st.markdown("**📊 Phase 4-5: 本番シート同期（KPI / Revenue / Notes）**")
-        st.caption(
-            "dry-run プレビュー → 明示確認 → live sync の順に実行します。  \n"
-            "行削除は行いません（追加・更新のみ）。KPI / Revenue / Notes 以外には一切アクセスしません。"
-        )
-
-        _p45c1, _p45c2, _p45c3 = st.columns(3)
-        _p45c1.metric("対象シート", "KPI / Revenue / Notes")
-        _p45c2.metric("書き込み戦略", "Upsert（追加+更新）")
-        _p45c3.metric("削除", "なし（安全）")
-
-        if st.button("🔍 差分プレビュー（書き込まない）", key="p45_dryrun", type="secondary"):
-            with st.spinner("差分計算中..."):
-                try:
-                    _p45_dr = _ex_prod_sync(
-                        _ws_merged,
-                        dry_run=True,
-                        manual_execute=False,
-                        allow_write=False,
-                    )
-                    if _p45_dr["ok"]:
-                        for _p45_tr in _p45_dr["targets"]:
-                            if _p45_tr.get("error"):
-                                st.error(f"[{_p45_tr['target_id']}] エラー: {_p45_tr['error']}")
-                            else:
-                                st.success(
-                                    f"[{_p45_tr['sheet_name']}] "
-                                    f"同期予定: {_p45_tr['flat_rows']}行"
-                                )
-                                if _p45_tr.get("preview"):
-                                    with st.expander(f"{_p45_tr['sheet_name']} プレビュー（先頭3行）"):
-                                        st.json(_p45_tr["preview"])
-                        st.session_state["p45_preview_ok"] = True
-                        st.info(f"プレビュー完了 | {_p45_dr['duration_ms']}ms | 書き込みは行われていません")
-                    else:
-                        st.error("プレビューに失敗しました")
-                        st.session_state["p45_preview_ok"] = False
-                except Exception as _p45_exc:
-                    st.error(f"プレビューエラー: {_p45_exc}")
-                    st.session_state["p45_preview_ok"] = False
-
-        _p45_confirmed = st.checkbox(
-            "差分プレビューを確認しました。本番シートに同期します（削除なし / ロールバック: Google Sheets の「元に戻す」で対応）",
-            key="p45_confirm",
-        )
-
-        if _p45_confirmed:
-            if st.button(
-                "⚡ 本番同期を実行（KPI / Revenue / Notes）",
-                key="p45_write",
-                type="primary",
-            ):
-                with st.spinner("同期中..."):
-                    try:
-                        _p45_result = _ex_prod_sync(
-                            _ws_merged,
-                            dry_run=False,
-                            manual_execute=True,
-                            allow_write=True,
-                        )
-                        if _p45_result["executed"]:
-                            st.success(
-                                f"✅ 同期完了  \n"
-                                f"追加: {_p45_result['total_appended']}行 / "
-                                f"更新: {_p45_result['total_updated']}行 / "
-                                f"スキップ: {_p45_result['total_skipped']}行  \n"
-                                f"処理時間: {_p45_result['duration_ms']}ms"
-                            )
-                            for _p45_tr in _p45_result["targets"]:
-                                if _p45_tr.get("error"):
-                                    st.warning(f"[{_p45_tr['sheet_name']}] {_p45_tr['error']}")
-                                else:
-                                    st.caption(
-                                        f"[{_p45_tr['sheet_name']}] "
-                                        f"追加:{_p45_tr['appended']}行 / "
-                                        f"更新:{_p45_tr['updated']}行 / "
-                                        f"スキップ:{_p45_tr['skipped']}行"
+                                _cs = _rt["client_status"]
+                                if _cs == "deps_missing":
+                                    st.code("pip install gspread google-auth", language="bash")
+                                elif _cs == "no_file_configured":
+                                    st.info(
+                                        "`config/workspace_local.json` に `service_account_file` を設定してください。"
                                     )
-                            st.warning(
-                                "**ロールバック手順:**  \n"
-                                "Google Sheets を開き Ctrl+Z（元に戻す）で変更を取り消せます。  \n"
-                                "または「ファイル → バージョン履歴」から特定時点に復元してください。"
+                                elif _cs == "file_missing":
+                                    st.info(
+                                        f"`{_cred_file_path}` が見つかりません。  \n"
+                                        "Google Cloud Console からサービスアカウント JSON をダウンロードし "
+                                        "`credentials/service-account.local.json` に配置してください。"
+                                    )
+                                elif _cs == "disabled":
+                                    st.info(
+                                        "`config/workspace_local.json` の `auth_mode` を "
+                                        '`"service_account"` に変更してから再テストしてください。'
+                                    )
+                        except Exception as exc:
+                            st.error(f"接続テストエラー: {exc}")
+
+            st.caption(
+                "Phase 4-3 で読み取り接続確認済み。"
+                "Phase 4-4 でテストシート（`test_worksheet_name`）への書き込みが可能になりました。"
+                "本番シート（KPI / Revenue / Notes）への書き込みは Phase 4-5 以降で有効化予定。"
+            )
+
+            st.divider()
+
+            # ── Manual Dry Run button ─────────────────────────────────────────────
+            st.markdown("**手動ドライラン**")
+            st.caption("ローカルデータを読み取り、同期プレビューを生成します。外部API通信なし。")
+            _dr_btn_col, _ = st.columns([1, 3])
+            with _dr_btn_col:
+                if st.button("🔍 ドライラン実行", type="primary", use_container_width=True,
+                             key="ws_dry_run"):
+                    with st.spinner("ドライラン実行中…"):
+                        try:
+                            _dr_result = _ws_dry_run(_ws_settings)
+                            st.success(
+                                f"✅ ドライラン完了  |  "
+                                f"ターゲット: {_dr_result['targets']}  |  "
+                                f"総行数: {_dr_result['total_rows']}  |  "
+                                f"変更数: {_dr_result['total_changes']}"
                             )
-                        else:
-                            st.error(
-                                f"同期が実行されませんでした: "
-                                f"{_p45_result.get('error') or '不明なエラー'}"
-                            )
-                            for _p45_tr in _p45_result["targets"]:
-                                if _p45_tr.get("error"):
-                                    st.error(f"[{_p45_tr['sheet_name']}] {_p45_tr['error']}")
-                    except Exception as _p45_exc:
-                        st.error(f"同期エラー: {_p45_exc}")
+                        except Exception as exc:
+                            st.error(f"ドライランエラー: {exc}")
 
-        st.caption(
-            "**allow_write=True は UI ボタン経由でのみ有効。"
-            "コミット済みコードには含まれません。"
-            "本番シートへの書き込みは慎重に実行してください。**"
-        )
+            st.divider()
 
-        st.divider()
+            # ── Phase 4-4: Test Worksheet Append ─────────────────────────────────
+            st.markdown("**✏️ Phase 4-4: テストシート書き込み（孤立ワークシートのみ）**")
+            st.caption(
+                "本番シート（KPI / Revenue / Notes / SNS / Sales）には書き込みません。  \n"
+                "`test_worksheet_name` で指定した孤立テストシートに **1 行だけ** 追記します。"
+            )
 
-        # ── Sync History ─────────────────────────────────────────────────────
-        st.markdown("**同期履歴 (直近10件)**")
-        _ws_recent = _ws_hist_recent(10)
-        if not _ws_recent:
-            st.caption("同期履歴なし。ドライランを実行すると履歴が記録されます。")
-        else:
-            for rec in _ws_recent:
-                s_icon   = _ws_status_icons.get(rec.get("status", ""), "❓")
-                dr_badge = "🔍 Dry" if rec.get("dry_run") else "⚡ Real"
-                st.caption(
-                    f"{s_icon} `{rec.get('timestamp', '?')}` — "
-                    f"{dr_badge} · {rec.get('target_id', '?')} · "
-                    f"rows={rec.get('rows_synced', 0)} · "
-                    f"conflicts={rec.get('conflicts', 0)}"
+            _p44_tw = _ws_local.get("test_worksheet_name", "").strip()
+            _PROD_WS44 = {"KPI", "Revenue", "Notes", "SNS", "Sales"}
+
+            _p44c1, _p44c2, _p44c3 = st.columns(3)
+            _p44c1.metric(
+                "📋 test_worksheet_name",
+                _p44_tw if _p44_tw else "⬜ 未設定",
+            )
+            _p44c2.metric(
+                "🔒 本番シート保護",
+                "✅ 安全" if (_p44_tw and _p44_tw not in _PROD_WS44) else (
+                    "🔴 本番シート名" if _p44_tw in _PROD_WS44 else "⬜ 未設定"
+                ),
+            )
+            _p44c3.metric(
+                "🔑 認証",
+                "✅ 接続済み" if _ws_auth["auth_mode"] == "service_account" else f"⬜ {_ws_auth['auth_mode']}",
+            )
+
+            if not _p44_tw:
+                st.warning(
+                    "**`test_worksheet_name` が未設定です。**  \n"
+                    "`config/workspace_local.json` に以下を追加してください:  \n"
+                    '`"test_worksheet_name": "Phase4-4-Test"`  \n'
+                    "また Google Sheets でこのシートを事前に作成してください（ヘッダー行不要）。"
                 )
+            elif _p44_tw in _PROD_WS44:
+                st.error(
+                    f"**`{_p44_tw}` は本番シートです。**  \n"
+                    "別のシート名（例: `Phase4-4-Test`）を `test_worksheet_name` に設定してください。"
+                )
+            else:
+                if st.button("🔍 ドライランプレビュー（書き込まない）", key="p44_dryrun", type="secondary"):
+                    with st.spinner("プレビュー中…"):
+                        try:
+                            _p44_dr = _ex_test_write(_ws_merged, dry_run=True, manual_execute=False)
+                            if _p44_dr["ok"]:
+                                st.info(
+                                    f"**プレビュー（書き込みなし）**  \n"
+                                    f"シート: `{_p44_dr['worksheet']}`  \n"
+                                    f"追記予定行: `{_p44_dr['row_data']}`"
+                                )
+                                st.session_state["p44_preview_ok"] = True
+                            else:
+                                st.error(f"プレビューエラー: {_p44_dr['error']}")
+                                st.session_state["p44_preview_ok"] = False
+                        except Exception as exc:
+                            st.error(f"プレビューエラー: {exc}")
+                            st.session_state["p44_preview_ok"] = False
+
+                _p44_confirmed = st.checkbox(
+                    "プレビューを確認しました。テストシートに 1 行だけ追記します（既存データは変更されません）",
+                    key="p44_confirm",
+                )
+
+                if _p44_confirmed:
+                    if st.button("⚠️ テスト書き込みを実行", key="p44_write", type="primary"):
+                        with st.spinner("書き込み中…"):
+                            try:
+                                _p44_result = _ex_test_write(
+                                    _ws_merged,
+                                    dry_run=False,
+                                    manual_execute=True,
+                                )
+                                if _p44_result["ok"] and _p44_result["executed"]:
+                                    st.success(
+                                        f"✅ テスト書き込み成功  \n"
+                                        f"シート: `{_p44_result['worksheet']}`  \n"
+                                        f"追記行: `{_p44_result['row_data']}`  \n"
+                                        f"処理時間: {_p44_result['duration_ms']}ms"
+                                    )
+                                    st.warning(
+                                        "**ロールバック手順:**  \n"
+                                        f"1. Google Sheets で `{_p44_result['worksheet']}` シートを開く  \n"
+                                        "2. 追記された最終行を右クリック → 「行を削除」  \n"
+                                        "3. または Ctrl+Z（Google Sheets の元に戻す）"
+                                    )
+                                else:
+                                    st.error(
+                                        f"書き込み失敗: "
+                                        f"{_p44_result.get('error') or '不明なエラー'}"
+                                    )
+                            except Exception as exc:
+                                st.error(f"書き込みエラー: {exc}")
+
+            st.caption(
+                "⚠️ **`allow_write=True` は UI ボタン経由でのみ有効。コミット済みコードに含まれません。"
+                "本番シートへの書き込みは Phase 4-5 以降。**"
+            )
+
+            st.divider()
+
+            # ── Phase 4-5: 本番シート同期（KPI / Revenue / Notes）──────────────
+            st.markdown("**📊 Phase 4-5: 本番シート同期（KPI / Revenue / Notes）**")
+            st.caption(
+                "dry-run プレビュー → 明示確認 → live sync の順に実行します。  \n"
+                "行削除は行いません（追加・更新のみ）。KPI / Revenue / Notes 以外には一切アクセスしません。"
+            )
+
+            _p45c1, _p45c2, _p45c3 = st.columns(3)
+            _p45c1.metric("対象シート", "KPI / Revenue / Notes")
+            _p45c2.metric("書き込み戦略", "Upsert（追加+更新）")
+            _p45c3.metric("削除", "なし（安全）")
+
+            if st.button("🔍 差分プレビュー（書き込まない）", key="p45_dryrun", type="secondary"):
+                with st.spinner("差分計算中..."):
+                    try:
+                        _p45_dr = _ex_prod_sync(
+                            _ws_merged,
+                            dry_run=True,
+                            manual_execute=False,
+                            allow_write=False,
+                        )
+                        if _p45_dr["ok"]:
+                            for _p45_tr in _p45_dr["targets"]:
+                                if _p45_tr.get("error"):
+                                    st.error(f"[{_p45_tr['target_id']}] エラー: {_p45_tr['error']}")
+                                else:
+                                    st.success(
+                                        f"[{_p45_tr['sheet_name']}] "
+                                        f"同期予定: {_p45_tr['flat_rows']}行"
+                                    )
+                                    if _p45_tr.get("preview"):
+                                        with st.expander(f"{_p45_tr['sheet_name']} プレビュー（先頭3行）"):
+                                            st.json(_p45_tr["preview"])
+                            st.session_state["p45_preview_ok"] = True
+                            st.info(f"プレビュー完了 | {_p45_dr['duration_ms']}ms | 書き込みは行われていません")
+                        else:
+                            st.error("プレビューに失敗しました")
+                            st.session_state["p45_preview_ok"] = False
+                    except Exception as _p45_exc:
+                        st.error(f"プレビューエラー: {_p45_exc}")
+                        st.session_state["p45_preview_ok"] = False
+
+            _p45_confirmed = st.checkbox(
+                "差分プレビューを確認しました。本番シートに同期します（削除なし / ロールバック: Google Sheets の「元に戻す」で対応）",
+                key="p45_confirm",
+            )
+
+            if _p45_confirmed:
+                if st.button(
+                    "⚡ 本番同期を実行（KPI / Revenue / Notes）",
+                    key="p45_write",
+                    type="primary",
+                ):
+                    with st.spinner("同期中..."):
+                        try:
+                            _p45_result = _ex_prod_sync(
+                                _ws_merged,
+                                dry_run=False,
+                                manual_execute=True,
+                                allow_write=True,
+                            )
+                            if _p45_result["executed"]:
+                                st.success(
+                                    f"✅ 同期完了  \n"
+                                    f"追加: {_p45_result['total_appended']}行 / "
+                                    f"更新: {_p45_result['total_updated']}行 / "
+                                    f"スキップ: {_p45_result['total_skipped']}行  \n"
+                                    f"処理時間: {_p45_result['duration_ms']}ms"
+                                )
+                                for _p45_tr in _p45_result["targets"]:
+                                    if _p45_tr.get("error"):
+                                        st.warning(f"[{_p45_tr['sheet_name']}] {_p45_tr['error']}")
+                                    else:
+                                        st.caption(
+                                            f"[{_p45_tr['sheet_name']}] "
+                                            f"追加:{_p45_tr['appended']}行 / "
+                                            f"更新:{_p45_tr['updated']}行 / "
+                                            f"スキップ:{_p45_tr['skipped']}行"
+                                        )
+                                st.warning(
+                                    "**ロールバック手順:**  \n"
+                                    "Google Sheets を開き Ctrl+Z（元に戻す）で変更を取り消せます。  \n"
+                                    "または「ファイル → バージョン履歴」から特定時点に復元してください。"
+                                )
+                            else:
+                                st.error(
+                                    f"同期が実行されませんでした: "
+                                    f"{_p45_result.get('error') or '不明なエラー'}"
+                                )
+                                for _p45_tr in _p45_result["targets"]:
+                                    if _p45_tr.get("error"):
+                                        st.error(f"[{_p45_tr['sheet_name']}] {_p45_tr['error']}")
+                        except Exception as _p45_exc:
+                            st.error(f"同期エラー: {_p45_exc}")
+
+            st.caption(
+                "**allow_write=True は UI ボタン経由でのみ有効。"
+                "コミット済みコードには含まれません。"
+                "本番シートへの書き込みは慎重に実行してください。**"
+            )
+
+            st.divider()
+
+            # ── Sync History ─────────────────────────────────────────────────────
+            st.markdown("**同期履歴 (直近10件)**")
+            _ws_recent = _ws_hist_recent(10)
+            if not _ws_recent:
+                st.caption("同期履歴なし。ドライランを実行すると履歴が記録されます。")
+            else:
+                for rec in _ws_recent:
+                    s_icon   = _ws_status_icons.get(rec.get("status", ""), "❓")
+                    dr_badge = "🔍 Dry" if rec.get("dry_run") else "⚡ Real"
+                    st.caption(
+                        f"{s_icon} `{rec.get('timestamp', '?')}` — "
+                        f"{dr_badge} · {rec.get('target_id', '?')} · "
+                        f"rows={rec.get('rows_synced', 0)} · "
+                        f"conflicts={rec.get('conflicts', 0)}"
+                    )
 
     except Exception as exc:
         st.error(f"Workspace Sync の読み込みに失敗しました: {exc}")
