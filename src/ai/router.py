@@ -1,11 +1,13 @@
 from __future__ import annotations
+import datetime
 import json
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 from .task import AITask, TaskType
 from .response import AIResponse
+from .logger import BaseRouterLogger, LogEntry, NullLogger
 from .providers.base import BaseProvider
 
 _DEFAULT_CONFIG = Path("config/ai_router.json")
@@ -38,9 +40,14 @@ class ProviderNotFoundError(Exception):
 
 
 class AIRouter:
-    def __init__(self, config_path: Path = _DEFAULT_CONFIG) -> None:
+    def __init__(
+        self,
+        config_path: Path = _DEFAULT_CONFIG,
+        logger: BaseRouterLogger | None = None,
+    ) -> None:
         self._config = RouterConfig.load(config_path)
         self._providers: dict[str, BaseProvider] = {}
+        self._logger: BaseRouterLogger = logger if logger is not None else NullLogger()
         self._load_providers()
 
     # ---- Public API --------------------------------------------------
@@ -56,6 +63,7 @@ class AIRouter:
             or [self._config.default_provider]
         )
 
+        resp: AIResponse | None = None
         for provider_name in priority:
             provider = self._providers.get(provider_name)
             if provider is None:
@@ -66,21 +74,25 @@ class AIRouter:
                 continue
             resp = provider.complete(task)
             resp.duration_ms = int((time.monotonic() - t0) * 1000)
-            return resp
+            break
 
-        duration_ms = int((time.monotonic() - t0) * 1000)
-        return AIResponse(
-            ok=False,
-            content="",
-            provider="none",
-            model="",
-            task_type=task_key,
-            duration_ms=duration_ms,
-            error=(
-                f"利用可能なプロバイダーが見つかりません "
-                f"(task={task_key}, priority={priority})"
-            ),
-        )
+        if resp is None:
+            duration_ms = int((time.monotonic() - t0) * 1000)
+            resp = AIResponse(
+                ok=False,
+                content="",
+                provider="none",
+                model="",
+                task_type=task_key,
+                duration_ms=duration_ms,
+                error=(
+                    f"利用可能なプロバイダーが見つかりません "
+                    f"(task={task_key}, priority={priority})"
+                ),
+            )
+
+        self._emit_log(resp, task_key)
+        return resp
 
     def get_provider(self, name: str) -> BaseProvider | None:
         return self._providers.get(name)
@@ -90,8 +102,8 @@ class AIRouter:
 
     def health_check(self) -> dict:
         return {
-            "router_version":    self._config.version,
-            "default_provider":  self._config.default_provider,
+            "router_version":   self._config.version,
+            "default_provider": self._config.default_provider,
             "providers": {
                 name: provider.health_check()
                 for name, provider in self._providers.items()
@@ -99,6 +111,20 @@ class AIRouter:
         }
 
     # ---- Private -----------------------------------------------------
+
+    def _emit_log(self, resp: AIResponse, task_key: str) -> None:
+        meta = resp.metadata or {}
+        entry = LogEntry(
+            timestamp=datetime.datetime.now(),
+            task_type=task_key,
+            provider=resp.provider,
+            duration_ms=resp.duration_ms,
+            ok=resp.ok,
+            input_tokens=meta.get("input_tokens"),
+            output_tokens=meta.get("output_tokens"),
+            error=resp.error,
+        )
+        self._logger.log(entry)
 
     def _load_providers(self) -> None:
         from .providers import PROVIDER_REGISTRY
