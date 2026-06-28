@@ -105,6 +105,10 @@ config/workspace_local.json
 screenshots/dev/*.png
 screenshots/dev/*.jpg
 
+# Project Snapshot 履歴（大量になる可能性あり、ローカルのみ）
+# latest.json はコミット対象（AI引き継ぎ用）
+snapshots/history/
+
 # AI Router — APIキーはworkspace_local.jsonのai_keysセクションで管理（同ファイルはgitignore済み）
 # 万一スタンドアロンファイルを作成した場合の除外
 config/ai_keys.json
