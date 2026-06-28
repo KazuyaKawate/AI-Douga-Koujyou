@@ -1,10 +1,10 @@
-"""sheet_reader — Google Sheets read abstraction for Creator Factory OS (v5.2 Phase 4-2).
+"""sheet_reader — Google Sheets read abstraction for Creator Factory OS (v5.2 Phase 4-3).
 
 If auth_mode == 'disabled' (committed default): returns dry-run sample data. No API call.
 If auth_mode == 'service_account' (local override via workspace_local.json): live gspread read.
 If gspread is not installed: returns a safe error, never crashes.
 If credential file is missing: returns a safe error, never crashes.
-Phase 4-3+: OAuth read support.
+Phase 4-4+: OAuth read support.
 """
 from __future__ import annotations
 
@@ -141,12 +141,12 @@ def get_reader_status(settings: dict | None = None) -> dict:
             "status":           "dry_run" if dry_run else cred["status"],
             "label":            "ドライラン（サンプルデータ）" if dry_run else cred["label"],
             "icon":             "🔍" if dry_run else cred["icon"],
-            "phase":            "Phase 4-2 (local config override, read-only)",
+            "phase":            "Phase 4-3 (live read-only connection verified)",
         }
     except Exception as exc:
         return {
             "auth_mode": "disabled", "dry_run_mode": True,
             "credential_ready": False, "deps_ready": False,
             "status": "error", "label": str(exc), "icon": "🔴",
-            "phase": "Phase 4-1",
+            "phase": "Phase 4-3",
         }

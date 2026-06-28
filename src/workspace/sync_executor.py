@@ -1,4 +1,4 @@
-"""sync_executor — Orchestrator for Google Sheets Connector (v5.2 Phase 3).
+"""sync_executor — Orchestrator for Google Sheets Connector (v5.2 Phase 4-3).
 
 Execution flow:
   1. load_settings()
@@ -165,7 +165,7 @@ def get_connector_health(settings: dict | None = None) -> dict:
         "targets":          [t.get("target_id", "") for t in targets],
         "last_preview":     last_preview,
         "conflict_count":   0,
-        "phase":            "Phase 4-2 (local config override, read-only)",
+        "phase":            "Phase 4-3 (live read-only connection verified)",
         "deps_ready":       get_dependency_status()["all_ready"],
     }
 

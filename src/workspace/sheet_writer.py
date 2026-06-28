@@ -1,10 +1,10 @@
-"""sheet_writer — Google Sheets write abstraction for Creator Factory OS (v5.2 Phase 4-1).
+"""sheet_writer — Google Sheets write abstraction for Creator Factory OS (v5.2 Phase 4-3).
 
 QUAD-LOCK WRITE GUARD (all four must be true to write):
   1. auth_mode != 'disabled'
   2. dry_run == False
   3. manual_execute == True
-  4. allow_write == True   ← Phase 4-1: always False by default; Phase 4-2+ enables writes
+  4. allow_write == True   ← Phase 4-3: always False by default; Phase 4-4+ may enable writes
 
 DEPENDENCY GUARDS (checked after quad-lock):
   5. gspread installed
@@ -12,7 +12,7 @@ DEPENDENCY GUARDS (checked after quad-lock):
   7. credential file exists
 
 Default behavior is always preview-only. Never crashes UI. Never writes by accident.
-Actual writes remain Phase 4-2+ (Phase 4-1 = read-only connection test only).
+Actual writes remain Phase 4-4+ (Phase 4-3 = live read-only connection verified).
 """
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ def _can_write(
     if not manual_execute:
         return False, "manual_execute=False のため書き込み不可（手動承認が必要）"
     if not allow_write:
-        return False, "allow_write=False のため書き込み不可（Phase 4-1: 読み取り専用）"
+        return False, "allow_write=False のため書き込み不可（Phase 4-3: 読み取り専用）"
     return True, "書き込み条件を満たしています"
 
 
@@ -49,8 +49,8 @@ def write_rows(
     """Write rows to a Google Sheet.
 
     Default: preview-only (dry_run=True, manual_execute=False, allow_write=False).
-    Phase 4-1: allow_write always defaults False — read-only phase.
-    Phase 4-2+: allow_write=True enables actual writes when all other guards pass.
+    Phase 4-3: allow_write always defaults False — read-only phase.
+    Phase 4-4+: allow_write=True enables actual writes when all other guards pass.
     """
     auth_cfg = get_auth_config(settings)
     auth_mode = auth_cfg["auth_mode"]
@@ -83,8 +83,8 @@ def write_rows(
         base["reason"] = f"認証エラー: {cred['label']}"
         return base
 
-    # Phase 4+: actual gspread write goes here.
-    base["reason"] = "Phase 4+ で gspread 実装予定（現在: Phase 3 準備完了）"
+    # Phase 4-4+: actual gspread write goes here.
+    base["reason"] = "Phase 4-4+ で gspread 書き込み実装予定（現在: Phase 4-3 読み取り専用）"
     return base
 
 
@@ -99,6 +99,6 @@ def get_writer_status(settings: dict | None = None) -> dict:
     return {
         "auth_mode":     auth_cfg["auth_mode"],
         "write_enabled": auth_cfg["auth_mode"] != "disabled",
-        "phase":         "Phase 4-1 (read-only; writes blocked by allow_write=False)",
-        "note":          "Writes enabled in Phase 4-2+ when allow_write=True and all guards pass",
+        "phase":         "Phase 4-3 (read-only; writes blocked by allow_write=False)",
+        "note":          "Writes enabled in Phase 4-4+ when allow_write=True and all guards pass",
     }

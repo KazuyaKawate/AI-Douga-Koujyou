@@ -6,6 +6,28 @@ Versions are cumulative; each release builds on the previous stable base.
 
 ---
 
+## [v5.2 Phase 4-3] — 2026-06-28 — Google Sheets Live Read-Only Connection Verified
+
+**Codename:** Live Read-Only Connection  
+**Upgrade path:** v5.2 Phase 4-2 → v5.2 Phase 4-3 (no breaking changes, no new dependencies)
+
+### What changed
+
+- **Live Google Sheets connection confirmed:** First end-to-end live read (`test_read_connection`) completed against a real spreadsheet using `gspread` + service account via `load_merged_settings()`. Connection succeeded; KPI sheet accessible. Writes remain blocked (`allow_write=False`).
+- **`config/workspace_settings.json` meta:** `version` → `"5.2 Phase 4-3"`, `phase` → `"4-3: live read-only connection verified"`.
+- **Phase label strings updated** in `sheet_reader.py`, `sheet_writer.py`, `sync_executor.py` — no logic changes.
+- **Docs updated:** CHANGELOG, ROADMAP, README, ARCHITECTURE.md, google_sheets_setup.md reflect Phase 4-3 completion.
+
+### What did not change
+
+- `allow_write` remains `False` — no writes possible.
+- `config/workspace_settings.json` `auth_mode` remains `"disabled"` (safe committed default).
+- `config/workspace_local.json` and `credentials/service-account.local.json` remain local-only, git-ignored, not committed.
+- `dry_run_default: true`, `auto_sync: false` unchanged.
+- No production logic changes.
+
+---
+
 ## [v5.2 Phase 4-2] — 2026-06-27 — Google Sheets Local Config Override
 
 **Codename:** Google Sheets Local Config Override  

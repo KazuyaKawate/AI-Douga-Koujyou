@@ -3,7 +3,8 @@
 ## 概要
 
 Creator Factory OS はローカルファースト・JSONファースト設計の Streamlit マルチページアプリです。  
-**v5.2 Phase 4-2** で **Google Sheets ローカル設定上書き** を実装。`config/workspace_local.json`（git除外）でコミット済み設定を実行時に上書き。`load_merged_settings()` が統合マージ。Dev Studio Phase 4-2 パネルでローカル設定状態を表示。書き込みは無効（`allow_write=False`）。Phase 4-3 でライブ書き込み有効化予定。  
+**v5.2 Phase 4-3** で **Google Sheets ライブ読み取り接続を確認**。`test_read_connection()` を実際のスプレッドシートに対して実行。`gspread` + サービスアカウント接続を `load_merged_settings()` 経由で確認。`allow_write=False` 維持。コミット済み `auth_mode=disabled` 変更なし。Phase 4-4 で書き込み有効化予定。  
+**v5.2 Phase 4-2** で **Google Sheets ローカル設定上書き** を実装。`config/workspace_local.json`（git除外）でコミット済み設定を実行時に上書き。`load_merged_settings()` が統合マージ。Dev Studio Phase 4-2 パネルでローカル設定状態を表示。書き込みは無効（`allow_write=False`）。Phase 4-3 でライブ接続確認済み。  
 **v5.2 Phase 4-1** で **Google Sheets 読み取り専用接続** を実装。`build_client()` が実際の `gspread.Client` を構築（service_account、lazy import）。`read_sheet()` がライブAPIで読み取り。`test_read_connection()` でエンドツーエンド読み取りテスト。`write_rows()` に `allow_write=False` の 4 つ目のロックを追加（Phase 4-1 は読み取り専用）。Phase 4-2+ でライブ書き込み有効化予定。  
 **v5.2 Phase 3** で **Google Sheets 認証安全性 & gspread 準備完了** を実施。`credentials/` フォルダ（`.gitkeep` のみ追跡）、`docs/google_sheets_setup.md` セットアップガイド、`sync_validator` に `check_gitignore_protections()` / `check_credentials_gitkeep()` / `check_phase3_dependencies()` / `get_phase3_readiness()` を追加。Dev Studio Tab 10 に Phase 3 準備状況チェックリストを追加（🔒安全必須 / 📦オプション）。`auth_mode=disabled` 維持。Phase 4+ でライブ gspread API 統合予定。  
 **v5.2 Phase 2** で **Google Sheets Connector 基盤** を追加。5モジュール: `google_auth.py`（認証モード設定ローダー、デフォルト`disabled`、認証情報はリポジトリにコミットしない）、`sheet_reader.py`（読み取り抽象）、`sheet_writer.py`（トリプルロック書き込みガード）、`sheet_diff.py`（純粋差分エンジン）、`sync_executor.py`（オーケストレーター）。認証情報は `.gitignore` で管理し、`check_no_credentials_committed()` で実行時に検証。  
