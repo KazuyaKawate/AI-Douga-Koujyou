@@ -706,9 +706,17 @@ with tabs[9]:
         # ── Beginner Mode ───────────────────────────────────────────────────
         if _beginner:
             # ■ 同期状態
+            _BG_AUTH_LABELS = {
+                "disabled":        "未接続（オフライン）",
+                "service_account": "接続済み（Googleアカウント）",
+                "oauth":           "接続済み（OAuth）",
+            }
+            _bg_auth_label = _BG_AUTH_LABELS.get(
+                _ws_auth["auth_mode"], _ws_auth["auth_mode"]
+            )
             st.markdown("#### ■ 同期状態")
             _bg_c1, _bg_c2, _bg_c3 = st.columns(3)
-            _bg_c1.metric("接続方式", _ws_auth["auth_mode"])
+            _bg_c1.metric("接続方式", _bg_auth_label)
             _bg_c2.metric("認証状態", f"{_ws_cred['icon']} {_ws_cred['label']}")
             _bg_c3.metric("対象シート", "KPI / Revenue / Notes")
 
@@ -738,19 +746,46 @@ with tabs[9]:
                             allow_write=False,
                         )
                         if _bg_dr["ok"]:
-                            for _bg_t in _bg_dr["targets"]:
-                                if _bg_t.get("error"):
-                                    _cause, _fix = _fmt_err(_bg_t["error"])
-                                    st.error(
-                                        f"**[{_bg_t['sheet_name']}] {_cause}**  \n"
-                                        f"対処方法: {_fix}"
-                                    )
-                                else:
-                                    st.success(
-                                        f"[{_bg_t['sheet_name']}] "
-                                        f"{_bg_t['flat_rows']}行を同期予定"
-                                    )
-                            st.session_state["bg_preview_ok"] = True
+                            _bg_has_err = any(
+                                t.get("error") for t in _bg_dr["targets"]
+                            )
+                            if _bg_has_err:
+                                for _bg_t in _bg_dr["targets"]:
+                                    if _bg_t.get("error"):
+                                        _cause, _fix = _fmt_err(_bg_t["error"])
+                                        st.error(
+                                            f"**[{_bg_t['sheet_name']}] {_cause}**  \n"
+                                            f"対処方法: {_fix}"
+                                        )
+                                st.session_state["bg_preview_ok"] = False
+                            else:
+                                _bg_total = sum(
+                                    t["flat_rows"] for t in _bg_dr["targets"]
+                                )
+                                _bg_sheet_cnt = len(_bg_dr["targets"])
+                                # ── カード表示 ────────────────────────────
+                                st.success("✅ プレビュー完了")
+                                _pc1, _pc2, _pc3, _pc4 = st.columns(4)
+                                _pc1.metric("同期予定", f"{_bg_total}行")
+                                _pc2.metric("削除",     "0行（なし）")
+                                _pc3.metric("対象シート", f"{_bg_sheet_cnt}シート")
+                                _pc4.metric("追加/更新",  "実行後に確定")
+                                # ── シート別件数 ──────────────────────────
+                                with st.expander("▼ シート別件数"):
+                                    for _bg_t in _bg_dr["targets"]:
+                                        st.caption(
+                                            f"✅ **{_bg_t['sheet_name']}**: "
+                                            f"{_bg_t['flat_rows']}行"
+                                        )
+                                # ── 詳細（raw データ）────────────────────
+                                with st.expander("▼ 詳細を見る（同期内容）"):
+                                    for _bg_t in _bg_dr["targets"]:
+                                        st.markdown(
+                                            f"**[{_bg_t['sheet_name']}]**"
+                                        )
+                                        for _row in (_bg_t.get("rows") or []):
+                                            st.json(_row, expanded=False)
+                                st.session_state["bg_preview_ok"] = True
                         else:
                             st.error("プレビューに失敗しました")
                             st.session_state["bg_preview_ok"] = False
@@ -766,10 +801,15 @@ with tabs[9]:
                 "確認した内容をGoogle Sheetsへ反映します。"
                 "追加・更新のみ行い、削除はしません。"
             )
-            _bg_confirmed = st.checkbox(
-                "内容を確認しました。Google Sheetsへ同期します。",
-                key="bg_confirm",
-            )
+            _bg_preview_done = st.session_state.get("bg_preview_ok", False)
+            if not _bg_preview_done:
+                st.info("先に「🔍 差分プレビュー」を実行してください。内容を確認してから同期できます。")
+                _bg_confirmed = False
+            else:
+                _bg_confirmed = st.checkbox(
+                    "内容を確認しました。Google Sheetsへ同期します。",
+                    key="bg_confirm",
+                )
             if _bg_confirmed:
                 if st.button(
                     "⚡ Google Sheetsに同期する",
@@ -796,6 +836,15 @@ with tabs[9]:
                                     "実行時間",
                                     f"{_bg_res['duration_ms'] / 1000:.1f}秒",
                                 )
+                                import datetime as _bg_dt
+                                st.session_state["bg_last_sync"] = {
+                                    "timestamp":      _bg_dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                    "success":        _err_cnt == 0,
+                                    "duration_sec":   _bg_res["duration_ms"] / 1000,
+                                    "total_appended": _bg_res["total_appended"],
+                                    "total_updated":  _bg_res["total_updated"],
+                                    "error_count":    _err_cnt,
+                                }
                                 if _err_cnt:
                                     for _bg_t in _bg_res["targets"]:
                                         if _bg_t.get("error"):
@@ -841,6 +890,23 @@ with tabs[9]:
                         f"追加:{_bg_rec.get('rows_synced', 0)}行 · "
                         f"競合:{_bg_rec.get('conflicts', 0)}件"
                     )
+
+            # ■ 最後の同期結果
+            _bg_last = st.session_state.get("bg_last_sync")
+            if _bg_last:
+                st.divider()
+                st.markdown("#### ■ 最後の同期結果")
+                _ls_r1c1, _ls_r1c2, _ls_r1c3 = st.columns(3)
+                _ls_r1c1.metric("実行日時", _bg_last["timestamp"])
+                _ls_r1c2.metric(
+                    "結果",
+                    "✅ 成功" if _bg_last["success"] else "❌ 失敗",
+                )
+                _ls_r1c3.metric("実行時間", f"{_bg_last['duration_sec']:.1f}秒")
+                _ls_r2c1, _ls_r2c2, _ls_r2c3 = st.columns(3)
+                _ls_r2c1.metric("追加件数", f"{_bg_last['total_appended']}行")
+                _ls_r2c2.metric("更新件数", f"{_bg_last['total_updated']}行")
+                _ls_r2c3.metric("エラー件数", f"{_bg_last['error_count']}件")
 
 
         # ── 詳細モード（Advanced Mode）──────────────────────
