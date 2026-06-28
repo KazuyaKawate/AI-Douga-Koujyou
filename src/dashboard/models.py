@@ -111,6 +111,20 @@ class OrchestratorStats:
 
 
 @dataclass
+class NoteFactoryStats:
+    """Dashboard 表示用 Note Factory 統計。data/note_stats.json から読む。"""
+
+    articles_today:        int   = 0
+    articles_this_month:   int   = 0
+    waiting_publish:       int   = 0
+    waiting_approval:      int   = 0
+    published_total:       int   = 0
+    total_word_count:      int   = 0
+    avg_word_count:        float = 0.0
+    estimated_revenue_jpy: int   = 0
+
+
+@dataclass
 class DashboardData:
     collected_at:  datetime              = field(default_factory=datetime.now)
     git:           GitStatus             = field(default_factory=GitStatus)
@@ -122,4 +136,5 @@ class DashboardData:
     scheduler:     SchedulerStats        = field(default_factory=SchedulerStats)
     workflow:      WorkflowStats         = field(default_factory=WorkflowStats)
     orchestrator:  OrchestratorStats     = field(default_factory=OrchestratorStats)
+    note_factory:  NoteFactoryStats      = field(default_factory=NoteFactoryStats)
     recent_errors: list[ErrorEntry]      = field(default_factory=list)

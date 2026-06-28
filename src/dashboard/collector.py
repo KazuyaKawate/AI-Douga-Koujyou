@@ -11,6 +11,7 @@ from .models import (
     ErrorEntry,
     GitStatus,
     InfraStatus,
+    NoteFactoryStats,
     OrchestratorStats,
     ProviderStatus,
     SchedulerStats,
@@ -54,6 +55,7 @@ class DashboardCollector:
             scheduler=self._collect_scheduler(),
             workflow=self._collect_workflows(),
             orchestrator=self._collect_orchestrator(),
+            note_factory=self._collect_note_factory(),
             recent_errors=self._collect_errors(),
         )
 
@@ -292,6 +294,28 @@ class DashboardCollector:
             )
         except Exception:
             return OrchestratorStats()
+
+    # ---- Note Factory --------------------------------------------
+
+    def _collect_note_factory(self) -> NoteFactoryStats:
+        """data/note_stats.json から Note Factory 統計を読む。"""
+        try:
+            path = Path("data/note_stats.json")
+            if not path.exists():
+                return NoteFactoryStats()
+            data = json.loads(path.read_text(encoding="utf-8"))
+            return NoteFactoryStats(
+                articles_today=int(data.get("articles_today", 0)),
+                articles_this_month=int(data.get("articles_this_month", 0)),
+                waiting_publish=int(data.get("waiting_publish", 0)),
+                waiting_approval=int(data.get("waiting_approval", 0)),
+                published_total=int(data.get("published_total", 0)),
+                total_word_count=int(data.get("total_word_count", 0)),
+                avg_word_count=float(data.get("avg_word_count", 0.0)),
+                estimated_revenue_jpy=int(data.get("estimated_revenue_jpy", 0)),
+            )
+        except Exception:
+            return NoteFactoryStats()
 
     # ---- エラーログ -----------------------------------------------
 
