@@ -6,6 +6,30 @@ Versions are cumulative; each release builds on the previous stable base.
 
 ---
 
+## [v5.2 Phase 4-5] — 2026-06-28 — Google Sheets 本番シート同期（Production Sync）
+
+**Codename:** Production Sync  
+**Upgrade path:** v5.2 Phase 4-4 → v5.2 Phase 4-5 (additive, no breaking changes)
+
+### What changed
+
+- **`src/workspace/sheets_sync.py`**: `SHEET_MAPPINGS` を実データに合わせて全面修正（`kpi_targets`: フィールド名を `targets.{}` ネストに対応、`revenue_expense`: key_field を `"date"` に変更・ドット記法廃止・3列構成に簡略化、`note_articles`: key_field を `"id"` に修正・`published_at` / `actual_revenue` / `score_total` / `score_grade` に対応）。`extract_flat_row(target_id, raw_row)` 追加（ターゲット別ネスト構造フラット化）。`read_flat_rows(target_id, local_file)` 追加（Phase 4-5専用ローダー）。`read_local_data()` の `history` 空リストバグ修正（空リストはスキップ）。
+- **`src/workspace/sheet_writer.py`**: `write_sheet_upsert()` 追加。処理: ヘッダー行確認・初期化 → key_fieldで既存行インデックス → 追加/更新のみ（行削除なし）。`_col_letter()` 追加（列番号→アルファベット変換）。`get_writer_status()` フェーズラベルを Phase 4-5 に更新。
+- **`src/workspace/sync_executor.py`**: `run_production_sync()` 追加（Phase 4-5専用: KPI / Revenue / Notes の3シートにupsert同期）。`_PHASE45_TARGETS` frozenset 追加。`_preview_row()` 追加。`get_connector_health()` フェーズラベルを Phase 4-5 に更新。モジュールdocstringを Phase 4-5 に更新。
+- **`pages/25_Development_Studio.py`**: Phase 4-5 パネル追加（差分プレビューボタン → 確認チェックボックス → 本番同期ボタン → ロールバック手順）。`run_production_sync` インポート追加。
+- **`scripts/check_project.py`**: Phase 4-5 ヘルスチェックセクション追加（3ターゲットのflat_rows確認・run_production_sync dry-run・allow_write guard）。
+- **`config/workspace_settings.json` meta**: `version` → `"5.2 Phase 4-5"`、`phase` → `"4-5: production sync (KPI / Revenue / Notes)"`。
+
+### What did not change
+
+- `allow_write` パラメータは全関数でデフォルト `False`。UIボタン経由でのみ `True` を渡す。コミット済みコードに `allow_write=True` は含まれない。
+- `config/workspace_settings.json` の `auth_mode` は `"disabled"` のまま（コミット済み安全デフォルト）。
+- `dry_run_default: true`、`auto_sync: false` 変更なし。
+- `config/workspace_local.json` および `credentials/service-account.local.json` はローカル専用・コミットなし。
+- `run_test_write()` および `_PRODUCTION_WORKSHEETS` blocklist は Phase 4-4 のまま維持。
+
+---
+
 ## [v5.2 Phase 4-4] — 2026-06-28 — Google Sheets Test Worksheet Append
 
 **Codename:** Test Worksheet Append  

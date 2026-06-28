@@ -1,4 +1,4 @@
-# Google Sheets セットアップガイド — Creator Factory OS v5.2 Phase 4-4
+# Google Sheets セットアップガイド — Creator Factory OS v5.2 Phase 4-5
 
 > **重要:** このガイドはオプション設定です。  
 > `auth_mode` のデフォルトは `"disabled"` のまま維持されます。  
@@ -17,9 +17,9 @@
 
 ---
 
-## Phase 4-4: テストシート書き込み（現フェーズ）
+## Phase 4-5: 本番シート同期（現フェーズ）
 
-**Phase 4-4** で、孤立テストシートへの **安全な書き込みを実装** しました。
+**Phase 4-5** で、KPI / Revenue / Notes の3本番シートへの **安全な upsert 同期を実装** しました。
 
 | フェーズ | 機能 | 状態 |
 |---------|------|------|
@@ -27,9 +27,32 @@
 | Phase 4-1 | gspread 接続コード実装（build_client / read_sheet / test_read_connection） | ✅ 完了 |
 | Phase 4-2 | ローカル設定上書き（workspace_local.json）& 読み取り接続テスト | ✅ 完了 |
 | Phase 4-3 | ライブ読み取り接続確認（service_account + 実スプレッドシート） | ✅ 完了 |
-| **Phase 4-4** | **テストシート書き込み（run_test_write / 1行追記 / 本番シート保護）** | ✅ 現フェーズ |
-| Phase 4-5 | 本番シート同期（KPI / Revenue / Notes） | 🔲 予定 |
+| Phase 4-4 | テストシート書き込み（run_test_write / 1行追記 / 本番シート保護） | ✅ 完了 |
+| **Phase 4-5** | **本番シート同期（KPI / Revenue / Notes / upsert / dry-run → 確認 → live）** | ✅ 現フェーズ |
 | Phase 4-6 | OAuth 認証 | 🔲 予定 |
+
+### Phase 4-5 の使い方
+
+1. `config/workspace_local.json` に `auth_mode: "service_account"` と認証情報が設定済みであること
+2. Google Sheets で KPI / Revenue / Notes の3シートが作成済みであること（ヘッダー行は自動初期化）
+3. **Development Studio → Workspace Sync タブ** を開く
+4. **「差分プレビュー（書き込まない）」** ボタンで内容を確認
+5. 確認チェックボックスをオン
+6. **「本番同期を実行」** ボタンで同期
+
+### Phase 4-5 のシート構造（自動初期化）
+
+| シート | key_field | 列 |
+|--------|----------|----|
+| KPI | date | 日付 / 売上目標 / note記事目標 / 動画本数目標 / SNS投稿目標 / 営業コール目標 / 開発タスク目標 |
+| Revenue | date | 日付 / 売上 / 経費 |
+| Notes | id | 記事ID / タイトル / ステータス / 公開日 / 実収益 / スコア合計 / スコアグレード / 閲覧数 / いいね数 |
+
+### ロールバック手順
+
+同期後に元に戻したい場合:
+- Google Sheets を開き **Ctrl+Z（元に戻す）**
+- または **「ファイル → バージョン履歴」** から同期前の時点に復元
 
 ---
 

@@ -1,19 +1,24 @@
-"""sync_executor — Orchestrator for Google Sheets Connector (v5.2 Phase 4-3).
+"""sync_executor — Google Sheets コネクター オーケストレーター (v5.2 Phase 4-5)
 
-Execution flow:
+実行フロー:
   1. load_settings()
-  2. read_local_data() — local JSON files
-  3. read_sheet()      — Google Sheet rows (sample data when auth_mode='disabled')
-  4. diff_records()    — calculate diff
-  5. generate preview  — no writes
-  6. execute           — only if manual_execute=True, dry_run=False, auth_mode != 'disabled'
+  2. read_local_data() — ローカルJSONファイル
+  3. read_sheet()      — Google Sheet行（auth_mode='disabled'時はサンプルデータ）
+  4. diff_records()    — 差分計算
+  5. プレビュー生成    — 書き込みなし
+  6. execute           — manual_execute=True + dry_run=False + auth_mode != 'disabled' の場合のみ
 
-Rules (enforced in code):
-  - No automatic execution.
-  - dry_run=True by default.
-  - manual_execute=False by default.
-  - auth_mode='disabled' by default → no API calls.
-  - Phase 3: gspread/google-auth readiness checks added; actual writes remain Phase 4+.
+Phase 4-5 追加:
+  - run_production_sync(): KPI / Revenue / Notes の3シートにupsert同期する専用関数
+    dry_run=True (デフォルト) → 差分プレビューのみ
+    dry_run=False + manual_execute=True + allow_write=True → 実際のupsert実行
+
+ルール（コードで強制）:
+  - 自動実行なし
+  - dry_run=True がデフォルト
+  - manual_execute=False がデフォルト
+  - auth_mode='disabled' がデフォルト → APIコールなし
+  - allow_write=False がデフォルト → UIボタン経由でのみ True を渡す
 """
 from __future__ import annotations
 import time
@@ -165,7 +170,7 @@ def get_connector_health(settings: dict | None = None) -> dict:
         "targets":          [t.get("target_id", "") for t in targets],
         "last_preview":     last_preview,
         "conflict_count":   0,
-        "phase":            "Phase 4-3 (live read-only connection verified)",
+        "phase":            "Phase 4-5 (本番シート upsert 同期)",
         "deps_ready":       get_dependency_status()["all_ready"],
     }
 
@@ -345,6 +350,146 @@ def run_test_write(
     base["error"]        = None if result.get("executed") else result.get("reason")
     base["duration_ms"]  = int((time.time() - t0) * 1000)
     return base
+
+
+_PHASE45_TARGETS = frozenset({"kpi_targets", "revenue_expense", "note_articles"})
+
+
+def run_production_sync(
+    settings: dict | None = None,
+    *,
+    dry_run: bool = True,
+    manual_execute: bool = False,
+    allow_write: bool = False,
+) -> dict:
+    """Phase 4-5: KPI / Revenue / Notes の3シートにupsert同期する。
+
+    安全設計:
+      - 対象は _PHASE45_TARGETS（kpi_targets / revenue_expense / note_articles）のみ
+      - 行削除は行わない（追加・更新のみ）
+      - dry_run=True（デフォルト） → プレビューのみ、書き込みなし
+      - allow_write=False（デフォルト） → UIボタン経由でのみ True を渡す
+
+    戻り値:
+      ok             — bool（全ターゲットでエラーなし）
+      dry_run        — bool
+      executed       — bool（実際に書き込みが行われた場合 True）
+      auth_mode      — str
+      targets        — [{target_id, sheet_name, flat_rows, appended, updated, skipped, error, preview}]
+      total_appended — int
+      total_updated  — int
+      total_skipped  — int
+      error          — str | None
+      duration_ms    — int
+      phase          — str
+    """
+    from src.workspace.sheets_sync import read_flat_rows, get_mapping
+    from src.workspace.sheet_writer import write_sheet_upsert
+
+    import time
+    t0 = time.time()
+
+    if settings is None:
+        settings = load_merged_settings()
+
+    auth_cfg = get_auth_config(settings)
+
+    base: dict = {
+        "ok":            False,
+        "dry_run":       dry_run,
+        "executed":      False,
+        "auth_mode":     auth_cfg["auth_mode"],
+        "targets":       [],
+        "total_appended": 0,
+        "total_updated":  0,
+        "total_skipped":  0,
+        "error":         None,
+        "duration_ms":   0,
+        "phase":         "Phase 4-5 (本番シート upsert 同期)",
+    }
+
+    # 有効ターゲットを取得し Phase 4-5 対象のみに絞る
+    all_targets = get_enabled_targets(settings)
+    targets = [t for t in all_targets if t.get("target_id") in _PHASE45_TARGETS]
+
+    target_results: list[dict] = []
+    total_appended = 0
+    total_updated  = 0
+    total_skipped  = 0
+
+    for t in targets:
+        target_id  = t["target_id"]
+        local_file = t["local_file"]
+        sheet_name = t["sheet_name"]
+        mapping    = get_mapping(target_id)
+
+        tr: dict = {
+            "target_id":  target_id,
+            "sheet_name": sheet_name,
+            "local_file": local_file,
+            "flat_rows":  0,
+            "appended":   0,
+            "updated":    0,
+            "skipped":    0,
+            "executed":   False,
+            "error":      None,
+        }
+
+        # フラット行読み込み（extract_flat_row済み）
+        flat_rows, read_err = read_flat_rows(target_id, local_file)
+        if read_err:
+            tr["error"] = read_err
+            target_results.append(tr)
+            continue
+
+        tr["flat_rows"] = len(flat_rows)
+
+        if dry_run:
+            # ドライランはプレビューのみ（APIコールなし）
+            tr["preview"] = [_preview_row(r) for r in flat_rows[:3]]
+            target_results.append(tr)
+            continue
+
+        # 実際の書き込み（allow_write=True のときのみ _can_write が通る）
+        key_field = mapping["key_field"] if mapping else "id"
+        columns   = mapping["columns"]   if mapping else []
+
+        result = write_sheet_upsert(
+            sheet_name,
+            flat_rows,
+            key_field,
+            columns,
+            dry_run=False,
+            manual_execute=manual_execute,
+            allow_write=allow_write,
+            settings=settings,
+        )
+
+        tr["appended"] = result.get("appended", 0)
+        tr["updated"]  = result.get("updated",  0)
+        tr["skipped"]  = result.get("skipped",  0)
+        tr["executed"] = result.get("executed", False)
+        if result.get("error"):
+            tr["error"] = result["error"]
+
+        total_appended += tr["appended"]
+        total_updated  += tr["updated"]
+        total_skipped  += tr["skipped"]
+        target_results.append(tr)
+
+    base["targets"]        = target_results
+    base["total_appended"] = total_appended
+    base["total_updated"]  = total_updated
+    base["total_skipped"]  = total_skipped
+    base["executed"]       = not dry_run and any(tr.get("executed") for tr in target_results)
+    base["ok"]             = all(tr.get("error") is None for tr in target_results)
+    base["duration_ms"]    = int((time.time() - t0) * 1000)
+    return base
+
+
+def _preview_row(row: dict) -> dict:
+    """プレビュー表示用にrow値を短縮する。"""
+    return {k: str(v)[:50] for k, v in list(row.items())[:6]}
 
 
 def _block_reason(auth_mode: str, dry_run: bool, manual_execute: bool) -> str:

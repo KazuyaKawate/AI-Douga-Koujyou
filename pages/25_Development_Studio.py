@@ -637,6 +637,7 @@ with tabs[9]:
             get_connector_health as _ex_health,
             test_read_connection as _ex_test_read,
             run_test_write as _ex_test_write,
+            run_production_sync as _ex_prod_sync,
         )
         from src.workspace.google_auth import (
             get_auth_config as _ws_auth_cfg,
@@ -1082,6 +1083,109 @@ with tabs[9]:
         st.caption(
             "⚠️ **`allow_write=True` は UI ボタン経由でのみ有効。コミット済みコードに含まれません。"
             "本番シートへの書き込みは Phase 4-5 以降。**"
+        )
+
+        st.divider()
+
+        # ── Phase 4-5: 本番シート同期（KPI / Revenue / Notes）──────────────
+        st.markdown("**📊 Phase 4-5: 本番シート同期（KPI / Revenue / Notes）**")
+        st.caption(
+            "dry-run プレビュー → 明示確認 → live sync の順に実行します。  \n"
+            "行削除は行いません（追加・更新のみ）。KPI / Revenue / Notes 以外には一切アクセスしません。"
+        )
+
+        _p45c1, _p45c2, _p45c3 = st.columns(3)
+        _p45c1.metric("対象シート", "KPI / Revenue / Notes")
+        _p45c2.metric("書き込み戦略", "Upsert（追加+更新）")
+        _p45c3.metric("削除", "なし（安全）")
+
+        if st.button("🔍 差分プレビュー（書き込まない）", key="p45_dryrun", type="secondary"):
+            with st.spinner("差分計算中..."):
+                try:
+                    _p45_dr = _ex_prod_sync(
+                        _ws_merged,
+                        dry_run=True,
+                        manual_execute=False,
+                        allow_write=False,
+                    )
+                    if _p45_dr["ok"]:
+                        for _p45_tr in _p45_dr["targets"]:
+                            if _p45_tr.get("error"):
+                                st.error(f"[{_p45_tr['target_id']}] エラー: {_p45_tr['error']}")
+                            else:
+                                st.success(
+                                    f"[{_p45_tr['sheet_name']}] "
+                                    f"同期予定: {_p45_tr['flat_rows']}行"
+                                )
+                                if _p45_tr.get("preview"):
+                                    with st.expander(f"{_p45_tr['sheet_name']} プレビュー（先頭3行）"):
+                                        st.json(_p45_tr["preview"])
+                        st.session_state["p45_preview_ok"] = True
+                        st.info(f"プレビュー完了 | {_p45_dr['duration_ms']}ms | 書き込みは行われていません")
+                    else:
+                        st.error("プレビューに失敗しました")
+                        st.session_state["p45_preview_ok"] = False
+                except Exception as _p45_exc:
+                    st.error(f"プレビューエラー: {_p45_exc}")
+                    st.session_state["p45_preview_ok"] = False
+
+        _p45_confirmed = st.checkbox(
+            "差分プレビューを確認しました。本番シートに同期します（削除なし / ロールバック: Google Sheets の「元に戻す」で対応）",
+            key="p45_confirm",
+        )
+
+        if _p45_confirmed:
+            if st.button(
+                "⚡ 本番同期を実行（KPI / Revenue / Notes）",
+                key="p45_write",
+                type="primary",
+            ):
+                with st.spinner("同期中..."):
+                    try:
+                        _p45_result = _ex_prod_sync(
+                            _ws_merged,
+                            dry_run=False,
+                            manual_execute=True,
+                            allow_write=True,
+                        )
+                        if _p45_result["executed"]:
+                            st.success(
+                                f"✅ 同期完了  \n"
+                                f"追加: {_p45_result['total_appended']}行 / "
+                                f"更新: {_p45_result['total_updated']}行 / "
+                                f"スキップ: {_p45_result['total_skipped']}行  \n"
+                                f"処理時間: {_p45_result['duration_ms']}ms"
+                            )
+                            for _p45_tr in _p45_result["targets"]:
+                                if _p45_tr.get("error"):
+                                    st.warning(f"[{_p45_tr['sheet_name']}] {_p45_tr['error']}")
+                                else:
+                                    st.caption(
+                                        f"[{_p45_tr['sheet_name']}] "
+                                        f"追加:{_p45_tr['appended']}行 / "
+                                        f"更新:{_p45_tr['updated']}行 / "
+                                        f"スキップ:{_p45_tr['skipped']}行"
+                                    )
+                            st.warning(
+                                "**ロールバック手順:**  \n"
+                                "Google Sheets を開き Ctrl+Z（元に戻す）で変更を取り消せます。  \n"
+                                "または「ファイル → バージョン履歴」から特定時点に復元してください。"
+                            )
+                        else:
+                            st.error(
+                                f"同期が実行されませんでした: "
+                                f"{_p45_result.get('error') or '不明なエラー'}"
+                            )
+                            for _p45_tr in _p45_result["targets"]:
+                                if _p45_tr.get("error"):
+                                    st.error(f"[{_p45_tr['sheet_name']}] {_p45_tr['error']}")
+                    except Exception as _p45_exc:
+                        st.error(f"同期エラー: {_p45_exc}")
+
+        st.caption(
+            "**allow_write=True は UI ボタン経由でのみ有効。"
+            "コミット済みコードには含まれません。"
+            "本番シートへの書き込みは慎重に実行してください。**"
         )
 
         st.divider()

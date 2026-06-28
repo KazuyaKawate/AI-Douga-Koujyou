@@ -3,7 +3,8 @@
 ## 概要
 
 Creator Factory OS はローカルファースト・JSONファースト設計の Streamlit マルチページアプリです。  
-**v5.2 Phase 4-4** で **テストシートへの書き込みを実装**。`run_test_write()` が孤立テストシートに 1 行追記（`allow_write=True` は UI ボタン経由のみ）。`_PRODUCTION_WORKSHEETS` frozenset で本番シートをブロック。`get_writer_status()` に `allow_write: False` 追加（ヘルスチェックバグ修正）。Dev Studio Phase 4-4 パネル追加。Phase 4-5 で本番シート同期予定。  
+**v5.2 Phase 4-5** で **本番シート同期を実装**。`run_production_sync()` が KPI / Revenue / Notes の3シートに upsert 同期（追加+更新のみ、削除なし）。`SHEET_MAPPINGS` を実データ構造に合わせて全面修正。`extract_flat_row()` でネスト構造フラット化。`write_sheet_upsert()` でヘッダー行自動初期化・upsert。dry-run → 確認 → live sync のフロー。`allow_write=True` は UI ボタン経由のみ。  
+**v5.2 Phase 4-4** で **テストシートへの書き込みを実装**。`run_test_write()` が孤立テストシートに 1 行追記（`allow_write=True` は UI ボタン経由のみ）。`_PRODUCTION_WORKSHEETS` frozenset で本番シートをブロック。`get_writer_status()` に `allow_write: False` 追加（ヘルスチェックバグ修正）。Dev Studio Phase 4-4 パネル追加。  
 **v5.2 Phase 4-3** で **Google Sheets ライブ読み取り接続を確認**。`test_read_connection()` を実際のスプレッドシートに対して実行。`gspread` + サービスアカウント接続を `load_merged_settings()` 経由で確認。`allow_write=False` 維持。コミット済み `auth_mode=disabled` 変更なし。  
 **v5.2 Phase 4-2** で **Google Sheets ローカル設定上書き** を実装。`config/workspace_local.json`（git除外）でコミット済み設定を実行時に上書き。`load_merged_settings()` が統合マージ。Dev Studio Phase 4-2 パネルでローカル設定状態を表示。書き込みは無効（`allow_write=False`）。Phase 4-3 でライブ接続確認済み。  
 **v5.2 Phase 4-1** で **Google Sheets 読み取り専用接続** を実装。`build_client()` が実際の `gspread.Client` を構築（service_account、lazy import）。`read_sheet()` がライブAPIで読み取り。`test_read_connection()` でエンドツーエンド読み取りテスト。`write_rows()` に `allow_write=False` の 4 つ目のロックを追加（Phase 4-1 は読み取り専用）。Phase 4-2+ でライブ書き込み有効化予定。  

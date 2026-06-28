@@ -1135,6 +1135,48 @@ def check() -> bool:
 
     print()
 
+    # Google Sheets Phase 4-5 — 本番シート同期準備
+    print("[ Google Sheets Phase 4-5: 本番シート同期準備 ]")
+    try:
+        from src.workspace.sync_executor import run_production_sync as _rps45
+        from src.workspace.sync_validator import load_merged_settings as _lms45
+        _ms45 = _lms45()
+        _dr45 = _rps45(_ms45, dry_run=True, manual_execute=False, allow_write=False)
+        for _tr45 in _dr45["targets"]:
+            if _tr45.get("error"):
+                print(
+                    f"  [WARN] {_tr45['target_id']}  "
+                    f"sheet={_tr45['sheet_name']}  "
+                    f"error={_tr45['error']}"
+                )
+            else:
+                print(
+                    f"  [OK  ] {_tr45['target_id']}  "
+                    f"sheet={_tr45['sheet_name']}  "
+                    f"flat_rows={_tr45['flat_rows']}"
+                )
+        _p45_ok = _dr45["ok"]
+        print(
+            f"  [{'OK  ' if _p45_ok else 'WARN'}] run_production_sync (dry_run)  "
+            f"targets={len(_dr45['targets'])}  {_dr45['duration_ms']}ms"
+        )
+    except Exception as exc:
+        print(f"  [----] run_production_sync (dry_run)  -> {exc}")
+
+    # allow_write guard（Phase 4-5: コミット済みコードでは常にFalse）
+    try:
+        from src.workspace.sheet_writer import get_writer_status as _gws45
+        _ws45     = _gws45()
+        _p45_safe = not _ws45.get("allow_write", True)
+        print(
+            f"  [{'OK  ' if _p45_safe else 'ERR '}] allow_write guard  "
+            f"allow_write={_ws45.get('allow_write')}  phase={_ws45['phase']}"
+        )
+    except Exception as exc:
+        print(f"  [----] allow_write guard  -> {exc}")
+
+    print()
+
     # Reports folder
     print("[ レポートフォルダ ]")
     reports_dir = ROOT / "reports" / "daily"
