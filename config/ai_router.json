@@ -1,0 +1,52 @@
+{
+  "_comment": "AI Router設定。APIキーは絶対にここに書かない。env変数またはconfig/workspace_local.jsonのai_keysセクションで設定。",
+  "version": "1.0",
+  "default_provider": "openai",
+  "task_routing": {
+    "coding":      ["claude", "openai"],
+    "review":      ["claude", "openai"],
+    "planning":    ["claude", "openai"],
+    "analysis":    ["claude", "openai"],
+    "writing":     ["openai", "claude"],
+    "translation": ["openai", "claude"],
+    "vision":      ["openai", "gemini"],
+    "default":     ["openai", "claude"]
+  },
+  "providers": {
+    "openai": {
+      "enabled": true,
+      "model": "gpt-4o",
+      "max_tokens": 4096,
+      "temperature": 0.7,
+      "api_key_env": "OPENAI_API_KEY",
+      "api_key_local_path": "ai_keys.openai_api_key",
+      "capabilities": [
+        "writing", "translation", "vision",
+        "coding", "review", "planning", "analysis", "default"
+      ]
+    },
+    "claude": {
+      "enabled": true,
+      "model": "claude-sonnet-4-6",
+      "max_tokens": 8192,
+      "temperature": 0.7,
+      "api_key_env": "ANTHROPIC_API_KEY",
+      "api_key_local_path": "ai_keys.anthropic_api_key",
+      "capabilities": [
+        "coding", "review", "planning", "analysis",
+        "writing", "translation", "default"
+      ]
+    },
+    "gemini": {
+      "enabled": false,
+      "model": "gemini-2.0-flash",
+      "max_tokens": 4096,
+      "temperature": 0.7,
+      "api_key_env": "GOOGLE_API_KEY",
+      "api_key_local_path": "ai_keys.google_api_key",
+      "capabilities": [
+        "vision", "writing", "translation", "analysis", "default"
+      ]
+    }
+  }
+}

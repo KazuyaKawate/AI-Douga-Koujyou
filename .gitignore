@@ -104,3 +104,8 @@ config/workspace_local.json
 # 開発確認用スクリーンショット（大容量になる可能性あり、ローカルのみ）
 screenshots/dev/*.png
 screenshots/dev/*.jpg
+
+# AI Router — APIキーはworkspace_local.jsonのai_keysセクションで管理（同ファイルはgitignore済み）
+# 万一スタンドアロンファイルを作成した場合の除外
+config/ai_keys.json
+config/ai_keys.*.json
