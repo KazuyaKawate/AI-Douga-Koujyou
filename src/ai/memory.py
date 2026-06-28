@@ -124,6 +124,10 @@ class BaseMemoryProvider(ABC):
                 return entry
         return None
 
+    def count(self, scope: "MemoryScope | None" = None) -> int:
+        """エントリ数を返す。scope 指定で絞り込み。"""
+        return len(self.get_all(scope))
+
     def close(self) -> None:
         """接続・バッファのクリーンアップ。必要な実装クラスでオーバーライドする。"""
 

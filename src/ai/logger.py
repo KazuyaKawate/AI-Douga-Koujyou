@@ -73,6 +73,23 @@ class NullLogger(BaseRouterLogger):
         pass
 
 
+class InMemoryLogger(BaseRouterLogger):
+    """オンメモリのロガー。Dashboard 集計・テスト・開発用。セッション終了でクリアされる。"""
+
+    def __init__(self) -> None:
+        self._entries: list[LogEntry] = []
+
+    def log(self, entry: LogEntry) -> None:
+        self._entries.append(entry)
+
+    def get_all(self) -> list[LogEntry]:
+        return list(self._entries)
+
+    def get_today(self) -> list[LogEntry]:
+        today = datetime.date.today()
+        return [e for e in self._entries if e.timestamp.date() == today]
+
+
 # ---- 将来実装スタブ --------------------------------------------------------
 #
 # Google Sheets を Claude のコンテキスト制限対策・外部記憶として使う設計。
