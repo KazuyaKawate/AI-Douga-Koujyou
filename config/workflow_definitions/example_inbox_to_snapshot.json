@@ -1,0 +1,54 @@
+{
+  "_comment": "Inbox受信からSnapshot保存までのサンプルワークフロー。",
+  "name": "inbox_to_snapshot",
+  "description": "Inbox受信 → AI Router実行 → Memory更新 → Snapshot保存",
+  "version": "1.0.0",
+  "steps": [
+    {
+      "step_id": "poll_inbox",
+      "step_type": "inbox_poll",
+      "name": "Inbox受信",
+      "depends_on": [],
+      "config": {
+        "output_key": "polled_count"
+      },
+      "retry_max": 1,
+      "retry_delay_sec": 2.0,
+      "on_failure": "abort"
+    },
+    {
+      "step_id": "run_ai",
+      "step_type": "ai_task",
+      "name": "AI Router実行",
+      "depends_on": ["poll_inbox"],
+      "config": {
+        "task_type": "default",
+        "prompt": "処理件数: {polled_count}件のInboxを処理しました。要約してください。",
+        "output_key": "ai_response"
+      },
+      "retry_max": 2,
+      "retry_delay_sec": 5.0,
+      "on_failure": "skip"
+    },
+    {
+      "step_id": "save_memory",
+      "step_type": "memory_update",
+      "name": "Memory更新",
+      "depends_on": ["poll_inbox"],
+      "config": {
+        "key": "last_ai_response",
+        "value_from_context": "ai_response",
+        "scope": "session"
+      },
+      "on_failure": "skip"
+    },
+    {
+      "step_id": "save_snapshot",
+      "step_type": "snapshot",
+      "name": "Snapshot保存",
+      "depends_on": ["save_memory"],
+      "config": {},
+      "on_failure": "abort"
+    }
+  ]
+}

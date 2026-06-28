@@ -81,6 +81,19 @@ class SchedulerStats:
 
 
 @dataclass
+class WorkflowStats:
+    """Dashboard 表示用ワークフロー統計。data/workflows/ ディレクトリから読む。"""
+
+    total_count:      int           = 0
+    running_count:    int           = 0
+    completed_today:  int           = 0
+    failed_count:     int           = 0
+    last_definition:  str           = "---"
+    last_ended_at:    Optional[str] = None
+    last_success:     bool          = True
+
+
+@dataclass
 class DashboardData:
     collected_at: datetime = field(default_factory=datetime.now)
     git: GitStatus = field(default_factory=GitStatus)
@@ -90,4 +103,5 @@ class DashboardData:
     infra: InfraStatus = field(default_factory=InfraStatus)
     task_queue: TaskQueueStats = field(default_factory=TaskQueueStats)
     scheduler: SchedulerStats = field(default_factory=SchedulerStats)
+    workflow: WorkflowStats = field(default_factory=WorkflowStats)
     recent_errors: list[ErrorEntry] = field(default_factory=list)

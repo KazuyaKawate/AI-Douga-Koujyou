@@ -16,6 +16,7 @@ from .models import (
     SnapshotStatus,
     TaskQueueStats,
     UsageStats,
+    WorkflowStats,
 )
 
 if TYPE_CHECKING:
@@ -50,6 +51,7 @@ class DashboardCollector:
             infra=self._collect_infra(),
             task_queue=self._collect_task_queue(),
             scheduler=self._collect_scheduler(),
+            workflow=self._collect_workflows(),
             recent_errors=self._collect_errors(),
         )
 
@@ -218,6 +220,51 @@ class DashboardCollector:
             )
         except Exception:
             return SchedulerStats()
+
+    # ---- Workflow ------------------------------------------------
+
+    def _collect_workflows(self) -> WorkflowStats:
+        """data/workflows/*.json からワークフロー統計を集計する。"""
+        try:
+            store_dir = Path("data/workflows")
+            if not store_dir.exists():
+                return WorkflowStats()
+
+            today    = datetime.now().date()
+            statuses = []
+            for p in store_dir.glob("*.json"):
+                try:
+                    statuses.append(json.loads(p.read_text(encoding="utf-8")))
+                except Exception:
+                    continue
+
+            total   = len(statuses)
+            running = sum(1 for s in statuses if s.get("state") == "running")
+            failed  = sum(1 for s in statuses if s.get("state") == "failed")
+            completed_today = sum(
+                1 for s in statuses
+                if s.get("state") == "completed"
+                and str(s.get("ended_at", ""))[:10] == str(today)
+            )
+
+            last_list = sorted(
+                [s for s in statuses if s.get("ended_at")],
+                key=lambda s: s["ended_at"],
+                reverse=True,
+            )
+            last = last_list[0] if last_list else None
+
+            return WorkflowStats(
+                total_count=total,
+                running_count=running,
+                completed_today=completed_today,
+                failed_count=failed,
+                last_definition=last.get("definition_name", "---") if last else "---",
+                last_ended_at=last.get("ended_at") if last else None,
+                last_success=(last.get("state") == "completed") if last else True,
+            )
+        except Exception:
+            return WorkflowStats()
 
     # ---- エラーログ -----------------------------------------------
 
