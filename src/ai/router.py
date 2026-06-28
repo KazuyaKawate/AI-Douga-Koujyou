@@ -8,6 +8,7 @@ from pathlib import Path
 from .task import AITask, TaskType
 from .response import AIResponse
 from .logger import BaseRouterLogger, LogEntry, NullLogger
+from .memory import BaseMemoryProvider, MemoryKey, MemoryScope, NullMemoryProvider, TTL
 from .providers.base import BaseProvider
 
 _DEFAULT_CONFIG = Path("config/ai_router.json")
@@ -44,10 +45,12 @@ class AIRouter:
         self,
         config_path: Path = _DEFAULT_CONFIG,
         logger: BaseRouterLogger | None = None,
+        memory: BaseMemoryProvider | None = None,
     ) -> None:
         self._config = RouterConfig.load(config_path)
         self._providers: dict[str, BaseProvider] = {}
-        self._logger: BaseRouterLogger = logger if logger is not None else NullLogger()
+        self._logger: BaseRouterLogger   = logger if logger is not None else NullLogger()
+        self._memory: BaseMemoryProvider = memory if memory is not None else NullMemoryProvider()
         self._load_providers()
 
     # ---- Public API --------------------------------------------------
@@ -92,6 +95,7 @@ class AIRouter:
             )
 
         self._emit_log(resp, task_key)
+        self._update_memory(resp)
         return resp
 
     def get_provider(self, name: str) -> BaseProvider | None:
@@ -126,6 +130,11 @@ class AIRouter:
             error_message=resp.error,
         )
         self._logger.log(entry)
+
+    def _update_memory(self, resp: AIResponse) -> None:
+        if resp.ok:
+            self._memory.set(MemoryKey.LAST_PROVIDER.value, resp.provider, MemoryScope.GLOBAL, TTL.PERMANENT)
+            self._memory.set(MemoryKey.LAST_MODEL.value,    resp.model,    MemoryScope.GLOBAL, TTL.PERMANENT)
 
     def _load_providers(self) -> None:
         from .providers import PROVIDER_REGISTRY
