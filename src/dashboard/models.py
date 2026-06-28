@@ -65,6 +65,22 @@ class ErrorEntry:
 
 
 @dataclass
+class SchedulerStats:
+    """Dashboard 表示用スケジューラー統計。data/scheduler_status.json から読む。"""
+
+    running:               bool          = False
+    trigger_name:          str           = "---"
+    iteration_count:       int           = 0
+    tasks_processed_today: int           = 0
+    last_started_at:       Optional[str] = None  # 最終 tick 開始時刻
+    last_ended_at:         Optional[str] = None  # 最終 tick 終了時刻 / 最終実行日時
+    last_duration_ms:      int           = 0     # 最終 tick 実行時間 (ms)
+    last_success:          bool          = True  # 最終 tick 成否
+    next_scheduled_at:     Optional[str] = None  # 次回実行予定
+    last_error:            Optional[str] = None
+
+
+@dataclass
 class DashboardData:
     collected_at: datetime = field(default_factory=datetime.now)
     git: GitStatus = field(default_factory=GitStatus)
@@ -73,4 +89,5 @@ class DashboardData:
     usage_today: UsageStats = field(default_factory=UsageStats)
     infra: InfraStatus = field(default_factory=InfraStatus)
     task_queue: TaskQueueStats = field(default_factory=TaskQueueStats)
+    scheduler: SchedulerStats = field(default_factory=SchedulerStats)
     recent_errors: list[ErrorEntry] = field(default_factory=list)

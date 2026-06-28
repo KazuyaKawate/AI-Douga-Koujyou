@@ -1,0 +1,5 @@
+{
+  "_comment": "Factory Scheduler 設定。変更後はスケジューラーを再起動すること。",
+  "poll_interval_sec": 60,
+  "enabled": true
+}

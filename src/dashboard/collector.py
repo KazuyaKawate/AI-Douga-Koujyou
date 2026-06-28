@@ -12,6 +12,7 @@ from .models import (
     GitStatus,
     InfraStatus,
     ProviderStatus,
+    SchedulerStats,
     SnapshotStatus,
     TaskQueueStats,
     UsageStats,
@@ -48,6 +49,7 @@ class DashboardCollector:
             usage_today=self._collect_usage_today(),
             infra=self._collect_infra(),
             task_queue=self._collect_task_queue(),
+            scheduler=self._collect_scheduler(),
             recent_errors=self._collect_errors(),
         )
 
@@ -192,6 +194,30 @@ class DashboardCollector:
             )
         except Exception:
             return TaskQueueStats()
+
+    # ---- Scheduler -----------------------------------------------
+
+    def _collect_scheduler(self) -> SchedulerStats:
+        """data/scheduler_status.json から統計を読む。ファイル未生成時はデフォルト値を返す。"""
+        try:
+            path = Path("data/scheduler_status.json")
+            if not path.exists():
+                return SchedulerStats()
+            data = json.loads(path.read_text(encoding="utf-8"))
+            return SchedulerStats(
+                running=bool(data.get("running", False)),
+                trigger_name=str(data.get("trigger_name", "---") or "---"),
+                iteration_count=int(data.get("iteration_count", 0)),
+                tasks_processed_today=int(data.get("tasks_processed_today", 0)),
+                last_started_at=data.get("last_started_at"),
+                last_ended_at=data.get("last_ended_at"),
+                last_duration_ms=int(data.get("last_duration_ms", 0)),
+                last_success=bool(data.get("last_success", True)),
+                next_scheduled_at=data.get("next_scheduled_at"),
+                last_error=data.get("last_error"),
+            )
+        except Exception:
+            return SchedulerStats()
 
     # ---- エラーログ -----------------------------------------------
 
