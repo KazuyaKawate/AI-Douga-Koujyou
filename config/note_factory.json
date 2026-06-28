@@ -1,0 +1,9 @@
+{
+  "target_word_count": 1500,
+  "category_default": "テクノロジー",
+  "forbidden_words": ["詐欺", "必ず儲かる", "絶対に稼げる", "保証"],
+  "min_word_count": 800,
+  "max_word_count": 3000,
+  "stub_mode": true,
+  "price_jpy": 500
+}

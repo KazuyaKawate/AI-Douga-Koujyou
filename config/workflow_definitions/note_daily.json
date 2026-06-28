@@ -1,0 +1,99 @@
+{
+  "name": "note_daily",
+  "description": "note記事を毎日自動生成・レビュー・承認・公開・分析・記憶するワークフロー",
+  "version": "1.0.0",
+  "steps": [
+    {
+      "step_id": "idea",
+      "step_type": "note_idea",
+      "name": "アイデア生成",
+      "depends_on": [],
+      "config": {},
+      "retry_max": 1,
+      "retry_delay_sec": 2.0,
+      "on_failure": "abort"
+    },
+    {
+      "step_id": "planning",
+      "step_type": "note_plan",
+      "name": "構成計画",
+      "depends_on": ["idea"],
+      "config": {},
+      "retry_max": 1,
+      "retry_delay_sec": 2.0,
+      "on_failure": "abort"
+    },
+    {
+      "step_id": "writing",
+      "step_type": "note_write",
+      "name": "記事執筆",
+      "depends_on": ["planning"],
+      "config": {},
+      "retry_max": 1,
+      "retry_delay_sec": 2.0,
+      "on_failure": "abort"
+    },
+    {
+      "step_id": "review",
+      "step_type": "note_review",
+      "name": "品質レビュー",
+      "depends_on": ["writing"],
+      "config": {},
+      "retry_max": 0,
+      "retry_delay_sec": 1.0,
+      "on_failure": "skip"
+    },
+    {
+      "step_id": "approval",
+      "step_type": "human_approval",
+      "name": "人間承認",
+      "depends_on": ["review"],
+      "config": {
+        "message": "記事を確認してください。承認すると draft.md を出力します。"
+      },
+      "retry_max": 0,
+      "retry_delay_sec": 1.0,
+      "on_failure": "abort"
+    },
+    {
+      "step_id": "publish",
+      "step_type": "note_publish",
+      "name": "ドラフト出力",
+      "depends_on": ["approval"],
+      "config": {},
+      "retry_max": 1,
+      "retry_delay_sec": 2.0,
+      "on_failure": "abort"
+    },
+    {
+      "step_id": "analyze",
+      "step_type": "note_analyze",
+      "name": "統計更新",
+      "depends_on": ["publish"],
+      "config": {},
+      "retry_max": 0,
+      "retry_delay_sec": 1.0,
+      "on_failure": "skip"
+    },
+    {
+      "step_id": "memory",
+      "step_type": "note_memory",
+      "name": "記憶保存",
+      "depends_on": ["publish"],
+      "config": {},
+      "retry_max": 0,
+      "retry_delay_sec": 1.0,
+      "on_failure": "skip"
+    },
+    {
+      "step_id": "snapshot",
+      "step_type": "snapshot",
+      "name": "システムスナップショット",
+      "depends_on": ["analyze", "memory"],
+      "config": {},
+      "retry_max": 0,
+      "retry_delay_sec": 1.0,
+      "on_failure": "skip"
+    }
+  ]
+}
