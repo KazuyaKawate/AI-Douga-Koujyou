@@ -34,6 +34,14 @@ class StepType(str, Enum):
     QUEUE_PUSH       = "queue_push"
     CONDITION        = "condition"      # スタブ（将来実装）
     NOTIFICATION     = "notification"   # スタブ（将来実装）
+    # Note Factory 専用ステップ
+    NOTE_IDEA        = "note_idea"
+    NOTE_PLAN        = "note_plan"
+    NOTE_WRITE       = "note_write"
+    NOTE_REVIEW      = "note_review"
+    NOTE_PUBLISH     = "note_publish"
+    NOTE_ANALYZE     = "note_analyze"
+    NOTE_MEMORY      = "note_memory"
 
 
 class OnFailure(str, Enum):
