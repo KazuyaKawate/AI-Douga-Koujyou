@@ -11,6 +11,7 @@ from .models import (
     ErrorEntry,
     GitStatus,
     InfraStatus,
+    OrchestratorStats,
     ProviderStatus,
     SchedulerStats,
     SnapshotStatus,
@@ -52,6 +53,7 @@ class DashboardCollector:
             task_queue=self._collect_task_queue(),
             scheduler=self._collect_scheduler(),
             workflow=self._collect_workflows(),
+            orchestrator=self._collect_orchestrator(),
             recent_errors=self._collect_errors(),
         )
 
@@ -265,6 +267,31 @@ class DashboardCollector:
             )
         except Exception:
             return WorkflowStats()
+
+    # ---- Orchestrator --------------------------------------------
+
+    def _collect_orchestrator(self) -> OrchestratorStats:
+        """data/orchestrator_status.json から Orchestrator 統計を読む。"""
+        try:
+            path = Path("data/orchestrator_status.json")
+            if not path.exists():
+                return OrchestratorStats()
+            data = json.loads(path.read_text(encoding="utf-8"))
+            return OrchestratorStats(
+                running=bool(data.get("running", False)),
+                active_workflow_count=int(data.get("active_workflow_count", 0)),
+                pending_job_count=int(data.get("pending_job_count", 0)),
+                completed_today=int(data.get("completed_today", 0)),
+                failed_count=int(data.get("failed_count", 0)),
+                total_jobs=int(data.get("total_jobs", 0)),
+                avg_duration_ms=float(data.get("avg_duration_ms", 0.0)),
+                last_event=data.get("last_event"),
+                last_event_at=data.get("last_event_at"),
+                cpu_usage_pct=float(data.get("cpu_usage_pct", 0.0)),
+                memory_usage_mb=float(data.get("memory_usage_mb", 0.0)),
+            )
+        except Exception:
+            return OrchestratorStats()
 
     # ---- エラーログ -----------------------------------------------
 

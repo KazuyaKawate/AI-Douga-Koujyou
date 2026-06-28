@@ -94,14 +94,32 @@ class WorkflowStats:
 
 
 @dataclass
+class OrchestratorStats:
+    """Dashboard 表示用 Orchestrator 統計。data/orchestrator_status.json から読む。"""
+
+    running:               bool          = False
+    active_workflow_count: int           = 0
+    pending_job_count:     int           = 0
+    completed_today:       int           = 0
+    failed_count:          int           = 0
+    total_jobs:            int           = 0
+    avg_duration_ms:       float         = 0.0
+    last_event:            Optional[str] = None
+    last_event_at:         Optional[str] = None
+    cpu_usage_pct:         float         = 0.0   # スタブ
+    memory_usage_mb:       float         = 0.0   # スタブ
+
+
+@dataclass
 class DashboardData:
-    collected_at: datetime = field(default_factory=datetime.now)
-    git: GitStatus = field(default_factory=GitStatus)
-    providers: list[ProviderStatus] = field(default_factory=list)
-    api_keys: ApiKeyStatus = field(default_factory=ApiKeyStatus)
-    usage_today: UsageStats = field(default_factory=UsageStats)
-    infra: InfraStatus = field(default_factory=InfraStatus)
-    task_queue: TaskQueueStats = field(default_factory=TaskQueueStats)
-    scheduler: SchedulerStats = field(default_factory=SchedulerStats)
-    workflow: WorkflowStats = field(default_factory=WorkflowStats)
-    recent_errors: list[ErrorEntry] = field(default_factory=list)
+    collected_at:  datetime              = field(default_factory=datetime.now)
+    git:           GitStatus             = field(default_factory=GitStatus)
+    providers:     list[ProviderStatus]  = field(default_factory=list)
+    api_keys:      ApiKeyStatus          = field(default_factory=ApiKeyStatus)
+    usage_today:   UsageStats            = field(default_factory=UsageStats)
+    infra:         InfraStatus           = field(default_factory=InfraStatus)
+    task_queue:    TaskQueueStats        = field(default_factory=TaskQueueStats)
+    scheduler:     SchedulerStats        = field(default_factory=SchedulerStats)
+    workflow:      WorkflowStats         = field(default_factory=WorkflowStats)
+    orchestrator:  OrchestratorStats     = field(default_factory=OrchestratorStats)
+    recent_errors: list[ErrorEntry]      = field(default_factory=list)

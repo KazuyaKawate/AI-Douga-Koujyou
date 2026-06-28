@@ -1,0 +1,7 @@
+{
+  "_comment": "Factory Orchestrator 設定。APIキー・credentials は含まない。",
+  "max_concurrent_workflows": 3,
+  "retry_max": 0,
+  "retry_delay_sec": 5.0,
+  "enabled": true
+}
