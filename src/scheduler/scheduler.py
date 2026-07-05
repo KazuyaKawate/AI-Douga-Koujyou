@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from .models import SchedulerConfig, SchedulerStatus
 from .triggers.base import BaseTrigger
 
+from src.utils.json_store import save_json_atomic
 if TYPE_CHECKING:
     from src.inbox.poller import InboxPoller
     from src.inbox.runner import TaskRunner
@@ -185,10 +186,7 @@ class FactoryScheduler:
         """SchedulerStatus を data/scheduler_status.json に書き出す。例外は握りつぶす。"""
         try:
             self._status_path.parent.mkdir(parents=True, exist_ok=True)
-            self._status_path.write_text(
-                json.dumps(self._status.to_dict(), ensure_ascii=False, indent=2),
-                encoding="utf-8",
-            )
+            save_json_atomic(self._status_path, self._status.to_dict())
         except Exception:
             pass
 

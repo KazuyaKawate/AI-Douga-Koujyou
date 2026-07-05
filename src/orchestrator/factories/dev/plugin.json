@@ -1,0 +1,13 @@
+{
+  "factory_id": "dev",
+  "name": "AIOS Dev Factory",
+  "version": "1.0.0",
+  "description": "Claude Code 不在時でも AIOS 単体でコード修正案・unified diff・実装計画を生成する開発補助 Factory。実ファイルは変更しない（読み取り専用）。",
+  "author": "AIOS Team",
+  "default_context": {
+    "instruction":  "",
+    "target_file":  "",
+    "target_file_2": "",
+    "project_root": "."
+  }
+}

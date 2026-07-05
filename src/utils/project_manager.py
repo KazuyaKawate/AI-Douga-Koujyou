@@ -14,6 +14,7 @@ from datetime import datetime
 from pathlib import Path
 
 from src.utils.config import PROJECT_ROOT
+from src.utils.json_store import save_json_atomic
 
 PROJECT_SETTINGS_PATH = PROJECT_ROOT / "config" / "project_settings.json"
 
@@ -87,9 +88,7 @@ def load_project_settings() -> dict:
 def save_project_settings(data: dict) -> None:
     data["project"]["updated_at"] = datetime.now().isoformat()
     PROJECT_SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    PROJECT_SETTINGS_PATH.write_text(
-        json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
+    save_json_atomic(PROJECT_SETTINGS_PATH, data)
 
 
 # ── Project info ───────────────────────────────────────────────────────────────
@@ -262,7 +261,7 @@ def duplicate_episode(ep_id: str) -> str | None:
             data["episode_id"] = new_id
             old_title     = data.get("title", "")
             data["title"] = (old_title + " (コピー)") if old_title else new_id
-            ep_json_dst.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+            save_json_atomic(ep_json_dst, data)
         except Exception:
             pass
 
@@ -279,7 +278,7 @@ def batch_rename_episodes(renames: dict[str, str]) -> list[str]:
         try:
             data          = json.loads(ep_json.read_text(encoding="utf-8"))
             data["title"] = new_title.strip()
-            ep_json.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+            save_json_atomic(ep_json, data)
             updated.append(ep_id)
         except Exception:
             pass
@@ -300,7 +299,7 @@ def archive_episode(ep_id: str, archived: bool = True) -> bool:
             pass
     state["archived"] = archived
     try:
-        prod_path.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+        save_json_atomic(prod_path, state)
         return True
     except Exception:
         return False

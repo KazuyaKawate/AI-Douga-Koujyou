@@ -1,18 +1,26 @@
 {
   "_comment": "AI Router設定。APIキーは絶対にここに書かない。env変数またはconfig/workspace_local.jsonのai_keysセクションで設定。",
   "version": "1.0",
-  "default_provider": "openai",
+  "default_provider": "virtual",
   "task_routing": {
-    "coding":      ["claude", "openai"],
-    "review":      ["claude", "openai"],
-    "planning":    ["claude", "openai"],
-    "analysis":    ["claude", "openai"],
-    "writing":     ["openai", "claude"],
-    "translation": ["openai", "claude"],
-    "vision":      ["openai", "gemini"],
-    "default":     ["openai", "claude"]
+    "coding":      ["virtual", "claude", "openai"],
+    "review":      ["virtual", "claude", "openai"],
+    "planning":    ["virtual", "claude", "openai"],
+    "analysis":    ["virtual", "claude", "openai"],
+    "writing":     ["virtual", "claude", "openai"],
+    "translation": ["virtual", "openai", "claude"],
+    "vision":      ["virtual", "openai", "gemini"],
+    "default":     ["virtual", "claude", "openai"]
   },
   "providers": {
+    "virtual": {
+      "enabled": true,
+      "model": "virtual-agent-v1",
+      "capabilities": [
+        "writing", "coding", "review", "planning",
+        "analysis", "translation", "default"
+      ]
+    },
     "openai": {
       "enabled": true,
       "model": "gpt-4o",
@@ -40,8 +48,8 @@
       ]
     },
     "gemini": {
-      "enabled": false,
-      "model": "gemini-2.0-flash",
+      "enabled": true,
+      "model": "gemini-2.0-flash-lite",
       "max_tokens": 4096,
       "temperature": 0.7,
       "api_key_env": "GOOGLE_API_KEY",

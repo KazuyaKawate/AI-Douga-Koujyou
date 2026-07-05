@@ -7,6 +7,7 @@ import streamlit as st
 import json
 from datetime import datetime
 from pathlib import Path
+from src.utils.json_store import save_json_atomic
 
 st.set_page_config(page_title="自動化工場", page_icon="⚙️", layout="wide")
 
@@ -25,7 +26,7 @@ def _load_settings() -> dict:
 
 def _save_settings(s: dict) -> None:
     p = ROOT / "config" / "automation_settings.json"
-    p.write_text(json.dumps(s, ensure_ascii=False, indent=2), encoding="utf-8")
+    save_json_atomic(p, s)
 
 
 # ── Header ─────────────────────────────────────────────────────────────────────

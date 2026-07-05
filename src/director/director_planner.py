@@ -12,6 +12,7 @@ from src.director.director_schema import (
     make_empty_plan,
     make_empty_scene_direction,
 )
+from src.utils.json_store import save_json_atomic
 
 PLAN_FILENAME = "director_plan.json"
 
@@ -36,9 +37,7 @@ def load_director_plan(episode_dir: Path) -> dict | None:
 
 def save_director_plan(episode_dir: Path, plan: dict) -> None:
     plan["updated_at"] = datetime.now().isoformat()
-    plan_path(episode_dir).write_text(
-        json.dumps(plan, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
+    save_json_atomic(plan_path(episode_dir), plan)
 
 
 def duplicate_director_plan(episode_dir: Path, new_episode_dir: Path) -> dict | None:

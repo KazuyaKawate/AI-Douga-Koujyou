@@ -1,0 +1,32 @@
+{
+  "name": "intelligence.agent_ranking",
+  "description": "Agent の利用実績に基づいてランキングと推奨を AI が生成する",
+  "version": "1.0.0",
+  "steps": [
+    {
+      "step_id": "ranking",
+      "step_type": "ai_task",
+      "name": "Agent ランキング生成",
+      "depends_on": [],
+      "config": {
+        "task_type": "analysis",
+        "output_key": "agent_ranking",
+        "prompt": "AIOS に登録されている AI Agent のパフォーマンスを評価してランキングを生成してください。\n\n評価対象期間: {period_days} 日間\n\n【ランキング基準】\n1. 利用頻度（使われている回数）\n2. 成功率（タスクを正常完了した割合）\n3. 出力品質（文字数・詳細さの指標）\n4. 将来性（今後の拡張余地）\n\n【出力形式】\n## Agent ランキング\n\n### 🥇 第1位: [Agent名]\n- 利用回数: N回\n- 成功率: X%\n- 強み: ...\n- 推奨用途: ...\n\n### 🥈 第2位: ...\n\n## 未使用 Agent の活性化提案\n...\n\n## 新たに追加すべき Agent の提案\n..."
+      },
+      "retry_max": 1,
+      "on_failure": "abort"
+    },
+    {
+      "step_id": "save_ranking",
+      "step_type": "memory_update",
+      "name": "ランキング保存",
+      "depends_on": ["ranking"],
+      "config": {
+        "key": "last_agent_ranking",
+        "value_from_context": "agent_ranking",
+        "scope": "global"
+      },
+      "on_failure": "continue"
+    }
+  ]
+}

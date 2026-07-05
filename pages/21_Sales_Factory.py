@@ -37,6 +37,7 @@ from src.factories.sales.proposal_tracker import (
 from src.factories.sales.sales_forecast import (
     calculate_forecast, get_pipeline_by_stage, get_monthly_projection,
 )
+from src.utils.json_store import save_json_atomic
 
 st.set_page_config(page_title="営業工場 | Creator Factory OS", page_icon="💼", layout="wide")
 
@@ -667,7 +668,7 @@ with tabs[5]:
             _sp = ROOT / "config" / "sales_settings.json"
             sd = _json.loads(_sp.read_text(encoding="utf-8")) if _sp.exists() else {}
             sd["monthly_target"] = int(new_target)
-            _sp.write_text(_json.dumps(sd, ensure_ascii=False, indent=2), encoding="utf-8")
+            save_json_atomic(_sp, sd)
             st.success(f"月次目標を ¥{new_target:,} に設定しました")
             st.rerun()
         except Exception as exc:

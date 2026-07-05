@@ -80,18 +80,54 @@ class FactoryRegistry:
         return len(EXECUTOR_REGISTRY)
 
     def auto_discover_factories(self) -> int:
-        """src.orchestrator.factories.FACTORY_REGISTRY から全 Factory を登録する。"""
+        """Python Factory と Plugin Factory を両方自動登録する。"""
+        count = 0
+
+        # 1. Python ベースの Factory (FACTORY_REGISTRY)
         try:
             from src.orchestrator.factories import FACTORY_REGISTRY
             for name, cls in FACTORY_REGISTRY.items():
                 try:
                     instance = cls()
                     self.register_factory(name, instance)
+                    count += 1
                 except Exception:
                     continue
-            return len(FACTORY_REGISTRY)
         except Exception:
-            return 0
+            pass
+
+        # 2. Plugin Factory (plugin.json を持つディレクトリを自動探索)
+        count += self._discover_plugin_factories()
+        return count
+
+    def _discover_plugin_factories(self) -> int:
+        """src/orchestrator/factories/ 以下の plugin.json を探索して登録する。
+
+        Python Factory と重複する名前はスキップする（Python Factory が優先）。
+        """
+        from pathlib import Path
+        from src.orchestrator.factories.plugin import PluginFactory
+
+        factory_base = Path(__file__).parent.parent / "orchestrator" / "factories"
+        count = 0
+
+        for item in sorted(factory_base.iterdir()):
+            if not item.is_dir() or item.name.startswith("_"):
+                continue
+            manifest = item / "plugin.json"
+            if not manifest.exists():
+                continue
+            try:
+                instance    = PluginFactory(manifest)
+                plugin_name = instance.factory_name
+                if plugin_name in self._factory_instances:
+                    continue  # Python Factory が優先
+                self.register_factory(plugin_name, instance)
+                count += 1
+            except Exception:
+                continue
+
+        return count
 
     def auto_discover_workflows(
         self,

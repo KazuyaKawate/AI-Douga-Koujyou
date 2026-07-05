@@ -12,6 +12,7 @@ from .memory import BaseMemoryProvider, MemoryKey, MemoryScope, NullMemoryProvid
 from .providers.base import BaseProvider
 
 _DEFAULT_CONFIG = Path("config/ai_router.json")
+_router_instance: "AIRouter | None" = None
 
 
 @dataclass
@@ -75,9 +76,13 @@ class AIRouter:
                 continue
             if not provider.supports(task_key):
                 continue
-            resp = provider.complete(task)
-            resp.duration_ms = int((time.monotonic() - t0) * 1000)
-            break
+            candidate = provider.complete(task)
+            candidate.duration_ms = int((time.monotonic() - t0) * 1000)
+            if candidate.ok:
+                resp = candidate
+                break
+            # 失敗した場合は最後の失敗レスポンスとして保持し、次を試みる
+            resp = candidate
 
         if resp is None:
             duration_ms = int((time.monotonic() - t0) * 1000)
@@ -148,3 +153,10 @@ class AIRouter:
             if cls is not None:
                 # enabled=false でも登録（health_check のため）
                 self._providers[name] = cls(name, cfg)
+
+def get_router() -> AIRouter:
+    """Return a process-local AIRouter singleton for modules that need direct routing."""
+    global _router_instance
+    if _router_instance is None:
+        _router_instance = AIRouter()
+    return _router_instance

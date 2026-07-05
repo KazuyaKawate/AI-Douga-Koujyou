@@ -1,0 +1,65 @@
+{
+  "name": "autonomous.run_cycle",
+  "description": "AIOS 自律改善サイクル: 分析→計画→キュー登録→レポート生成",
+  "factory_id": "autonomous",
+  "steps": [
+    {
+      "step_id": "analyze",
+      "name": "実行データ分析",
+      "step_type": "ai_task",
+      "config": {
+        "agent_id": "improvement_analyst",
+        "output_key": "analysis_report",
+        "task_type": "analysis",
+        "prompt": "AIOS の直近 {period_days} 日間の実行データを分析してください。\n\n現在の改善課題を箇条書きで列挙し、優先度の高い順に並べてください。\n各課題には: 課題名 / 根拠 / 推奨アクション / 優先度(HIGH/MED/LOW) を含めてください。\n\n出力は Markdown 形式で。"
+      },
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "plan",
+      "name": "次アクション計画",
+      "step_type": "ai_task",
+      "config": {
+        "agent_id": "strategic_planner",
+        "output_key": "action_plan",
+        "task_type": "planning",
+        "prompt": "## 分析結果\n{analysis_report}\n\n上記を踏まえ、今すぐ実行すべき改善アクションを最大 {max_actions} 件、優先度順に計画してください。\n各アクションには: タイトル / 対象 / 実行 Workflow / 期待効果 / リスク を含めてください。\n\n出力は Markdown 形式で。"
+      },
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "report",
+      "name": "サイクルレポート生成",
+      "step_type": "ai_task",
+      "config": {
+        "agent_id": "improvement_analyst",
+        "output_key": "cycle_report",
+        "task_type": "default",
+        "prompt": "## 分析\n{analysis_report}\n\n## 計画\n{action_plan}\n\n上記を元に、今回の自律改善サイクルのエグゼクティブサマリーを 200 字以内で作成してください。"
+      },
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "save_report",
+      "name": "レポート保存",
+      "step_type": "file_save",
+      "config": {
+        "content_from_context": "cycle_report",
+        "output_dir": "output/autonomous",
+        "filename_prefix": "cycle_report",
+        "extension": "md"
+      },
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "memory",
+      "name": "記憶更新",
+      "step_type": "memory_update",
+      "config": {
+        "key": "last_autonomous_cycle",
+        "value_from_context": "cycle_report"
+      },
+      "on_failure": "continue"
+    }
+  ]
+}

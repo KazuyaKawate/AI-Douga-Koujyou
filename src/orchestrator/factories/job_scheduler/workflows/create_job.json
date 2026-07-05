@@ -1,0 +1,32 @@
+{
+  "name": "job_scheduler.create_job",
+  "description": "新しいスケジュールジョブを AI が設計して登録する",
+  "version": "1.0.0",
+  "steps": [
+    {
+      "step_id": "design",
+      "step_type": "ai_task",
+      "name": "スケジュール設計",
+      "depends_on": [],
+      "config": {
+        "task_type": "analysis",
+        "output_key": "schedule_design",
+        "prompt": "以下の Workflow を自動実行するスケジュール設定を提案してください。\n\nWorkflow: {workflow_name}\nジョブ名: {job_name}\n希望の実行タイミング: {trigger_type}\n実行時刻: {run_at}\n\n【提案内容】\n1. 最適な実行タイミングとその理由\n2. 実行前後に注意すべき点\n3. 失敗時の対処方法\n4. 監視すべき KPI\n\n実際的で具体的なアドバイスを提供してください。"
+      },
+      "retry_max": 1,
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "save_job_config",
+      "step_type": "memory_update",
+      "name": "ジョブ設定保存",
+      "depends_on": ["design"],
+      "config": {
+        "key": "last_scheduled_job",
+        "value_from_context": "job_name",
+        "scope": "global"
+      },
+      "on_failure": "continue"
+    }
+  ]
+}

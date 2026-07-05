@@ -6,6 +6,7 @@ from pathlib import Path
 
 from src.utils.config import PROJECT_ROOT
 
+from src.utils.json_store import save_json_atomic
 BACKGROUNDS_PATH = PROJECT_ROOT / "config" / "backgrounds.json"
 
 CATEGORY_OPTIONS = [
@@ -34,9 +35,7 @@ def load_backgrounds() -> dict:
 
 def save_backgrounds(data: dict) -> None:
     BACKGROUNDS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    BACKGROUNDS_PATH.write_text(
-        json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
+    save_json_atomic(BACKGROUNDS_PATH, data)
 
 
 # ── Read ───────────────────────────────────────────────────────────────────────

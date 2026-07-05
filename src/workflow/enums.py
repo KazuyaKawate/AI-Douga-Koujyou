@@ -34,6 +34,9 @@ class StepType(str, Enum):
     QUEUE_PUSH       = "queue_push"
     CONDITION        = "condition"      # スタブ（将来実装）
     NOTIFICATION     = "notification"   # スタブ（将来実装）
+    FILE_SAVE        = "file_save"      # ファイル保存
+    FILE_READ        = "file_read"      # ファイル読み込み（読み取り専用）
+    DIFF_OUTPUT      = "diff_output"    # unified diff 生成・保存
     # Note Factory 専用ステップ
     NOTE_IDEA        = "note_idea"
     NOTE_PLAN        = "note_plan"

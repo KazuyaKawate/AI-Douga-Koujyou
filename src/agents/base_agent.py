@@ -24,6 +24,7 @@ from datetime import datetime
 from pathlib import Path
 
 from src.utils.config import PROJECT_ROOT
+from src.utils.json_store import save_json_atomic
 
 # ── Task status constants ──────────────────────────────────────────────────────
 
@@ -248,7 +249,7 @@ class TaskQueue:
 
     def _save(self, task: Task) -> None:
         p = self.tasks_dir / f"{task.id}.json"
-        p.write_text(json.dumps(task.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
+        save_json_atomic(p, task.to_dict())
 
 
 # ── BaseAgent ─────────────────────────────────────────────────────────────────

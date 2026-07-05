@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from src.workspace.sync_models import make_sync_record
+from src.utils.json_store import save_json_atomic
 
 ROOT = Path(__file__).parent.parent.parent
 HISTORY_PATH = ROOT / "config" / "sync_history.json"
@@ -28,7 +29,7 @@ def load_history() -> dict:
 
 def save_history(data: dict) -> None:
     HISTORY_PATH.parent.mkdir(parents=True, exist_ok=True)
-    HISTORY_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    save_json_atomic(HISTORY_PATH, data)
 
 
 def log_sync(

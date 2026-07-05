@@ -3,11 +3,13 @@ import datetime
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
 from typing import Any
 
 
 # ---- 列挙型 -----------------------------------------------------------
 
+from src.utils.json_store import save_json_atomic
 class MemoryScope(str, Enum):
     """AI が読み込む範囲。将来の実装でフィルタ条件に使う。"""
     GLOBAL  = "global"   # プロジェクト跨ぎ
@@ -200,15 +202,103 @@ class InMemoryProvider(BaseMemoryProvider):
         return [e for e in self._store.values() if e.scope == scope]
 
 
+class FileMemoryProvider(BaseMemoryProvider):
+    """
+    JSON ファイルへ永続化するメモリプロバイダー。
+
+    デフォルト保存先: data/aios_memory.json
+    InMemoryProvider の永続版として AIOS Kernel に注入する。
+    マルチプロセス非対応 — Streamlit シングルプロセス前提。
+    """
+
+    DEFAULT_PATH = Path("data/aios_memory.json")
+
+    def __init__(self, path: "Path | None" = None) -> None:
+        self._path  = path or self.DEFAULT_PATH
+        self._store: "dict[tuple[str, str], MemoryEntry]" = {}
+        self._load()
+
+    def get(self, key: str, scope: MemoryScope = MemoryScope.GLOBAL) -> "str | None":
+        entry = self._store.get((key, scope.value))
+        return entry.value if entry else None
+
+    def set(
+        self,
+        key: str,
+        value: str,
+        scope: MemoryScope = MemoryScope.GLOBAL,
+        ttl: TTL = TTL.PERMANENT,
+    ) -> None:
+        store_key = (key, scope.value)
+        existing  = self._store.get(store_key)
+        version   = (existing.version + 1) if existing else 1
+        self._store[store_key] = MemoryEntry(
+            key=key,
+            value=value,
+            scope=scope,
+            ttl=ttl,
+            version=version,
+            updated_at=datetime.datetime.now(),
+        )
+        self._flush()
+
+    def delete(self, key: str, scope: MemoryScope = MemoryScope.GLOBAL) -> None:
+        self._store.pop((key, scope.value), None)
+        self._flush()
+
+    def get_all(self, scope: "MemoryScope | None" = None) -> "list[MemoryEntry]":
+        if scope is None:
+            return list(self._store.values())
+        return [e for e in self._store.values() if e.scope == scope]
+
+    def _flush(self) -> None:
+        """_store を JSON ファイルへ書き出す。例外は無視する。"""
+        try:
+            import json
+            self._path.parent.mkdir(parents=True, exist_ok=True)
+            rows = [
+                {
+                    "key":        e.key,
+                    "value":      e.value,
+                    "scope":      e.scope.value,
+                    "ttl":        e.ttl.value,
+                    "version":    e.version,
+                    "updated_at": e.updated_at.isoformat(),
+                }
+                for e in self._store.values()
+            ]
+            save_json_atomic(self._path, rows)
+        except Exception:
+            pass
+
+    def _load(self) -> None:
+        """起動時に JSON から _store を復元する。"""
+        if not self._path.exists():
+            return
+        try:
+            import json
+            for row in json.loads(self._path.read_text(encoding="utf-8")):
+                try:
+                    scope = MemoryScope(row.get("scope", "global"))
+                    ttl   = TTL(row.get("ttl", "permanent"))
+                    entry = MemoryEntry(
+                        key=row["key"],
+                        value=row["value"],
+                        scope=scope,
+                        ttl=ttl,
+                        version=int(row.get("version", 1)),
+                        updated_at=datetime.datetime.fromisoformat(
+                            row.get("updated_at", datetime.datetime.now().isoformat())
+                        ),
+                    )
+                    self._store[(entry.key, entry.scope.value)] = entry
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
+
 # ---- 将来実装スタブ --------------------------------------------------------
-#
-# Google Sheets を外部記憶として使う設計。
-# AI_Memory シート（SheetsRouterLogger.SHEET_MEMORY と共通）に読み書きする。
-# 列定義: key | value | scope | ttl | version | updated_at | expires_at
-#
-# 接続設定: config/workspace_local.json の spreadsheet_id / service_account_file を利用
-# 認証:    Workspace Sync と同じ service_account または OAuth を流用
-#
 
 class GoogleSheetsMemoryProvider(BaseMemoryProvider):
     """

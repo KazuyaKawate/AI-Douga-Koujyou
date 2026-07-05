@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 
 from src.approval.approval_models import make_item, STATUSES, is_pending
+from src.utils.json_store import save_json_atomic
 
 ROOT = Path(__file__).parent.parent.parent
 CONFIG_PATH = ROOT / "config" / "approval_queue.json"
@@ -35,7 +36,7 @@ def load_queue() -> dict:
 
 def save_queue(data: dict) -> None:
     CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    CONFIG_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    save_json_atomic(CONFIG_PATH, data)
 
 
 def get_pending() -> list[dict]:

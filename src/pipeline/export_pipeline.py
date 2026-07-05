@@ -6,6 +6,10 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
+from src.utils.config import PROJECT_ROOT
+from src.utils.path_safety import safe_resolve_path, workspace_relative_path
+
+from src.utils.json_store import save_json_atomic
 STAGE_ORDER: list[str] = ["script", "images", "videos", "voice", "bgm", "se"]
 
 STAGE_LABELS: dict[str, str] = {
@@ -27,9 +31,17 @@ STATUS_LABELS: dict[str, str] = {
 }
 
 
+def _safe_episode_dir(episode_dir: Path) -> Path:
+    """Resolve an episode directory under the workspace project/ folder."""
+    p = Path(episode_dir)
+    rel = workspace_relative_path(PROJECT_ROOT, p) if p.is_absolute() else p
+    return safe_resolve_path(PROJECT_ROOT, rel, allowed_subdirs=["project"])
+
+
 # ── Production state ───────────────────────────────────────────────────────────
 
 def load_production_state(episode_dir: Path) -> dict:
+    episode_dir = _safe_episode_dir(episode_dir)
     path = episode_dir / "production_state.json"
     if path.exists():
         try:
@@ -43,13 +55,13 @@ def load_production_state(episode_dir: Path) -> dict:
 
 
 def save_production_state(episode_dir: Path, state: dict) -> None:
+    episode_dir = _safe_episode_dir(episode_dir)
     state["last_updated"] = datetime.now().isoformat()
-    (episode_dir / "production_state.json").write_text(
-        json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
+    save_json_atomic(episode_dir / "production_state.json", state)
 
 
 def mark_stage(episode_dir: Path, stage: str, status: str) -> dict:
+    episode_dir = _safe_episode_dir(episode_dir)
     state = load_production_state(episode_dir)
     state["stages"][stage]["status"] = status
     state["stages"][stage]["completed_at"] = (
@@ -90,6 +102,7 @@ def _default_state(episode_id: str) -> dict:
 
 def validate_episode(episode_dir: Path) -> dict:
     """Aggregate validation of all production files for an episode."""
+    episode_dir = _safe_episode_dir(episode_dir)
     from src.pipeline.script_pipeline import validate_script
     from src.pipeline.image_pipeline  import validate_images
     from src.pipeline.video_pipeline  import validate_videos
@@ -104,6 +117,7 @@ def validate_episode(episode_dir: Path) -> dict:
 
 def validate_assets(episode_dir: Path) -> dict:
     """Check image, video, and audio asset files."""
+    episode_dir = _safe_episode_dir(episode_dir)
     from src.pipeline.image_pipeline import validate_images
     from src.pipeline.video_pipeline import validate_videos
     from src.pipeline.audio_pipeline import validate_audio
@@ -121,6 +135,7 @@ def validate_export(episode_dir: Path) -> dict:
 
 def validate_export_ready(episode_dir: Path) -> dict:
     """Check required script files exist before creating export package."""
+    episode_dir = _safe_episode_dir(episode_dir)
     from src.pipeline.script_pipeline import validate_script
     script_status = validate_script(episode_dir)
     missing = [label for label, v in script_status.items() if not v["exists"]]
@@ -143,6 +158,7 @@ def create_export_package(
     Copy production files into project/EPXX/export/ and create production_report.json.
     Returns {"export_dir", "copied", "skipped", "report"}.
     """
+    episode_dir = _safe_episode_dir(episode_dir)
     export_dir = episode_dir / "export"
     export_dir.mkdir(parents=True, exist_ok=True)
 
@@ -162,12 +178,14 @@ def create_export_package(
     for pattern, is_glob in copy_targets:
         if is_glob:
             for src in episode_dir.glob(pattern):
-                shutil.copy2(src, export_dir / src.name)
+                dst = safe_resolve_path(export_dir, src.name)
+                shutil.copy2(src, dst)
                 copied.append(src.name)
         else:
             src = episode_dir / pattern
             if src.exists():
-                shutil.copy2(src, export_dir / pattern)
+                dst = safe_resolve_path(export_dir, pattern)
+                shutil.copy2(src, dst)
                 copied.append(pattern)
             else:
                 skipped.append(pattern)
@@ -213,9 +231,8 @@ def create_export_package(
         "skipped_files":    skipped,
     }
 
-    (export_dir / "production_report.json").write_text(
-        json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
+    report_path = safe_resolve_path(export_dir, "production_report.json")
+    save_json_atomic(report_path, report)
     copied.append("production_report.json")
 
     return {
@@ -227,6 +244,7 @@ def create_export_package(
 
 
 def load_production_report(episode_dir: Path) -> dict | None:
+    episode_dir = _safe_episode_dir(episode_dir)
     path = episode_dir / "export" / "production_report.json"
     if path.exists():
         try:

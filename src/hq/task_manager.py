@@ -2,6 +2,7 @@
 import json
 from datetime import date
 from pathlib import Path
+from src.utils.json_store import save_json_atomic
 
 CONFIG_PATH = Path(__file__).parent.parent.parent / "config" / "daily_tasks.json"
 
@@ -47,7 +48,7 @@ def save_tasks(data: dict) -> None:
 
 def _save(data: dict) -> None:
     CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    CONFIG_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    save_json_atomic(CONFIG_PATH, data)
 
 
 def update_task_status(task_id: str, new_status: str) -> dict:

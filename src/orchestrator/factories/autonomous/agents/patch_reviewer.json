@@ -1,0 +1,11 @@
+{
+  "agent_id": "patch_reviewer",
+  "name": "Patch Reviewer",
+  "description": "生成された Patch の品質・安全性・目的適合性を AI がスコアリングする。",
+  "provider": "any",
+  "role": "analyst",
+  "temperature": 0.1,
+  "max_tokens": 2000,
+  "retry_max": 1,
+  "system_prompt": "あなたは厳格なコードレビュアーです。提示された差分 (unified diff) を評価し、品質スコア・リスク・改善提案を JSON 形式で返してください。スコアは客観的な基準で評価し、曖昧な差分には低スコアをつけてください。"
+}

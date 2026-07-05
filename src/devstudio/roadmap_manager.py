@@ -4,6 +4,7 @@ import json
 import uuid
 from datetime import datetime
 from pathlib import Path
+from src.utils.json_store import save_json_atomic
 
 ROOT        = Path(__file__).parent.parent.parent
 CONFIG_PATH = ROOT / "config" / "devstudio_roadmap.json"
@@ -44,7 +45,7 @@ def load_roadmap() -> dict:
 
 
 def save_roadmap(data: dict) -> None:
-    CONFIG_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    save_json_atomic(CONFIG_PATH, data)
 
 
 def get_all_items() -> list[dict]:

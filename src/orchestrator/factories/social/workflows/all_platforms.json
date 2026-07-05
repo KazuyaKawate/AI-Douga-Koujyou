@@ -1,0 +1,167 @@
+{
+  "name": "social.all_platforms",
+  "description": "1つのトピックから X / Threads / note / Instagram / TikTok 向けコンテンツを一括生成するマスターワークフロー",
+  "version": "1.0.0",
+  "steps": [
+    {
+      "step_id": "long_article",
+      "step_type": "ai_task",
+      "name": "長文ベース記事生成",
+      "depends_on": [],
+      "config": {
+        "task_type": "writing",
+        "output_key": "long_article",
+        "prompt": "以下のトピックについて、各SNS向けコンテンツの素材となる詳細な長文記事を作成してください。\n\nトピック: {topic}\nターゲット: {target}\nトーン: {tone}\nキーワード: {keywords}\nブランド: {brand_name}\n\n【構成】\n# タイトル\n\n## 概要・背景（なぜ今重要か）\n\n## 核心的な洞察・価値（3〜5ポイント、具体例・数字付き）\n\n## よくある誤解・失敗パターン\n\n## 実践的なアクションステップ\n\n## まとめ\n\n目安: 1500〜2000文字。マークダウン形式で。"
+      },
+      "retry_max": 1,
+      "on_failure": "abort"
+    },
+    {
+      "step_id": "x_content",
+      "step_type": "ai_task",
+      "name": "X投稿生成",
+      "depends_on": ["long_article"],
+      "config": {
+        "task_type": "writing",
+        "output_key": "x_content",
+        "prompt": "以下の記事をもとに、X (Twitter) 投稿文を作成してください。\n\n【記事】\n{long_article}\n\n【X投稿ルール】\n- 140〜280文字（日本語）\n- 最初の1行でスクロールを止めるフック\n- 改行・数字・意外性で拡散力を最大化\n- ハッシュタグ1〜2個\n- 末尾にソフトCTA\n\n投稿文のみ出力してください。"
+      },
+      "retry_max": 1,
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "threads_content",
+      "step_type": "ai_task",
+      "name": "Threads投稿生成",
+      "depends_on": ["long_article"],
+      "config": {
+        "task_type": "writing",
+        "output_key": "threads_content",
+        "prompt": "以下の記事をもとに、Threads 投稿文を作成してください。\n\n【記事】\n{long_article}\n\n【Threads投稿ルール】\n- 300〜500文字\n- 共感から始まる（「〜って感じたことありませんか？」）\n- 体験・失敗・気づきを織り交ぜる\n- 対話的なトーン、押し付けがましくない\n- 改行でテンポよく\n\n投稿文のみ出力してください。"
+      },
+      "retry_max": 1,
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "note_content",
+      "step_type": "ai_task",
+      "name": "note記事生成",
+      "depends_on": ["long_article"],
+      "config": {
+        "task_type": "writing",
+        "output_key": "note_content",
+        "prompt": "以下の記事をベースに、note向けの完全記事（3000文字以上）を作成してください。\n\n【ベース記事】\n{long_article}\n\n【note最適化ルール】\n- 3000文字以上（必須）\n- SEOキーワードをタイトル前半・導入100文字以内に配置\n- 各セクションを大幅に加筆・具体例追加\n- 引用・太字・箇条書きを効果的に使用\n- 末尾にスキ・フォローへの自然なCTA\n- ハッシュタグ5個を末尾に追加\n\n完成記事のみ出力してください。"
+      },
+      "retry_max": 1,
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "instagram_content",
+      "step_type": "ai_task",
+      "name": "Instagramキャプション生成",
+      "depends_on": ["long_article"],
+      "config": {
+        "task_type": "writing",
+        "output_key": "instagram_content",
+        "prompt": "以下の記事をもとに、Instagramキャプション＋ハッシュタグを作成してください。\n\n【記事】\n{long_article}\n\n【Instagramルール】\n- キャプション: 150〜300文字（最初の125文字で掴む）\n- 絵文字でリズムを作る\n- 末尾CTA（保存・コメント促進）\n- ハッシュタグ20〜25個（大・中・小・ブランドタグをバランスよく）\n\nキャプション＋ハッシュタグのみ出力してください。"
+      },
+      "retry_max": 1,
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "tiktok_content",
+      "step_type": "ai_task",
+      "name": "TikTok台本生成",
+      "depends_on": ["long_article"],
+      "config": {
+        "task_type": "writing",
+        "output_key": "tiktok_content",
+        "prompt": "以下の記事をもとに、TikTok動画台本（30〜60秒）を作成してください。\n\n【記事】\n{long_article}\n\n【TikTok台本ルール】\n- 最初3秒で視聴者を掴むフック\n- 口語体・テンポよく展開\n- フック→本編→CTA の構成\n- ハッシュタグ3〜5個（#fyp含む）\n\n台本形式で出力してください。"
+      },
+      "retry_max": 1,
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "save_x",
+      "step_type": "file_save",
+      "name": "X投稿をファイル保存",
+      "depends_on": ["x_content"],
+      "config": {
+        "output_dir": "output/social/x",
+        "filename_prefix": "x_post",
+        "value_from_context": "x_content",
+        "extension": ".md",
+        "append_timestamp": true
+      },
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "save_threads",
+      "step_type": "file_save",
+      "name": "Threads投稿をファイル保存",
+      "depends_on": ["threads_content"],
+      "config": {
+        "output_dir": "output/social/threads",
+        "filename_prefix": "threads_post",
+        "value_from_context": "threads_content",
+        "extension": ".md",
+        "append_timestamp": true
+      },
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "save_note",
+      "step_type": "file_save",
+      "name": "note記事をファイル保存",
+      "depends_on": ["note_content"],
+      "config": {
+        "output_dir": "output/social/note",
+        "filename_prefix": "note_article",
+        "value_from_context": "note_content",
+        "extension": ".md",
+        "append_timestamp": true
+      },
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "save_instagram",
+      "step_type": "file_save",
+      "name": "Instagramをファイル保存",
+      "depends_on": ["instagram_content"],
+      "config": {
+        "output_dir": "output/social/instagram",
+        "filename_prefix": "instagram_post",
+        "value_from_context": "instagram_content",
+        "extension": ".md",
+        "append_timestamp": true
+      },
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "save_tiktok",
+      "step_type": "file_save",
+      "name": "TikTok台本をファイル保存",
+      "depends_on": ["tiktok_content"],
+      "config": {
+        "output_dir": "output/social/tiktok",
+        "filename_prefix": "tiktok_script",
+        "value_from_context": "tiktok_content",
+        "extension": ".md",
+        "append_timestamp": true
+      },
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "save_memory",
+      "step_type": "memory_update",
+      "name": "Memory保存",
+      "depends_on": ["note_content"],
+      "config": {
+        "key": "last_social_campaign",
+        "value_from_context": "long_article",
+        "scope": "global"
+      },
+      "on_failure": "continue"
+    }
+  ]
+}

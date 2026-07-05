@@ -4,6 +4,7 @@ import json
 import uuid
 from datetime import datetime
 from pathlib import Path
+from src.utils.json_store import save_json_atomic
 
 ROOT         = Path(__file__).parent.parent.parent.parent
 REPORTS_DIR  = ROOT / "reports" / "analytics"
@@ -35,7 +36,7 @@ def save_snapshot(snapshot: dict) -> None:
     data["snapshots"].append(record)
     if len(data["snapshots"]) > MAX_SNAPSHOTS:
         data["snapshots"] = data["snapshots"][-MAX_SNAPSHOTS:]
-    SNAPSHOTS_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    save_json_atomic(SNAPSHOTS_PATH, data)
 
 
 def get_snapshots(limit: int = 10) -> list[dict]:

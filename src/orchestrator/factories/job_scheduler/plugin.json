@@ -1,0 +1,13 @@
+{
+  "factory_id": "job_scheduler",
+  "name": "Job Scheduler Factory",
+  "version": "1.0.0",
+  "description": "Workflow を時間・イベント起動でスケジュール実行する Job Scheduler Factory。",
+  "author": "AIOS Team",
+  "default_context": {
+    "job_name": "",
+    "workflow_name": "",
+    "trigger_type": "manual",
+    "run_at": "09:00"
+  }
+}

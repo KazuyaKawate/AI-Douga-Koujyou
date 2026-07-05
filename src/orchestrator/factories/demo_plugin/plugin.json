@@ -1,0 +1,11 @@
+{
+  "factory_id": "demo_plugin",
+  "name": "Demo Plugin Factory",
+  "version": "1.0.0",
+  "description": "Plugin System のデモ。Python コードなしで Factory を追加する例。",
+  "author": "AIOS Team",
+  "default_context": {
+    "topic": "",
+    "language": "日本語"
+  }
+}

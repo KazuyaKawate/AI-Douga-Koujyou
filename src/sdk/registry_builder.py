@@ -14,6 +14,7 @@ from src.sdk.module_loader import (
 )
 from src.sdk.module_validator import validate_all
 from src.sdk.module_manifest import SDK_VERSION
+from src.utils.json_store import save_json_atomic
 
 ROOT = Path(__file__).parent.parent.parent
 REGISTRY_PATH = ROOT / "config" / "module_registry.json"
@@ -160,7 +161,7 @@ class ModuleRegistry:
             "modules": serialized,
         }
         REGISTRY_PATH.parent.mkdir(parents=True, exist_ok=True)
-        REGISTRY_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        save_json_atomic(REGISTRY_PATH, data)
         return REGISTRY_PATH
 
     @staticmethod

@@ -12,6 +12,7 @@ import json
 import uuid
 from datetime import datetime
 from pathlib import Path
+from src.utils.json_store import save_json_atomic
 
 ROOT = Path(__file__).parent.parent.parent.parent
 
@@ -28,7 +29,7 @@ def _read_json(rel: str) -> dict:
 
 def _write_json(rel: str, data: dict) -> None:
     p = ROOT / rel
-    p.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+save_json_atomic(    p, data)
 
 
 def _ok(description: str, dry_run: bool, item: dict | None = None) -> dict:

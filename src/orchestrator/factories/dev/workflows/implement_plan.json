@@ -1,0 +1,98 @@
+{
+  "name": "dev.implement_plan",
+  "description": "複数ファイルにまたがる実装計画を生成する（ファイル読み込み・計画のみ・変更なし）",
+  "version": "1.0.0",
+  "steps": [
+    {
+      "step_id": "read_file_1",
+      "step_type": "file_read",
+      "name": "ファイル1 読み込み",
+      "depends_on": [],
+      "config": {
+        "file_path_from_context": "target_file",
+        "output_key": "file_content",
+        "max_lines": 400,
+        "include_line_numbers": true
+      },
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "read_file_2",
+      "step_type": "file_read",
+      "name": "ファイル2 読み込み",
+      "depends_on": [],
+      "config": {
+        "file_path_from_context": "target_file_2",
+        "output_key": "file_content_2",
+        "max_lines": 300,
+        "include_line_numbers": true
+      },
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "design",
+      "step_type": "ai_task",
+      "name": "詳細実装計画生成",
+      "depends_on": ["read_file_1", "read_file_2"],
+      "config": {
+        "task_type": "analysis",
+        "output_key": "implementation_plan",
+        "prompt": "以下の開発指示に対して、詳細な実装計画を立案してください。\n\n【開発指示】\n{instruction}\n\n【関連ファイル1】\n{file_content}\n\n【関連ファイル2（あれば）】\n{file_content_2}\n\n## 詳細実装計画\n\n### 1. 要件分解\n（指示を実装可能な単位に分解）\n\n### 2. 変更対象ファイル一覧\n| ファイルパス | 変更種別 | 変更内容 |\n|-------------|----------|----------|\n| `path/file.py` | 新規/修正/削除 | 何を変更するか |\n\n### 3. 実装ステップ（順序必須）\n```\nStep 1: [ファイル名] — 何を実装するか\n  - 追加するクラス/関数: XxxClass.method()\n  - 変更するロジック: ...\n  - 依存: なし\n\nStep 2: [ファイル名] — ...\n  - 依存: Step 1\n```\n\n### 4. 各ファイルの変更詳細\n\n#### `{target_file}`\n```python\n# 変更箇所の擬似コード（実装のガイドとして）\ndef new_function():\n    # やること\n    pass\n```\n\n### 5. テスト計画\n```bash\n# 実行コマンド\npython -m pytest tests/test_xxx.py -v\n```\n\n### 6. ロールバック計画\n（何かまずければどうやって元に戻すか）\n\n### 7. 推定作業時間\n- 実装: X時間\n- テスト: Y時間\n- コードレビュー: Z時間"
+      },
+      "retry_max": 1,
+      "on_failure": "abort"
+    },
+    {
+      "step_id": "risk_assessment",
+      "step_type": "ai_task",
+      "name": "リスク評価",
+      "depends_on": ["design"],
+      "config": {
+        "task_type": "analysis",
+        "output_key": "risk_assessment",
+        "prompt": "以下の実装計画のリスクを評価してください。\n\n【実装計画】\n{implementation_plan}\n\n## リスク評価\n\n| リスク | 確率 | 影響 | 対策 |\n|--------|------|------|------|\n| 後方互換性の破壊 | 低/中/高 | 低/中/高 | ... |\n| パフォーマンス劣化 | ... | ... | ... |\n| テスト漏れ | ... | ... | ... |\n\n## 最重要確認事項\n1. ...\n2. ...\n\n## 代替アプローチ\n（もし現在の計画でリスクが高い場合の代替案）"
+      },
+      "retry_max": 1,
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "build_report",
+      "step_type": "ai_task",
+      "name": "最終計画レポート",
+      "depends_on": ["design", "risk_assessment"],
+      "config": {
+        "task_type": "writing",
+        "output_key": "dev_report",
+        "prompt": "# 実装計画レポート\n\n## 開発指示\n{instruction}\n\n---\n\n## 詳細実装計画\n{implementation_plan}\n\n---\n\n## リスク評価\n{risk_assessment}\n\n---\n\n## 次のアクション\n1. この計画を確認・承認する\n2. Step 1 から順番に実装する\n3. 各ステップで必要に応じて `dev.fix_bug` や `dev.add_feature` Workflow を使って具体的なコードを生成する\n\n---\n上記をそのまま出力してください。"
+      },
+      "retry_max": 1,
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "save_report",
+      "step_type": "file_save",
+      "name": "実装計画を保存",
+      "depends_on": ["build_report"],
+      "config": {
+        "output_dir": "output/dev",
+        "value_from_context": "dev_report",
+        "filename_prefix": "implement_plan",
+        "extension": ".md",
+        "append_timestamp": true
+      },
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "save_memory",
+      "step_type": "memory_update",
+      "name": "Memory 保存",
+      "depends_on": ["build_report"],
+      "config": {
+        "key": "last_implementation_plan",
+        "value_from_context": "dev_report",
+        "scope": "global"
+      },
+      "on_failure": "continue"
+    }
+  ]
+}

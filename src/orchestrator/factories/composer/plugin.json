@@ -1,0 +1,12 @@
+{
+  "factory_id": "composer",
+  "name": "Auto Agent Composer Factory",
+  "version": "1.0.0",
+  "description": "目的を入力すると既存 Agent を組み合わせて Workflow を自動生成する Composer Factory。",
+  "author": "AIOS Team",
+  "default_context": {
+    "goal": "",
+    "workflow_prefix": "composed",
+    "auto_register": true
+  }
+}

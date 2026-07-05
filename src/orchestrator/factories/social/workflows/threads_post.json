@@ -1,0 +1,59 @@
+{
+  "name": "social.threads_post",
+  "description": "トピックから Threads 投稿を生成し output/social/threads/ に保存する",
+  "version": "1.0.0",
+  "steps": [
+    {
+      "step_id": "base_content",
+      "step_type": "ai_task",
+      "name": "ベースコンテンツ生成",
+      "depends_on": [],
+      "config": {
+        "task_type": "writing",
+        "output_key": "base_content",
+        "prompt": "以下のトピックについて、読者が共感しやすいストーリーや体験談の要素を整理してください。\n\nトピック: {topic}\nターゲット: {target}\nトーン: {tone}\n\n共感ポイント・背景ストーリー・気づき・メッセージを含む素材をまとめてください。"
+      },
+      "retry_max": 1,
+      "on_failure": "abort"
+    },
+    {
+      "step_id": "threads_content",
+      "step_type": "ai_task",
+      "name": "Threads投稿文生成",
+      "depends_on": ["base_content"],
+      "config": {
+        "task_type": "writing",
+        "output_key": "threads_content",
+        "prompt": "以下の素材をもとに、Threads への投稿文を作成してください。\n\n【素材】\n{base_content}\n\n【Threads投稿のルール】\n- 文字数: 300〜500文字（共感・余韻を大切に）\n- 共感から始まる（「〜って感じたことありませんか？」）\n- 自分の体験・失敗・気づきを織り交ぜる\n- 読者が「わかる」「自分のことだ」と感じる表現\n- 押し付けがましくなく、対話的なトーン\n- 改行でテンポよく読める構成\n- ハッシュタグは不要か、使う場合は1個まで\n- ブランド: {brand_name}\n- CTA（任意）: {cta}\n\n投稿文のみ出力してください。"
+      },
+      "retry_max": 1,
+      "on_failure": "abort"
+    },
+    {
+      "step_id": "save_memory",
+      "step_type": "memory_update",
+      "name": "Memory保存",
+      "depends_on": ["threads_content"],
+      "config": {
+        "key": "last_threads_post",
+        "value_from_context": "threads_content",
+        "scope": "global"
+      },
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "save_file",
+      "step_type": "file_save",
+      "name": "ファイル保存",
+      "depends_on": ["threads_content"],
+      "config": {
+        "output_dir": "output/social/threads",
+        "filename_prefix": "threads_post",
+        "value_from_context": "threads_content",
+        "extension": ".md",
+        "append_timestamp": true
+      },
+      "on_failure": "continue"
+    }
+  ]
+}

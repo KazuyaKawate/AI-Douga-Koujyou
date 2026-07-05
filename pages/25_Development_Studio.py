@@ -1,5 +1,5 @@
 """
-Creator Factory Development Studio — v5.0 Beta
+Creator Factory Development Studio
 OS development headquarters: roadmap, decisions, releases, health check, git status, exports.
 No external API calls.
 """
@@ -34,8 +34,9 @@ from src.devstudio.meeting_log_manager import (
 from src.devstudio.git_status_reader import get_git_status
 from src.devstudio.healthcheck_reader import run_healthcheck, get_script_exists
 from src.devstudio.spreadsheet_exporter import export_all, get_export_history
+from src.core.version import OS_VERSION, get_version_label
 
-APP_VERSION = "5.0-beta"
+APP_VERSION = OS_VERSION
 TODAY = date.today().isoformat()
 
 st.set_page_config(
@@ -45,7 +46,7 @@ st.set_page_config(
 )
 
 st.title("🛠️ Creator Factory Development Studio")
-st.caption(f"OS Development Headquarters | v{APP_VERSION} Beta")
+st.caption(f"OS Development Headquarters | {get_version_label()}")
 
 st.divider()
 
@@ -269,8 +270,8 @@ with tabs[2]:
             r_commit = st.text_input("Commit ID",   key="rel_n_commit")
         with rfc2:
             r_health  = st.selectbox("Health Status", HEALTH_STATUSES, key="rel_n_health")
-            r_summary = st.text_area("Summary",       key="rel_n_sum", height=60)
-            r_notes   = st.text_area("Notes",         key="rel_n_notes", height=60)
+            r_summary = st.text_area("Summary",       key="rel_n_sum", height=68)
+            r_notes   = st.text_area("Notes",         key="rel_n_notes", height=68)
         if st.button("➕ Add Release", type="primary", key="rel_add"):
             if r_ver and r_title:
                 create_release(r_ver, r_title, r_date, r_commit, r_health, r_summary, r_notes)
@@ -333,9 +334,9 @@ with tabs[3]:
             d_impact = st.selectbox("Impact",            IMPACTS, index=1, key="dec_n_imp")
         with dfc2:
             d_status = st.selectbox("Status",            DEC_STATUSES, key="dec_n_stat")
-            d_dec    = st.text_area("Decision",          key="dec_n_dec", height=60)
-            d_reason = st.text_area("Reason",            key="dec_n_reas", height=60)
-            d_effect = st.text_area("Expected Effect",   key="dec_n_eff", height=60)
+            d_dec    = st.text_area("Decision",          key="dec_n_dec", height=68)
+            d_reason = st.text_area("Reason",            key="dec_n_reas", height=68)
+            d_effect = st.text_area("Expected Effect",   key="dec_n_eff", height=68)
         if st.button("➕ Add Decision", type="primary", key="dec_add"):
             if d_dec and d_theme:
                 create_decision(d_date, d_ver, d_theme, d_dec, d_reason, d_effect, d_impact, d_status)
@@ -388,11 +389,11 @@ with tabs[4]:
         with mfc1:
             m_date   = st.text_input("Date",         value=TODAY, key="mtg_n_date")
             m_title  = st.text_input("Title",         key="mtg_n_title")
-            m_agenda = st.text_area("Agenda",         key="mtg_n_agenda", height=60)
+            m_agenda = st.text_area("Agenda",         key="mtg_n_agenda", height=68)
         with mfc2:
-            m_notes  = st.text_area("Notes",          key="mtg_n_notes", height=60)
-            m_decs   = st.text_area("Decisions Made", key="mtg_n_decs", height=60)
-            m_next   = st.text_area("Next Actions",   key="mtg_n_next", height=60)
+            m_notes  = st.text_area("Notes",          key="mtg_n_notes", height=68)
+            m_decs   = st.text_area("Decisions Made", key="mtg_n_decs", height=68)
+            m_next   = st.text_area("Next Actions",   key="mtg_n_next", height=68)
         if st.button("➕ Add Meeting", type="primary", key="mtg_add"):
             if m_title:
                 create_meeting(m_date, m_title, m_agenda, m_notes, m_decs, m_next)
@@ -514,7 +515,7 @@ with tabs[7]:
 # ── Tab 9: Module SDK ──────────────────────────────────────────────────────────
 with tabs[8]:
     st.subheader("📦 Module SDK — Self-Registration Registry")
-    st.caption("v5.1 · すべてのモジュールのMANIFEST情報を一覧表示。外部API不使用。読み取り専用。")
+    st.caption(f"{get_version_label()} · すべてのモジュールのMANIFEST情報を一覧表示。外部API不使用。読み取り専用。")
 
     try:
         from src.sdk.registry_builder import ModuleRegistry, TYPE_ICONS, STATUS_ICONS
@@ -1108,7 +1109,7 @@ with tabs[9]:
                 or _cred_cfg42.get("service_account_file", "")
             )
 
-            p42c1, p42c2, p42c3 = st.columns(3)
+            p42c1, p42c2, p42c3, p42c4 = st.columns(4)
             p42c1.metric(
                 "📦 gspread",
                 f"✅ {_deps42['gspread_version']}" if _deps42["gspread_installed"] else "❌ 未インストール",
@@ -1118,6 +1119,11 @@ with tabs[9]:
                 f"✅ {_deps42['google_auth_version']}" if _deps42["google_auth_installed"] else "❌ 未インストール",
             )
             p42c3.metric(
+                "📦 google-genai",
+                f"✅ {_deps42['google_genai_version']}" if _deps42["google_genai_installed"] else "⬜ 任意",
+                help="Gemini provider 利用時のみ必要です。Google Sheets 同期は gspread / google-auth で動作します。",
+            )
+            p42c4.metric(
                 "🔑 auth_mode (実効値)",
                 _ws_auth["auth_mode"],
                 help="committed=disabled。workspace_local.json で service_account に上書き可能。",
@@ -1144,6 +1150,12 @@ with tabs[9]:
                     f"📦 **依存パッケージ未インストール:** `{_deps42['install_hint']}`  \n"
                     "ターミナルで実行後、ページをリロードしてください。"
                     "`auth_mode=disabled` のままでもアプリは動作します。"
+                )
+            elif not _deps42["google_genai_installed"]:
+                st.info(
+                    "📦 `google-genai` は未インストールです。"
+                    "Gemini provider を使う場合のみ `pip install google-genai` を実行してください。"
+                    "Google Sheets 同期とローカル起動には不要です。"
                 )
 
             if _deps42["all_ready"] and not _cred_exists42:

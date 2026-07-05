@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .models import InboxEntry
 
+from src.utils.json_store import save_json_atomic
 _STATS_PATH = Path("data/inbox_queue_stats.json")
 
 
@@ -70,9 +71,6 @@ class TaskQueue:
         """統計を data/inbox_queue_stats.json に書き出す。例外は握りつぶす。"""
         try:
             self._stats_path.parent.mkdir(parents=True, exist_ok=True)
-            self._stats_path.write_text(
-                json.dumps(self.stats(), ensure_ascii=False),
-                encoding="utf-8",
-            )
+            save_json_atomic(self._stats_path, self.stats(), indent=None)
         except Exception:
             pass

@@ -39,7 +39,7 @@ class AITaskExecutor(BaseStepExecutor):
                 task_type = TaskType.DEFAULT
 
             task = AITask(prompt=prompt, task_type=task_type)
-            resp = self._router.complete(task)
+            resp = self._router.route(task)
 
             if not resp.ok:
                 return StepResult(success=False, error=resp.error or "AIRouter エラー")

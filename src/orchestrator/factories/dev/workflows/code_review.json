@@ -1,0 +1,72 @@
+{
+  "name": "dev.code_review",
+  "description": "ファイルを読み込んでコードレビュー・問題点・改善提案を生成する（ファイル変更なし）",
+  "version": "1.0.0",
+  "steps": [
+    {
+      "step_id": "read_file",
+      "step_type": "file_read",
+      "name": "対象ファイル読み込み",
+      "depends_on": [],
+      "config": {
+        "file_path_from_context": "target_file",
+        "output_key": "file_content",
+        "max_lines": 600,
+        "include_line_numbers": true
+      },
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "read_file_2",
+      "step_type": "file_read",
+      "name": "関連ファイル読み込み（任意）",
+      "depends_on": [],
+      "config": {
+        "file_path_from_context": "target_file_2",
+        "output_key": "file_content_2",
+        "max_lines": 300,
+        "include_line_numbers": true
+      },
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "review",
+      "step_type": "ai_task",
+      "name": "コードレビュー実行",
+      "depends_on": ["read_file", "read_file_2"],
+      "config": {
+        "task_type": "analysis",
+        "output_key": "review_result",
+        "prompt": "以下のコードをレビューしてください。\n\n【レビュー指示】\n{instruction}\n\n【対象ファイル】\n{file_content}\n\n【関連ファイル（あれば）】\n{file_content_2}\n\n【レビュー観点】\n1. バグ・潜在的エラー（HIGH: クラッシュする / MEDIUM: 稀に失敗 / LOW: エッジケース）\n2. パフォーマンス問題\n3. 可読性・保守性\n4. セキュリティリスク\n5. テスタビリティ\n\n【出力形式】\n## コードレビュー: {target_file}\n\n### サマリー\n（全体的な品質評価 1〜5点、コメント）\n\n### 問題点一覧\n| 優先度 | 行番号 | 問題 | 修正方針 |\n|--------|--------|------|----------|\n\n### 良い点\n- ...\n\n### 改善推奨コード例\n```python\n# 問題箇所と修正例\n```\n\n### 次のアクション\n1. ...\n2. ..."
+      },
+      "retry_max": 1,
+      "on_failure": "abort"
+    },
+    {
+      "step_id": "save_review",
+      "step_type": "file_save",
+      "name": "レビュー結果を保存",
+      "depends_on": ["review"],
+      "config": {
+        "output_dir": "output/dev",
+        "value_from_context": "review_result",
+        "filename_prefix": "review",
+        "extension": ".md",
+        "append_timestamp": true
+      },
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "save_memory",
+      "step_type": "memory_update",
+      "name": "レビュー結果を Memory 保存",
+      "depends_on": ["review"],
+      "config": {
+        "key": "last_code_review",
+        "value_from_context": "review_result",
+        "scope": "global"
+      },
+      "on_failure": "continue"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "name": "autonomous.review_patch",
+  "description": "生成された Patch を AI がレビューし品質スコアを付ける",
+  "factory_id": "autonomous",
+  "steps": [
+    {
+      "step_id": "review",
+      "name": "Patch レビュー",
+      "step_type": "ai_task",
+      "config": {
+        "agent_id": "patch_reviewer",
+        "output_key": "review_result",
+        "task_type": "analysis",
+        "prompt": "## タスク\n{task_title}\n\n## Patch\n```diff\n{patch_text}\n```\n\n品質・安全性・目的適合性を評価し、以下の JSON 形式で回答してください:\n{\"score\":8.5,\"summary\":\"...\",\"risks\":[\"...\"],\"suggestions\":[\"...\"]}\n\nJSON のみ出力。"
+      },
+      "on_failure": "abort"
+    },
+    {
+      "step_id": "save",
+      "name": "レビュー結果保存",
+      "step_type": "file_save",
+      "config": {
+        "content_from_context": "review_result",
+        "output_dir": "output/autonomous",
+        "filename_prefix": "review",
+        "extension": "json"
+      },
+      "on_failure": "continue"
+    }
+  ]
+}

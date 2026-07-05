@@ -1,3 +1,4 @@
+import json as _json
 import sys
 from pathlib import Path
 
@@ -8,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from src.utils.config import FOLDERS, PROJECT_ROOT
 from src.utils.file_manager import count_files
 from src.utils.settings_manager import CONFIG_PATH, load_settings
+from src.core.version import OS_VERSION, get_version_label
 
 st.set_page_config(
     page_title="Creator Factory OS",
@@ -17,12 +19,7 @@ st.set_page_config(
 )
 
 st.title("🎯 Creator Factory OS")
-try:
-    from src.core.version import OS_VERSION as _OS_VER, OS_CODENAME as _OS_CODE
-    _caption = f"AIツールを組み合わせた動画制作自動化プラットフォーム | v{_OS_VER} — {_OS_CODE}"
-except Exception:
-    _caption = "AIツールを組み合わせた動画制作自動化プラットフォーム | v5.1 — Module SDK + Approval Center"
-st.caption(_caption)
+st.caption(f"AIツールを組み合わせた動画制作自動化プラットフォーム | {get_version_label()}")
 
 st.divider()
 
@@ -56,9 +53,88 @@ WORKFLOW = [
     ("✅", "Approval Center",  "人間承認ゲートウェイ — AI CEO・自動化・DevStudio", None),
 ]
 
-st.subheader("制作フロー")
-cols = st.columns(len(WORKFLOW))
-for col, (icon, title, desc, folder) in zip(cols, WORKFLOW):
+WORKFLOW_PAGES = {
+    "Mission Control": "pages/17_Mission_Control.py",
+    "note投稿工場": "pages/18_Note_Factory.py",
+    "SNS投稿工場": "pages/19_SNS_Factory.py",
+    "営業工場": "pages/21_Sales_Factory.py",
+    "会計監査工場": "pages/22_Accounting_Factory.py",
+    "アナリティクス工場": "pages/23_Analytics_Factory.py",
+    "自動化工場": "pages/24_Automation_Factory.py",
+    "承認アシスタント": "pages/20_Approval_Assistant.py",
+    "一発生成": "pages/6_Produce.py",
+    "エピソード管理": "pages/5_Episode.py",
+    "素材ライブラリ": "pages/7_Assets.py",
+    "画像・動画生成": "pages/13_Production.py",
+    "ナレーション": "pages/13_Production.py",
+    "字幕生成": "pages/2_Subtitles.py",
+    "動画組立": "pages/3_Assembly.py",
+    "制作ダッシュボード": "pages/8_Dashboard.py",
+    "スタジオ設定": "pages/9_Settings.py",
+    "キャラクター管理": "pages/10_Characters.py",
+    "背景管理": "pages/11_Backgrounds.py",
+    "プロンプトビルダー": "pages/12_Prompt_Builder.py",
+    "制作管理": "pages/13_Production.py",
+    "AI Director": "pages/14_Director.py",
+    "プロジェクト管理": "pages/15_Project_Manager.py",
+    "AI Studio": "pages/16_AI_Studio.py",
+    "Development Studio": "pages/25_Development_Studio.py",
+    "AI CEO": "pages/26_AI_CEO.py",
+    "Approval Center": "pages/27_Approval_Center.py",
+}
+
+WORKFLOW_GROUPS = [
+    (
+        "🎬 Creator Factory",
+        "動画制作・素材・エピソード制作に使うページ",
+        [
+            "一発生成",
+            "エピソード管理",
+            "素材ライブラリ",
+            "画像・動画生成",
+            "ナレーション",
+            "字幕生成",
+            "動画組立",
+            "制作ダッシュボード",
+            "キャラクター管理",
+            "背景管理",
+            "プロンプトビルダー",
+            "制作管理",
+            "AI Director",
+            "プロジェクト管理",
+        ],
+    ),
+    (
+        "🏭 Business Factories",
+        "日次運用・投稿・営業・会計・分析・自動化の業務ページ",
+        [
+            "note投稿工場",
+            "SNS投稿工場",
+            "営業工場",
+            "会計監査工場",
+            "アナリティクス工場",
+            "自動化工場",
+        ],
+    ),
+    (
+        "🧠 AIOS Control",
+        "OS管理・AIエージェント・承認・設定のページ",
+        [
+            "Mission Control",
+            "スタジオ設定",
+            "AI Studio",
+            "Development Studio",
+            "AI CEO",
+            "Approval Center",
+            "承認アシスタント",
+        ],
+    ),
+]
+
+WORKFLOW_BY_TITLE = {title: (icon, desc, folder) for icon, title, desc, folder in WORKFLOW}
+
+
+def get_workflow_count(title: str, folder: str | None) -> int:
     if title == "Mission Control":
         try:
             from src.hq.task_manager import load_tasks, get_task_stats
@@ -69,7 +145,6 @@ for col, (icon, title, desc, folder) in zip(cols, WORKFLOW):
             count = 0
     elif title == "note投稿工場":
         try:
-            import json as _json
             _np = PROJECT_ROOT / "config" / "note_articles.json"
             _nd = _json.loads(_np.read_text(encoding="utf-8")) if _np.exists() else {}
             count = len([a for a in _nd.get("articles", []) if a.get("status") == "published"])
@@ -77,7 +152,6 @@ for col, (icon, title, desc, folder) in zip(cols, WORKFLOW):
             count = 0
     elif title == "SNS投稿工場":
         try:
-            import json as _json
             _sp = PROJECT_ROOT / "config" / "sns_posts.json"
             _sd = _json.loads(_sp.read_text(encoding="utf-8")) if _sp.exists() else {}
             count = len([p for p in _sd.get("posts", []) if p.get("status") == "published"])
@@ -85,7 +159,6 @@ for col, (icon, title, desc, folder) in zip(cols, WORKFLOW):
             count = 0
     elif title == "営業工場":
         try:
-            import json as _json
             _slp = PROJECT_ROOT / "config" / "sales_leads.json"
             _sld = _json.loads(_slp.read_text(encoding="utf-8")) if _slp.exists() else {}
             count = len([l for l in _sld.get("leads", []) if l.get("status") not in ("archived",)])
@@ -93,7 +166,6 @@ for col, (icon, title, desc, folder) in zip(cols, WORKFLOW):
             count = 0
     elif title == "会計監査工場":
         try:
-            import json as _json
             _arp = PROJECT_ROOT / "config" / "accounting_revenue.json"
             _ard = _json.loads(_arp.read_text(encoding="utf-8")) if _arp.exists() else {}
             count = sum(1 for r in _ard.get("revenue", []) if r.get("status") == "confirmed")
@@ -101,7 +173,6 @@ for col, (icon, title, desc, folder) in zip(cols, WORKFLOW):
             count = 0
     elif title == "アナリティクス工場":
         try:
-            import json as _json
             _anp = PROJECT_ROOT / "config" / "analytics_snapshots.json"
             _and = _json.loads(_anp.read_text(encoding="utf-8")) if _anp.exists() else {}
             count = len(_and.get("snapshots", []))
@@ -109,7 +180,6 @@ for col, (icon, title, desc, folder) in zip(cols, WORKFLOW):
             count = 0
     elif title == "自動化工場":
         try:
-            import json as _json
             _awp = PROJECT_ROOT / "config" / "automation_workflows.json"
             _awd = _json.loads(_awp.read_text(encoding="utf-8")) if _awp.exists() else {}
             count = sum(1 for w in _awd.get("workflows", []) if w.get("enabled"))
@@ -117,7 +187,6 @@ for col, (icon, title, desc, folder) in zip(cols, WORKFLOW):
             count = 0
     elif title == "承認アシスタント":
         try:
-            import json as _json
             _ap = PROJECT_ROOT / "config" / "approval_history.json"
             _ad = _json.loads(_ap.read_text(encoding="utf-8")) if _ap.exists() else {}
             count = len(_ad.get("history", []))
@@ -136,21 +205,18 @@ for col, (icon, title, desc, folder) in zip(cols, WORKFLOW):
         count = 1 if CONFIG_PATH.exists() else 0
     elif title == "キャラクター管理":
         try:
-            import json as _json
             _cp = PROJECT_ROOT / "config" / "characters.json"
             count = len(_json.loads(_cp.read_text(encoding="utf-8")).get("characters", [])) if _cp.exists() else 0
         except Exception:
             count = 0
     elif title == "背景管理":
         try:
-            import json as _json
             _bp = PROJECT_ROOT / "config" / "backgrounds.json"
             count = len(_json.loads(_bp.read_text(encoding="utf-8")).get("backgrounds", [])) if _bp.exists() else 0
         except Exception:
             count = 0
     elif title == "プロンプトビルダー":
         try:
-            import json as _json
             _tp = PROJECT_ROOT / "config" / "prompt_templates.json"
             count = len(_json.loads(_tp.read_text(encoding="utf-8")).get("templates", [])) if _tp.exists() else 0
         except Exception:
@@ -175,7 +241,6 @@ for col, (icon, title, desc, folder) in zip(cols, WORKFLOW):
             count = 0
     elif title == "プロジェクト管理":
         try:
-            import json as _json
             _ps = PROJECT_ROOT / "config" / "project_settings.json"
             count = len(_json.loads(_ps.read_text(encoding="utf-8")).get("series", [])) if _ps.exists() else 0
         except Exception:
@@ -211,7 +276,30 @@ for col, (icon, title, desc, folder) in zip(cols, WORKFLOW):
             count = 0
     else:
         count = count_files(PROJECT_ROOT / folder)
-    col.metric(label=f"{icon} {title}", value=count, help=desc)
+    return count
+
+
+def render_workflow_card(title: str) -> None:
+    icon, desc, folder = WORKFLOW_BY_TITLE[title]
+    page_path = WORKFLOW_PAGES[title]
+    count = get_workflow_count(title, folder)
+    with st.container(border=True):
+        st.metric(label=f"{icon} {title}", value=count, help=desc)
+        st.caption(desc)
+        st.page_link(page_path, label="開く", icon="↗️", use_container_width=True)
+
+
+st.subheader("制作フロー")
+st.caption("Creator Factory と AIOS 管理ページを分けて表示しています。すべての既存ページは引き続きサイドバーからも開けます。")
+workflow_tabs = st.tabs([group_name for group_name, _, _ in WORKFLOW_GROUPS])
+for tab, (_, group_desc, titles) in zip(workflow_tabs, WORKFLOW_GROUPS):
+    with tab:
+        st.caption(group_desc)
+        for start in range(0, len(titles), 3):
+            cols = st.columns(3)
+            for col, title in zip(cols, titles[start:start + 3]):
+                with col:
+                    render_workflow_card(title)
 
 st.divider()
 
@@ -253,8 +341,8 @@ col1, col2 = st.columns([2, 1])
 with col1:
     st.info("👈 左のサイドバーから各ページを選択して作業を開始してください。")
 with col2:
-    st.markdown("""
-**クイックスタート v5.0-beta**
+    st.markdown(f"""
+**クイックスタート v{OS_VERSION}**
 1. 🛠️ **Development Studio** でロードマップ・決定・リリースを管理
 2. 🗂️ **Projects** でプロジェクトとシステム健全性を確認
 2. 🎯 **Mission Control** で今日のKPI・タスク・工場状態を確認

@@ -26,10 +26,11 @@ from src.agents.base_agent import (
 )
 from src.agents.agent_registry import AgentRegistry, create_default_registry
 from src.pipeline.export_pipeline import STAGE_ORDER
+from src.core.version import OS_VERSION, get_version_label
 
 st.set_page_config(page_title="AI Studio", page_icon="🤖", layout="wide")
 
-APP_VERSION = "4.0"
+APP_VERSION = OS_VERSION
 
 # ── Shared singletons (per session) ──────────────────────────────────────────
 
@@ -45,7 +46,7 @@ queue:    TaskQueue      = st.session_state["ai_studio_queue"]
 
 st.title("🤖 AI Studio")
 st.caption(
-    f"マルチエージェント制作スタジオ | AI動画工場 v{APP_VERSION} | "
+    f"マルチエージェント制作スタジオ | AI動画工場 {get_version_label()} | "
     f"エージェント: {registry.active_count()}/{len(registry.list_all())} 稼働中"
 )
 

@@ -1,4 +1,5 @@
 """
+from src.utils.json_store import save_json_atomic
 Agent registry for AI動画工場 v4.0.
 
 Responsibilities:
@@ -89,9 +90,7 @@ class AgentRegistry:
             for name, agent in self._agents.items()
         }
         REGISTRY_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-        REGISTRY_CONFIG_PATH.write_text(
-            json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
+        save_json_atomic(REGISTRY_CONFIG_PATH, state)
 
     def load_state(self) -> None:
         if not REGISTRY_CONFIG_PATH.exists():

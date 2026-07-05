@@ -6,6 +6,7 @@ from typing import Optional
 from .enums import WorkflowState
 from .models import WorkflowStatus
 
+from src.utils.json_store import save_json_atomic
 _DEFAULT_STORE_DIR = Path("data/workflows")
 
 
@@ -25,10 +26,7 @@ class WorkflowStore:
     def save(self, status: WorkflowStatus) -> None:
         try:
             path = self._dir / f"{status.workflow_id}.json"
-            path.write_text(
-                json.dumps(status.to_dict(), ensure_ascii=False, indent=2),
-                encoding="utf-8",
-            )
+            save_json_atomic(path, status.to_dict())
         except Exception:
             pass
 

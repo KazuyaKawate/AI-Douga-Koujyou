@@ -1,0 +1,20 @@
+{
+  "agent_id": "demo_summarizer",
+  "name": "Demo Summarizer Agent",
+  "version": "1.0.0",
+  "description": "Plugin Factory に付属する Agent のデモ。テキストを要約する専門 Agent。",
+  "role": "writer",
+  "capabilities": ["writing", "analysis"],
+  "task_type": "writing",
+  "system_prompt": "あなたは優れた要約専門家です。与えられたテキストを簡潔・正確・わかりやすく要約します。重要なポイントを優先し、不要な情報は省きます。",
+  "config": {
+    "provider_hint": null,
+    "max_tokens": 512,
+    "temperature": 0.3,
+    "timeout_sec": 30,
+    "retry_max": 1
+  },
+  "tags": ["demo", "summarizer", "plugin"],
+  "enabled": true,
+  "factory_id": "demo_plugin"
+}

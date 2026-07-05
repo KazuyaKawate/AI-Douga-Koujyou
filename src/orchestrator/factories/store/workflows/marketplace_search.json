@@ -1,0 +1,32 @@
+{
+  "name": "store.marketplace_search",
+  "description": "Marketplace を AI で検索してインストール推奨リストを生成する",
+  "version": "1.0.0",
+  "steps": [
+    {
+      "step_id": "search_analysis",
+      "step_type": "ai_task",
+      "name": "検索クエリ分析・推奨生成",
+      "depends_on": [],
+      "config": {
+        "task_type": "analysis",
+        "output_key": "search_recommendation",
+        "prompt": "以下の目的に合う AI Agent の推奨リストを作成してください。\n\n検索クエリ: {search_query}\n\n利用可能な Agent カテゴリ:\n- Writing: 記事・コピーライティング・SEO\n- Marketing: SNS戦略・ハッシュタグ・広告\n- Analysis: 調査・データ分析・レポート\n- Video: 台本・シーン設計・プロダクション\n- Lifestyle: 占い・健康・趣味\n- Business: メール・契約・業務効率化\n- Legal: 法務レビュー・リスク分析\n\n【出力形式】\n## 推奨 Agent\n1. [Agent名] — 推奨理由\n2. [Agent名] — 推奨理由\n3. [Agent名] — 推奨理由\n\n## 利用シナリオ\nこれらの Agent を組み合わせることで...\n\n## 導入順序\n1. まず... 2. 次に... 3. 最後に..."
+      },
+      "retry_max": 1,
+      "on_failure": "abort"
+    },
+    {
+      "step_id": "save_search",
+      "step_type": "memory_update",
+      "name": "検索結果保存",
+      "depends_on": ["search_analysis"],
+      "config": {
+        "key": "last_marketplace_search",
+        "value_from_context": "search_query",
+        "scope": "global"
+      },
+      "on_failure": "continue"
+    }
+  ]
+}

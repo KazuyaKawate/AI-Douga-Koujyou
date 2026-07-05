@@ -1,0 +1,12 @@
+{
+  "factory_id": "intelligence",
+  "name": "Memory Intelligence Factory",
+  "version": "1.0.0",
+  "description": "AIOS の自己分析・実行レポート・Agent ランキング・改善提案を生成する Intelligence Factory。",
+  "author": "AIOS Team",
+  "default_context": {
+    "period_days": 30,
+    "target_workflow": "",
+    "report_format": "markdown"
+  }
+}

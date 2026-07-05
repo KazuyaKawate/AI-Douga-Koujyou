@@ -1,0 +1,59 @@
+{
+  "name": "social.tiktok_script",
+  "description": "トピックから TikTok 台本（フック→本編→CTA）を生成し output/social/tiktok/ に保存する",
+  "version": "1.0.0",
+  "steps": [
+    {
+      "step_id": "video_concept",
+      "step_type": "ai_task",
+      "name": "動画コンセプト設計",
+      "depends_on": [],
+      "config": {
+        "task_type": "planning",
+        "output_key": "video_concept",
+        "prompt": "以下のトピックについて、TikTok動画のコンセプトと伝えるべき核心メッセージを設計してください。\n\nトピック: {topic}\nターゲット: {target}\nトーン: {tone}\n\n動画の核心メッセージ・ターゲットの悩み・提供する価値・ビジュアルアイデアをまとめてください。"
+      },
+      "retry_max": 1,
+      "on_failure": "abort"
+    },
+    {
+      "step_id": "tiktok_script",
+      "step_type": "ai_task",
+      "name": "TikTok台本生成",
+      "depends_on": ["video_concept"],
+      "config": {
+        "task_type": "writing",
+        "output_key": "tiktok_script",
+        "prompt": "以下のコンセプトをもとに、TikTok動画の台本を作成してください。\n\n【コンセプト】\n{video_concept}\n\n【TikTok台本のルール】\n- 動画尺: 30〜60秒想定\n- 最初の3秒が命（「待って、これ知らないとヤバい」レベルのフック）\n- 口語体・自然な話し言葉で書く\n- テンポよく、飽きさせない展開\n- 「え、そうなの？」という驚きや発見を入れる\n- 箇条書き・リスト形式で情報を整理\n- 末尾: フォロー/保存/コメント への明確なCTA\n- ハッシュタグ: 3〜5個（#fyp #foryou を含む）\n\n【出力形式】\n## 🎬 フック（0〜3秒）\n（最初のセリフ）\n\n## 📝 本編（4〜50秒）\n（ナレーション台本を時系列で）\n\n## 🔥 CTA（最後5秒）\n（行動喚起セリフ）\n\n## #ハッシュタグ\n（3〜5個）\n\n## 📌 ディスクリプション\n（動画説明文 100文字以内）"
+      },
+      "retry_max": 1,
+      "on_failure": "abort"
+    },
+    {
+      "step_id": "save_memory",
+      "step_type": "memory_update",
+      "name": "Memory保存",
+      "depends_on": ["tiktok_script"],
+      "config": {
+        "key": "last_tiktok_script",
+        "value_from_context": "tiktok_script",
+        "scope": "global"
+      },
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "save_file",
+      "step_type": "file_save",
+      "name": "ファイル保存",
+      "depends_on": ["tiktok_script"],
+      "config": {
+        "output_dir": "output/social/tiktok",
+        "filename_prefix": "tiktok_script",
+        "value_from_context": "tiktok_script",
+        "extension": ".md",
+        "append_timestamp": true
+      },
+      "on_failure": "continue"
+    }
+  ]
+}

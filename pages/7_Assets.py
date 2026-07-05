@@ -10,6 +10,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.utils.config import PROJECT_ROOT
 from src.utils.settings_manager import load_settings
 from src.core import episode_manager as em
+from src.utils.json_store import save_json_atomic
 
 st.set_page_config(page_title="素材ライブラリ", page_icon="📚", layout="wide")
 st.title("📚 素材ライブラリ")
@@ -77,7 +78,7 @@ def save_all_notes() -> int:
                 if val:
                     notes[rel] = val
     NOTES_PATH.parent.mkdir(parents=True, exist_ok=True)
-    NOTES_PATH.write_text(json.dumps(notes, ensure_ascii=False, indent=2), encoding="utf-8")
+    save_json_atomic(NOTES_PATH, notes)
     return len(notes)
 
 
@@ -152,9 +153,7 @@ with st.sidebar:
                 }
                 out = PROJECT_ROOT / "project" / target_ep / "asset_manifest.json"
                 out.parent.mkdir(parents=True, exist_ok=True)
-                out.write_text(
-                    json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
-                )
+                save_json_atomic(out, manifest)
                 st.success(
                     f"{len(selected)} 件を出力\n"
                     f"`project/{target_ep}/asset_manifest.json`"

@@ -1,4 +1,4 @@
-"""Project health check script for Creator Factory OS (AI動画工場 v5.1)."""
+"""Project health check script for Creator Factory OS."""
 import io
 import sys
 from pathlib import Path
@@ -7,6 +7,8 @@ from pathlib import Path
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(ROOT))
+from src.core.version import get_app_title
 
 REQUIRED_FOLDERS = [
     "assets",
@@ -93,19 +95,19 @@ REQUIRED_FILES = [
     "src/workspace/sheet_writer.py",
     "src/workspace/sheet_diff.py",
     "src/workspace/sync_executor.py",
-    # Module SDK (v5.1)
+    # Module SDK
     "src/sdk/__init__.py",
     "src/sdk/module_manifest.py",
     "src/sdk/module_loader.py",
     "src/sdk/module_validator.py",
     "src/sdk/registry_builder.py",
-    # Approval Center (v5.1)
+    # Approval Center
     "src/approval/__init__.py",
     "src/approval/approval_models.py",
     "src/approval/approval_queue.py",
     "src/approval/risk_analyzer.py",
     "src/approval/command_preview.py",
-    # AI CEO Core — Executive Module (v5.0-beta)
+    # AI CEO Core — Executive Module
     "src/aiceo/__init__.py",
     "src/aiceo/executive_engine.py",
     "src/aiceo/executive_dashboard.py",
@@ -176,7 +178,7 @@ REQUIRED_FILES = [
     "src/factories/note/revenue_tracker.py",
     "src/factories/note/repurpose_engine.py",
     "src/factories/note/integration_bridge.py",
-    # Core — version (v5.1)
+    # Core — version source of truth
     "src/core/version.py",
     # Core — architecture layer (v4.5.1)
     "src/core/factory_base.py",
@@ -271,10 +273,10 @@ OPTIONAL_FILES = [
     "config/automation_workflows.json",
     "config/automation_runs.json",
     "config/automation_settings.json",
-    # AI CEO Core config (v5.0-beta)
+    # AI CEO Core config
     "config/aiceo_settings.json",
     "config/aiceo_history.json",
-    # Dev Studio config (v5.0-beta)
+    # Dev Studio config
     "config/devstudio_roadmap.json",
     "config/devstudio_releases.json",
     "config/devstudio_decisions.json",
@@ -283,9 +285,9 @@ OPTIONAL_FILES = [
     # Workspace Sync config (v5.2)
     "config/workspace_settings.json",
     "config/sync_history.json",
-    # Approval Center config (v5.1)
+    # Approval Center config
     "config/approval_queue.json",
-    # Module SDK registry export (v5.1 Phase 2)
+    # Module SDK registry export
     "config/module_registry.json",
 ]
 
@@ -295,11 +297,9 @@ def check() -> bool:
     width = 60
 
     try:
-        import sys as _sv; _sv.path.insert(0, str(ROOT))
-        from src.core.version import OS_VERSION as _V, OS_CODENAME as _C
-        _title = f"Creator Factory OS v{_V} — {_C}"
+        _title = get_app_title()
     except Exception:
-        _title = "Creator Factory OS v5.1 — Project Health Check"
+        _title = "Creator Factory OS — Project Health Check"
     print("=" * width)
     print(f"  {_title}")
     print("=" * width)
@@ -451,7 +451,7 @@ def check() -> bool:
 
     print()
 
-    # AI CEO Core (v5.0-beta)
+    # AI CEO Core
     print("[ AI CEO Core データ ]")
     _ceo_cfgs = [
         ("config/aiceo_settings.json", None),
@@ -480,7 +480,7 @@ def check() -> bool:
 
     print()
 
-    # Development Studio (v5.0-beta)
+    # Development Studio
     print("[ Development Studio データ ]")
     _ds_cfgs = [
         ("config/devstudio_roadmap.json",   "roadmap"),
@@ -512,7 +512,7 @@ def check() -> bool:
 
     print()
 
-    # Module SDK + Approval Center (v5.1 Phase 2)
+    # Module SDK + Approval Center
     print("[ Module SDK データ ]")
     reg_path = ROOT / "config" / "module_registry.json"
     if reg_path.exists():

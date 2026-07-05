@@ -1,23 +1,24 @@
 # 🎯 Creator Factory OS — v5.2 — Google Workspace Sync Foundation
 
-**v5.2 Phase 4-5:** **📊 Google Sheets 本番シート同期** — `run_production_sync()` が KPI / Revenue / Notes の3シートに upsert 同期（追加+更新のみ、削除なし）。`SHEET_MAPPINGS` を実データ構造に合わせて全面修正。`extract_flat_row()` でネスト構造を自動フラット化（kpi_targets の targets/actuals / revenue_expense の today / note_articles の score ネスト）。`write_sheet_upsert()` でヘッダー行自動初期化・key_field によるupsert。dry-run プレビュー → 確認チェックボックス → live sync のフロー。`allow_write=True` は UI ボタン経由のみ（コミット済みコードに含まない）。  
-**v5.2 Phase 4-4:** **✏️ Google Sheets テストシート書き込み** — `run_test_write()` が孤立テストシートに 1 行だけ追記（`_phase`・`_ts`・`_source`・`_status`）。本番シート（KPI / Revenue / Notes / SNS / Sales）は `_PRODUCTION_WORKSHEETS` でブロック。`allow_write=True` は UI ボタン経由のみ（コミット済みコードに含まない）。Dev Studio Tab 10 に Phase 4-4 パネル追加（ドライランプレビュー → チェックボックス確認 → 書き込み実行 → ロールバック手順）。ヘルスチェック書き込みガードのバグ修正（`write_enabled` → `allow_write` チェック）。  
-**v5.2 Phase 4-3:** **✅ Google Sheets ライブ読み取り接続確認** — `test_read_connection()` を実際のスプレッドシートに対して実行し、`gspread` + サービスアカウント接続を確認。`load_merged_settings()` 経由でマージ設定を使用。KPI シート読み取り成功。`allow_write=False` 維持。コミット済み `auth_mode=disabled` 変更なし。フェーズラベルを `sheet_reader.py`・`sheet_writer.py`・`sync_executor.py` で更新（ロジック変更なし）。  
-**v5.2 Phase 4-2:** **🔌 Google Sheets ローカル設定上書き & 読み取り接続テスト** — `config/workspace_local.json`（git除外）でコミット済み設定を実行時に上書き可能。`auth_mode`・`service_account_file`・`spreadsheet_id`・`worksheet_name` をローカルのみで設定。`load_merged_settings()` がコミット設定とローカル上書きをマージ。Dev Studio Tab 10 に Phase 4-2 セクション（ローカル設定状態・依存チェック・認証ファイル・接続テストボタン・JSONテンプレート）。書き込みは無効（`allow_write=False`）。`auth_mode=disabled` でもすべての機能が動作します。  
-**v5.2 Phase 4-1:** **🔌 Google Sheets 読み取り専用接続** — `build_client()` が実際の `gspread.Client` を構築（service_account モード）。`read_sheet()` がライブAPIを呼び出し。`test_read_connection()` で読み取り専用エンドツーエンドテスト。`write_rows()` に 4 つ目のロック `allow_write=False` 追加（Phase 4-1 は読み取り専用）。Dev Studio Tab 10 に Phase 4-1 セクション追加（依存パッケージ・認証ファイル・接続テストボタン）。認証情報はリポジトリ不可。`auth_mode=disabled` のままでもすべての機能が動作します。  
-**v5.2 Phase 3:** **🔒 Google Sheets 認証安全性 & gspread 準備完了** — `credentials/` フォルダ（`.gitkeep` のみ追跡、実JSONは`.gitignore`で除外）。`docs/google_sheets_setup.md` セットアップガイド。`sync_validator` に4関数追加: `check_gitignore_protections()`・`check_credentials_gitkeep()`・`check_phase3_dependencies()`（importlib.metadata で循環インポートなし）・`get_phase3_readiness()`（6項目複合チェック）。Dev Studio Tab 10 に Phase 3 準備状況チェックリスト追加（🔒安全必須 / 📦オプション）。`auth_mode=disabled` 維持。Phase 4+ でgspreadライブ統合予定。  
-**v5.2 Phase 2:** **🔗 Google Sheets Connector 基盤** — 5モジュール追加: `google_auth.py`（認証モード設定、デフォルト`disabled`、認証情報はリポジトリに保存しない）、`sheet_reader.py`（読み取り抽象、`disabled`時はサンプルデータ）、`sheet_writer.py`（トリプルロック書き込みガード: `auth_mode != disabled` AND `dry_run=False` AND `manual_execute=True`）、`sheet_diff.py`（ローカルJSONとシートの差分: added/updated/removed/conflicts/unchanged）、`sync_executor.py`（オーケストレーター: プレビュー・差分・実行）。Phase 3 で認証安全性確認完了。Phase 4+ でgspreadライブ統合予定。  
-**v5.2 Phase 1:** **🔄 Google Workspace Sync 基盤** — ローカルJSON → Google Sheets マッピング。手動同期のみ。ドライランデフォルト。Phase 1はローカルデータ読み取り・プレビュー生成のみ（外部API不使用）。  
-**v5.1 Phase 2:** **📦 Module SDK 自己登録基盤** — `MODULE_INFO` スキーマ拡張（module_id・entrypoint・status・package_path 等）。`ModuleRegistry.export_registry()` で registry スナップショットを生成。Development Studio に "Module SDK" タブ追加。  
-**v5.1 Phase 1:** **✅ Approval Center** — AI CEO・自動化・DevStudio からのアクションをレビューする人間承認ゲートウェイ。自動実行なし。  
-**v5.0 Beta Phase 2:** **🧠 AI CEO Core** — OSの全データを横断分析し、健全度・優先度・リスク・機会・推奨アクションを提示するエグゼクティブ決定レイヤー。外部API不使用・自動実行なし・推奨のみ。  
-**v5.0 Beta Phase 1:** **🛠️ Development Studio** — ロードマップ・リリース・決定ログ・ミーティングノートを管理するOS開発の司令塔。
+**v5.2 Phase 4-5:** **📊 Google Sheets 本番シート同期** — `run_production_sync()` が KPI / Revenue / Notes の3シートに upsert 同期（追加+更新のみ、削除なし）。`SHEET_MAPPINGS` を実データ構造に合わせて全面修正。`extract_flat_row()` でネスト構造を自動フラット化（kpi_targets の targets/actuals / revenue_expense の today / note_articles の score ネスト）。`write_sheet_upsert()` でヘッダー行自動初期化・key_field によるupsert。dry-run プレビュー → 確認チェックボックス → live sync のフロー。`allow_write=True` は UI ボタン経由のみ（コミット済みコードに含まない）。
+**v5.2 Phase 4-4:** **✏️ Google Sheets テストシート書き込み** — `run_test_write()` が孤立テストシートに 1 行だけ追記（`_phase`・`_ts`・`_source`・`_status`）。本番シート（KPI / Revenue / Notes / SNS / Sales）は `_PRODUCTION_WORKSHEETS` でブロック。`allow_write=True` は UI ボタン経由のみ（コミット済みコードに含まない）。Dev Studio Tab 10 に Phase 4-4 パネル追加（ドライランプレビュー → チェックボックス確認 → 書き込み実行 → ロールバック手順）。ヘルスチェック書き込みガードのバグ修正（`write_enabled` → `allow_write` チェック）。
+**v5.2 Phase 4-3:** **✅ Google Sheets ライブ読み取り接続確認** — `test_read_connection()` を実際のスプレッドシートに対して実行し、`gspread` + サービスアカウント接続を確認。`load_merged_settings()` 経由でマージ設定を使用。KPI シート読み取り成功。`allow_write=False` 維持。コミット済み `auth_mode=disabled` 変更なし。フェーズラベルを `sheet_reader.py`・`sheet_writer.py`・`sync_executor.py` で更新（ロジック変更なし）。
+**v5.2 Phase 4-2:** **🔌 Google Sheets ローカル設定上書き & 読み取り接続テスト** — `config/workspace_local.json`（git除外）でコミット済み設定を実行時に上書き可能。`auth_mode`・`service_account_file`・`spreadsheet_id`・`worksheet_name` をローカルのみで設定。`load_merged_settings()` がコミット設定とローカル上書きをマージ。Dev Studio Tab 10 に Phase 4-2 セクション（ローカル設定状態・依存チェック・認証ファイル・接続テストボタン・JSONテンプレート）。書き込みは無効（`allow_write=False`）。`auth_mode=disabled` でもすべての機能が動作します。
+**v5.2 Phase 4-1:** **🔌 Google Sheets 読み取り専用接続** — `build_client()` が実際の `gspread.Client` を構築（service_account モード）。`read_sheet()` がライブAPIを呼び出し。`test_read_connection()` で読み取り専用エンドツーエンドテスト。`write_rows()` に 4 つ目のロック `allow_write=False` 追加（Phase 4-1 は読み取り専用）。Dev Studio Tab 10 に Phase 4-1 セクション追加（依存パッケージ・認証ファイル・接続テストボタン）。認証情報はリポジトリ不可。`auth_mode=disabled` のままでもすべての機能が動作します。
+**v5.2 Phase 3:** **🔒 Google Sheets 認証安全性 & gspread 準備完了** — `credentials/` フォルダ（`.gitkeep` のみ追跡、実JSONは`.gitignore`で除外）。`docs/google_sheets_setup.md` セットアップガイド。`sync_validator` に4関数追加: `check_gitignore_protections()`・`check_credentials_gitkeep()`・`check_phase3_dependencies()`（importlib.metadata で循環インポートなし）・`get_phase3_readiness()`（6項目複合チェック）。Dev Studio Tab 10 に Phase 3 準備状況チェックリスト追加（🔒安全必須 / 📦オプション）。`auth_mode=disabled` 維持。Phase 4+ でgspreadライブ統合予定。
+**v5.2 Phase 2:** **🔗 Google Sheets Connector 基盤** — 5モジュール追加: `google_auth.py`（認証モード設定、デフォルト`disabled`、認証情報はリポジトリに保存しない）、`sheet_reader.py`（読み取り抽象、`disabled`時はサンプルデータ）、`sheet_writer.py`（トリプルロック書き込みガード: `auth_mode != disabled` AND `dry_run=False` AND `manual_execute=True`）、`sheet_diff.py`（ローカルJSONとシートの差分: added/updated/removed/conflicts/unchanged）、`sync_executor.py`（オーケストレーター: プレビュー・差分・実行）。Phase 3 で認証安全性確認完了。Phase 4+ でgspreadライブ統合予定。
+**v5.2 Phase 1:** **🔄 Google Workspace Sync 基盤** — ローカルJSON → Google Sheets マッピング。手動同期のみ。ドライランデフォルト。Phase 1はローカルデータ読み取り・プレビュー生成のみ（外部API不使用）。
+**📦 Module SDK 自己登録基盤** — `MODULE_INFO` スキーマ拡張（module_id・entrypoint・status・package_path 等）。`ModuleRegistry.export_registry()` で registry スナップショットを生成。Development Studio に "Module SDK" タブ追加。
+**✅ Approval Center** — AI CEO・自動化・DevStudio からのアクションをレビューする人間承認ゲートウェイ。自動実行なし。
+**🧠 AI CEO Core** — OSの全データを横断分析し、健全度・優先度・リスク・機会・推奨アクションを提示するエグゼクティブ決定レイヤー。外部API不使用・自動実行なし・推奨のみ。
+**🛠️ Development Studio** — ロードマップ・リリース・決定ログ・ミーティングノートを管理するOS開発の司令塔。
 
-**Creator Factory OS** は、ソロクリエイターのための統合型デイリーオペレーティングシステムです。  
-毎朝アプリを開くと **Mission Control** が起動し、今日のKPI・タスク・工場状態・財務スナップショットを一画面で確認できます。  
+**Creator Factory OS** は、ソロクリエイターのための統合型デイリーオペレーティングシステムです。
+毎朝アプリを開くと **Mission Control** が起動し、今日のKPI・タスク・工場状態・財務スナップショットを一画面で確認できます。
 各工場（AI動画工場・note・SNS・営業・会計）へのワンクリックナビゲーションで、作業を即座に開始できます。
 
-> **ベース技術:** Python + Streamlit + OpenAI — ローカルファースト、外部APIは最小限。  
+> **ベース技術:** Python + Streamlit + OpenAI — ローカルファースト、外部APIは最小限。
+> **現在のバージョン情報:** `src/core/version.py` の `OS_VERSION` / `OS_CODENAME` を単一の基準にしています。
 > **前バージョン名:** AI動画工場 (v4.1まで)
 
 ---
@@ -46,8 +47,8 @@
 | **Step 3** | ブラウザが自動で `http://localhost:8501` を開く |
 | **Step 4** | サイドバーから **🎯 Mission Control** を選択して今日の作業を開始 |
 
-> ショートカットがない場合は `create_desktop_shortcut.ps1` を右クリック → **PowerShell で実行**  
-> 環境確認: `check_environment.bat`  
+> ショートカットがない場合は `create_desktop_shortcut.ps1` を右クリック → **PowerShell で実行**
+> 環境確認: `check_environment.bat`
 > 全ユーティリティ: [README_UTILITIES.md](README_UTILITIES.md)
 
 ---
@@ -139,7 +140,7 @@ streamlit run app.py
 │  HQ Layer — src/hq/                          [v4.2 NEW]        │
 │  kpi_manager  |  task_manager  |  factory_status  |  daily_report│
 ├─────────────────────────────────────────────────────────────────┤
-│  Agent Layer — src/agents/                   [v4.1]            │
+│  Agent Layer — src/agents/                                     │
 │  ProducerAgent → DirectorAgent → ScriptAgent                   │
 │  → PromptAgent → EditorAgent → PublisherAgent                  │
 ├─────────────────────────────────────────────────────────────────┤
@@ -181,9 +182,9 @@ streamlit run app.py
 
 ```
 Creator Factory OS (AI動画工場)/
-├── app.py                         # Streamlit エントリポイント — v4.2 Creator Factory OS
+├── app.py                         # Streamlit エントリポイント
 ├── pages/
-│   ├── 17_Mission_Control.py      # 🎯 Mission Control（日次司令塔）       [v4.2 NEW]
+│   ├── 17_Mission_Control.py      # 🎯 Mission Control（日次司令塔）
 │   ├── 1_Script.py                # 🎬 台本生成
 │   ├── 2_Subtitles.py             # 🔤 字幕生成
 │   ├── 3_Assembly.py              # ✂️ 動画組立
@@ -201,27 +202,27 @@ Creator Factory OS (AI動画工場)/
 │   ├── 15_Project_Manager.py      # 📁 プロジェクト管理
 │   └── 16_AI_Studio.py            # 🤖 AI Studio
 ├── src/
-│   ├── hq/                        # [v4.2] Mission Control データ層
+│   ├── hq/                        # Mission Control データ層
 │   │   ├── kpi_manager.py
 │   │   ├── task_manager.py
 │   │   ├── factory_status.py
 │   │   └── daily_report.py
-│   ├── agents/                    # [v4.1] マルチエージェントパイプライン
+│   ├── agents/                    # マルチエージェントパイプライン
 │   ├── core/                      # AI生成パイプライン（OpenAI）
 │   ├── utils/                     # 設定・マネージャー群
 │   ├── pipeline/                  # 制作バリデーション
 │   ├── director/                  # AI演出計画
 │   └── providers/                 # 生成プロバイダー抽象化
 ├── config/
-│   ├── kpi_targets.json           # [v4.2] 日次KPI目標・実績
-│   ├── daily_tasks.json           # [v4.2] 日次タスクリスト
-│   ├── factory_status.json        # [v4.2] 工場ステータス
-│   ├── revenue_expense.json       # [v4.2] 財務データ
+│   ├── kpi_targets.json           # 日次KPI目標・実績
+│   ├── daily_tasks.json           # 日次タスクリスト
+│   ├── factory_status.json        # 工場ステータス
+│   ├── revenue_expense.json       # 財務データ
 │   ├── settings.json              # スタジオ設定
 │   ├── characters.json            # キャラクターデータ
 │   └── backgrounds.json           # 背景データ
 ├── reports/
-│   └── daily/                     # [v4.2] 日次レポートエクスポート先
+│   └── daily/                     # 日次レポートエクスポート先
 ├── project/                       # 生成済みエピソード（.gitignore）
 ├── assets/                        # 素材ライブラリ
 ├── scripts/

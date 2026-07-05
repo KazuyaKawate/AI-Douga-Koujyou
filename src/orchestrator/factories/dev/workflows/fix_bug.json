@@ -1,0 +1,115 @@
+{
+  "name": "dev.fix_bug",
+  "description": "バグ修正案を生成して unified diff で出力する（ファイル変更なし）",
+  "version": "1.0.0",
+  "steps": [
+    {
+      "step_id": "read_file",
+      "step_type": "file_read",
+      "name": "バグファイル読み込み",
+      "depends_on": [],
+      "config": {
+        "file_path_from_context": "target_file",
+        "output_key": "file_content",
+        "max_lines": 600,
+        "include_line_numbers": true
+      },
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "analyze_bug",
+      "step_type": "ai_task",
+      "name": "バグ原因分析",
+      "depends_on": ["read_file"],
+      "config": {
+        "task_type": "analysis",
+        "output_key": "bug_analysis",
+        "prompt": "以下のコードのバグを分析してください。\n\n【バグ報告・修正指示】\n{instruction}\n\n【対象ファイル】\n{file_content}\n\n【分析内容】\n1. バグの根本原因（どの行・どのロジックが問題か）\n2. バグが発生する条件（再現手順）\n3. 影響範囲（他のファイル・関数への波及）\n4. 修正アプローチ（最小変更で安全に直す方法）\n5. 修正後に確認すべき回帰リスク\n\n箇条書きで簡潔に記述してください。"
+      },
+      "retry_max": 1,
+      "on_failure": "abort"
+    },
+    {
+      "step_id": "generate_fix",
+      "step_type": "ai_task",
+      "name": "修正コード生成",
+      "depends_on": ["read_file", "analyze_bug"],
+      "config": {
+        "task_type": "writing",
+        "output_key": "modified_code",
+        "prompt": "以下のバグを修正した完全なファイル内容を出力してください。\n\n【修正指示】\n{instruction}\n\n【バグ分析結果】\n{bug_analysis}\n\n【元のファイル内容（行番号付き）】\n{file_content}\n\n【重要なルール】\n- 修正後のファイル全体を ```python（または適切な言語）ブロックで出力する\n- コードを省略しない（# ... 省略 ... は禁止）\n- 修正箇所に # FIXED: 理由 のコメントを1行添える\n- 元のコードスタイル・インデントを維持する\n- 最小限の変更に留める（バグ修正に無関係なリファクタリングは行わない）\n\n```python\n# ここに修正済みの完全なコードを出力\n```"
+      },
+      "retry_max": 2,
+      "on_failure": "abort"
+    },
+    {
+      "step_id": "compute_diff",
+      "step_type": "diff_output",
+      "name": "unified diff 生成",
+      "depends_on": ["generate_fix"],
+      "config": {
+        "original_from_context": "file_content_raw",
+        "modified_from_context": "modified_code",
+        "file_path_from_context": "target_file",
+        "output_key": "unified_diff",
+        "context_lines": 5,
+        "save_to_file": true,
+        "output_dir": "output/dev",
+        "extract_code_block": true
+      },
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "generate_tests",
+      "step_type": "ai_task",
+      "name": "テストコマンド生成",
+      "depends_on": ["compute_diff"],
+      "config": {
+        "task_type": "analysis",
+        "output_key": "test_commands",
+        "prompt": "以下のバグ修正に対するテスト戦略とコマンドを生成してください。\n\n【修正内容サマリー】\n{bug_analysis}\n\n【差分（unified diff）】\n{unified_diff}\n\n【必要な出力】\n## テスト計画\n\n### 1. ユニットテスト例\n```python\nimport pytest\n# 修正したバグを検証するテスト\ndef test_bug_fix():\n    ...\n```\n\n### 2. 実行コマンド\n```bash\n# 基本\npython -m pytest tests/ -v\n\n# 特定テスト\npython -m pytest tests/test_specific.py::test_function -v\n```\n\n### 3. 手動確認チェックリスト\n- [ ] 修正前に再現したバグが発生しないこと\n- [ ] 関連機能が壊れていないこと\n- [ ] エッジケース（空値・大量データ）で問題ないこと"
+      },
+      "retry_max": 1,
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "build_report",
+      "step_type": "ai_task",
+      "name": "最終レポート統合",
+      "depends_on": ["compute_diff", "generate_tests"],
+      "config": {
+        "task_type": "writing",
+        "output_key": "dev_report",
+        "prompt": "以下の情報を統合して、開発者向けの完全な修正レポートを作成してください。\n\n【修正対象】{target_file}\n【指示】{instruction}\n\n---\n## バグ分析\n{bug_analysis}\n\n---\n## unified diff（適用すべき変更）\n```diff\n{unified_diff}\n```\n\n---\n## テスト計画\n{test_commands}\n\n---\n上記を以下の形式でまとめてください:\n\n# バグ修正レポート\n\n**ファイル**: `{target_file}`\n**生成日時**: （現在時刻）\n\n## 修正サマリー\n（1〜3文で修正内容を要約）\n\n## 変更箇所\n（diff の主要な変更点を箇条書き）\n\n## 適用手順\n1. 以下の diff を確認する\n2. 問題なければ手動で適用（または別ツールで適用）\n3. テストを実行して動作確認\n\n## unified diff\n```diff\n{unified_diff}\n```\n\n## テスト\n{test_commands}"
+      },
+      "retry_max": 1,
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "save_report",
+      "step_type": "file_save",
+      "name": "修正レポートを保存",
+      "depends_on": ["build_report"],
+      "config": {
+        "output_dir": "output/dev",
+        "value_from_context": "dev_report",
+        "filename_prefix": "fix_report",
+        "extension": ".md",
+        "append_timestamp": true
+      },
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "save_memory",
+      "step_type": "memory_update",
+      "name": "Memory 保存",
+      "depends_on": ["build_report"],
+      "config": {
+        "key": "last_bug_fix",
+        "value_from_context": "dev_report",
+        "scope": "global"
+      },
+      "on_failure": "continue"
+    }
+  ]
+}

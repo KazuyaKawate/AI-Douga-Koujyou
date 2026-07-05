@@ -1,0 +1,12 @@
+{
+  "factory_id": "autonomous",
+  "name": "Autonomous Improvement Factory",
+  "description": "AIOS の自律改善サイクルを管理する。分析・計画・Patch生成・レビューを自動実行する。",
+  "version": "1.0.0",
+  "default_context": {
+    "period_days": "30",
+    "max_actions": "5",
+    "dry_run": "true",
+    "auto_approve": "false"
+  }
+}

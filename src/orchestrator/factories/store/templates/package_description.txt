@@ -1,0 +1,30 @@
+## {name} v{version}
+
+**作者**: {author}
+**カテゴリ**: {category}
+**価格**: {price}
+
+### 概要
+{description}
+
+### 機能
+- Agent ID: {agent_id}
+- 対応タスク: {task_type}
+- 含まれる Workflow: {workflow_name:なし}
+
+### タグ
+{tags}
+
+### インストール方法
+```
+# AIOS CLI（将来実装予定）
+aios store install {package_id}
+
+# Python API
+from src.agent_store import get_store_registry
+store = get_store_registry()
+store.install(Path("path/to/{package_id}.apagent"))
+```
+
+### 評価
+⭐ {rating} / 5.0  （{downloads} ダウンロード）

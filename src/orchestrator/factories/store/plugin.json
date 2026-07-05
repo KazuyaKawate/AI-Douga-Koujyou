@@ -1,0 +1,13 @@
+{
+  "factory_id": "store",
+  "name": "Agent Store Factory",
+  "version": "1.0.0",
+  "description": "Agent パッケージの管理・Marketplace 連携 Factory。Agent の Export / Import / 検索 / バージョン管理を行う。",
+  "author": "AIOS Team",
+  "default_context": {
+    "agent_id": "",
+    "package_path": "",
+    "search_query": "",
+    "author": "AIOS Team"
+  }
+}

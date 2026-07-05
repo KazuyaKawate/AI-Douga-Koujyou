@@ -1,0 +1,15 @@
+{
+  "factory_id": "social",
+  "name": "Social Media Factory",
+  "version": "1.0.0",
+  "description": "SNS マルチプラットフォーム対応コンテンツ生成 Factory。1つのトピックから X / Threads / note / Instagram / TikTok 向けコンテンツを自動生成する。",
+  "author": "AIOS Team",
+  "default_context": {
+    "topic": "",
+    "tone": "専門的・信頼感",
+    "target": "ビジネス層・クリエイター",
+    "keywords": "",
+    "brand_name": "AIOS",
+    "cta": "詳細はプロフィールリンクから"
+  }
+}

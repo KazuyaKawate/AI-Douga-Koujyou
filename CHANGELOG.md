@@ -1,14 +1,46 @@
 # Changelog — Creator Factory OS (旧: AI動画工場)
 
-All notable changes to this project are documented in this file.  
-Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).  
+All notable changes to this project are documented in this file.
+Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versions are cumulative; each release builds on the previous stable base.
+
+Current release source of truth: `src/core/version.py` (`OS_VERSION = "5.2"`, `OS_CODENAME = "Google Workspace Sync Foundation"`).
+
+---
+
+## [v5.2 Release Candidate] — 2026-07-05 — AIOS Stabilization RC
+
+**Codename:** Google Workspace Sync Foundation RC
+**Upgrade path:** v5.2 Phase 4-5 → v5.2 RC (stabilization, no feature expansion)
+
+### What changed
+
+- Stabilized hard runtime API mismatches across AI router, task types, workflow executors, and kernel discovery.
+- Added smoke coverage for syntax, JSON validity, kernel startup, workflow registry, virtual AI router, Streamlit import, and safe workflow execution.
+- Added filesystem safety for workflow file operations and centralized atomic JSON writes for JSON managers.
+- Aligned runtime and documentation version labels on `src/core/version.py`.
+- Reworked the main dashboard workflow layout into grouped Creator Factory, Business Factories, and AIOS Control sections.
+- Hardened Google Workspace sync defaults: committed `auth_mode=disabled`, optional Google packages remain optional, live sync is blocked until credentials and dependencies are explicitly available.
+
+### Verification
+
+- Python syntax check: passed.
+- JSON validation: passed.
+- Pytest smoke suite: passed.
+- Streamlit startup: passed on `http://localhost:8501`.
+- Browser dashboard check: passed with grouped workflow links visible and no visible RuntimeError/Traceback.
+
+### Known limitations
+
+- Google Sheets live production sync requires local credentials plus `gspread` / `google-auth`; committed defaults remain local-first and disabled.
+- Media generation remains manual/local-export oriented; paid image, video, and voice APIs are not enabled by default.
+- Some deeper workflow integrations are smoke-tested, not yet covered by full end-to-end production tests.
 
 ---
 
 ## [v5.2 Phase 4-5] — 2026-06-28 — Google Sheets 本番シート同期（Production Sync）
 
-**Codename:** Production Sync  
+**Codename:** Production Sync
 **Upgrade path:** v5.2 Phase 4-4 → v5.2 Phase 4-5 (additive, no breaking changes)
 
 ### What changed
@@ -32,7 +64,7 @@ Versions are cumulative; each release builds on the previous stable base.
 
 ## [v5.2 Phase 4-4] — 2026-06-28 — Google Sheets Test Worksheet Append
 
-**Codename:** Test Worksheet Append  
+**Codename:** Test Worksheet Append
 **Upgrade path:** v5.2 Phase 4-3 → v5.2 Phase 4-4 (additive, no breaking changes)
 
 ### What changed
@@ -56,7 +88,7 @@ Versions are cumulative; each release builds on the previous stable base.
 
 ## [v5.2 Phase 4-3] — 2026-06-28 — Google Sheets Live Read-Only Connection Verified
 
-**Codename:** Live Read-Only Connection  
+**Codename:** Live Read-Only Connection
 **Upgrade path:** v5.2 Phase 4-2 → v5.2 Phase 4-3 (no breaking changes, no new dependencies)
 
 ### What changed
@@ -78,7 +110,7 @@ Versions are cumulative; each release builds on the previous stable base.
 
 ## [v5.2 Phase 4-2] — 2026-06-27 — Google Sheets Local Config Override
 
-**Codename:** Google Sheets Local Config Override  
+**Codename:** Google Sheets Local Config Override
 **Upgrade path:** v5.2 Phase 4-1 → v5.2 Phase 4-2 (additive, no breaking changes)
 
 ### Added
@@ -109,7 +141,7 @@ Versions are cumulative; each release builds on the previous stable base.
 
 ## [v5.2 Phase 4-1] — 2026-06-27 — Google Sheets Read-Only Connection
 
-**Codename:** Google Sheets Read-Only Connection  
+**Codename:** Google Sheets Read-Only Connection
 **Upgrade path:** v5.2 Phase 3 → v5.2 Phase 4-1 (additive, no breaking changes)
 
 ### Added
@@ -138,7 +170,7 @@ Versions are cumulative; each release builds on the previous stable base.
 
 ## [v5.2 Phase 3] — 2026-06-27 — Google Sheets Credential Safety & gspread Readiness
 
-**Codename:** Google Sheets Credential Safety & gspread Readiness  
+**Codename:** Google Sheets Credential Safety & gspread Readiness
 **Upgrade path:** v5.2 Phase 2 → v5.2 Phase 3 (additive, no breaking changes)
 
 ### Added
@@ -171,7 +203,7 @@ Versions are cumulative; each release builds on the previous stable base.
 
 ## [v5.2 Phase 2] — 2026-06-27 — Google Sheets Connector Foundation
 
-**Codename:** Google Sheets Connector Foundation  
+**Codename:** Google Sheets Connector Foundation
 **Upgrade path:** v5.2 Phase 1 → v5.2 Phase 2 (additive, no breaking changes)
 
 ### Added
@@ -203,7 +235,7 @@ Versions are cumulative; each release builds on the previous stable base.
 
 ## [v5.2 Phase 1] — 2026-06-27 — Google Workspace Sync Foundation
 
-**Codename:** Google Workspace Sync Foundation  
+**Codename:** Google Workspace Sync Foundation
 **Upgrade path:** v5.1 Phase 2 → v5.2 Phase 1 (additive, no breaking changes)
 
 ### Added
@@ -237,7 +269,7 @@ Versions are cumulative; each release builds on the previous stable base.
 
 ## [v5.1 Phase 2] — 2026-06-27 — Module SDK Self-Registration Foundation
 
-**Codename:** Module SDK Self-Registration Foundation  
+**Codename:** Module SDK Self-Registration Foundation
 **Upgrade path:** v5.1 Phase 1 (Approval Center) → Phase 2 (additive, no breaking changes)
 
 ### Added
@@ -263,7 +295,7 @@ Versions are cumulative; each release builds on the previous stable base.
 
 ## [v5.1 Phase 1] — 2026-06-27 — Module SDK + Approval Center
 
-**Codename:** Module SDK + Approval Center Foundation  
+**Codename:** Module SDK + Approval Center Foundation
 **Upgrade path:** v5.0-beta Phase 2 (AI CEO Core) → v5.1 Phase 1 (additive, no breaking changes)
 
 ### Added
@@ -297,7 +329,7 @@ Versions are cumulative; each release builds on the previous stable base.
 
 ## [v5.0-beta Phase 2] — 2026-06-27 — AI CEO Core
 
-**Codename:** AI CEO Core  
+**Codename:** AI CEO Core
 **Upgrade path:** v5.0-beta (Development Studio) → Phase 2 (additive, no breaking changes)
 
 ### Added
@@ -333,7 +365,7 @@ Versions are cumulative; each release builds on the previous stable base.
 
 ## [v5.0-beta] — 2026-06-27 — Development Studio
 
-**Codename:** Development Studio  
+**Codename:** Development Studio
 **Upgrade path:** v4.8 → v5.0-beta (additive, no breaking changes)
 
 ### Added
@@ -555,7 +587,7 @@ Creator Factory OS is now **Project-centric**: Projects are the top-level unit; 
 
 ## [v4.4.1] — 2026-06-27 — Claude Approval Assistant
 
-**Codename:** Approval Assistant  
+**Codename:** Approval Assistant
 **Upgrade path:** v4.4 → v4.4.1 (additive, no breaking changes)
 
 ### Added
@@ -586,7 +618,7 @@ Creator Factory OS is now **Project-centric**: Projects are the top-level unit; 
 
 ## [v4.4] — 2026-06-27 — SNS Factory
 
-**Codename:** SNS Factory  
+**Codename:** SNS Factory
 **Upgrade path:** v4.3 → v4.4 (additive, no breaking changes)
 
 ### Added
@@ -618,7 +650,7 @@ Creator Factory OS is now **Project-centric**: Projects are the top-level unit; 
 
 ## [v4.3] — 2026-06-27 — Note Factory
 
-**Codename:** Note Factory  
+**Codename:** Note Factory
 **Upgrade path:** v4.2 → v4.3 (additive, no breaking changes)
 
 ### Added
@@ -636,7 +668,7 @@ Creator Factory OS is now **Project-centric**: Projects are the top-level unit; 
 
 ## [v4.2] — 2026-06-27 — Dashboard Factory
 
-**Codename:** Dashboard Factory  
+**Codename:** Dashboard Factory
 **Upgrade path:** v4.1 → v4.2 (additive, no breaking changes)
 
 ### Added
@@ -666,7 +698,7 @@ Creator Factory OS is now **Project-centric**: Projects are the top-level unit; 
 
 ## [v4.1] — 2026-06-27 — Multi-Agent Production Studio
 
-**Codename:** Multi-Agent Production Studio  
+**Codename:** Multi-Agent Production Studio
 **See:** `RELEASE_NOTES_v4.1.md` for full details
 
 ### Added

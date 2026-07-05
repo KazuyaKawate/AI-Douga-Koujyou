@@ -3,6 +3,7 @@ from pathlib import Path
 
 from src.utils.config import PROJECT_ROOT
 
+from src.utils.json_store import save_json_atomic
 CONFIG_PATH = PROJECT_ROOT / "config" / "settings.json"
 
 DEFAULTS: dict = {
@@ -47,9 +48,7 @@ def load_settings() -> dict:
 
 def save_settings(settings: dict) -> None:
     CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    CONFIG_PATH.write_text(
-        json.dumps(settings, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
+    save_json_atomic(CONFIG_PATH, settings)
 
 
 def _deep_merge(base: dict, override: dict) -> dict:

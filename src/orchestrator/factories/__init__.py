@@ -6,6 +6,7 @@ from .writing import WritingFactory
 from .video import VideoFactory
 from .research import ResearchFactory
 from .marketing import MarketingFactory
+from src.factories.note.factory import NoteFactory
 
 FACTORY_REGISTRY: dict[str, type[BaseFactory]] = {
     "creator":   CreatorFactory,
@@ -15,6 +16,7 @@ FACTORY_REGISTRY: dict[str, type[BaseFactory]] = {
     "video":     VideoFactory,
     "research":  ResearchFactory,
     "marketing": MarketingFactory,
+    "note":      NoteFactory,
 }
 
 __all__ = [
@@ -26,5 +28,6 @@ __all__ = [
     "VideoFactory",
     "ResearchFactory",
     "MarketingFactory",
+    "NoteFactory",
     "FACTORY_REGISTRY",
 ]

@@ -25,6 +25,7 @@ from datetime import datetime
 from pathlib import Path
 
 from src.agents.base_agent import BaseAgent, Task, TaskQueue
+from src.utils.json_store import save_json_atomic
 
 
 class PublisherAgent(BaseAgent):
@@ -78,7 +79,7 @@ class PublisherAgent(BaseAgent):
         export_dir = ep_dir / "export"
         export_dir.mkdir(parents=True, exist_ok=True)
         rp = export_dir / "publish_report.json"
-        rp.write_text(json.dumps(publish_report, ensure_ascii=False, indent=2), encoding="utf-8")
+        save_json_atomic(rp, publish_report)
 
         output = {
             "episode_id":         episode_id,

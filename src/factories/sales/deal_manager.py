@@ -3,6 +3,7 @@ import json
 import uuid
 from datetime import date, datetime
 from pathlib import Path
+from src.utils.json_store import save_json_atomic
 
 CONFIG_PATH = Path(__file__).parent.parent.parent.parent / "config" / "sales_deals.json"
 
@@ -51,7 +52,7 @@ def load_deals() -> dict:
 
 
 def save_deals(data: dict) -> None:
-    CONFIG_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    save_json_atomic(CONFIG_PATH, data)
 
 
 def create_deal(

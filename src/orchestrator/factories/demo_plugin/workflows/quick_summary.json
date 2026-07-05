@@ -1,0 +1,20 @@
+{
+  "name": "demo_plugin.quick_summary",
+  "description": "Plugin Factory から自動ロードされた Workflow のデモ。トピックを要約する。",
+  "version": "1.0.0",
+  "steps": [
+    {
+      "step_id": "summary",
+      "step_type": "ai_task",
+      "name": "クイックサマリ生成",
+      "depends_on": [],
+      "config": {
+        "task_type": "writing",
+        "output_key": "summary",
+        "prompt": "以下のトピックを{language}で3行にまとめてください。\n\nトピック: {topic}"
+      },
+      "retry_max": 1,
+      "on_failure": "abort"
+    }
+  ]
+}

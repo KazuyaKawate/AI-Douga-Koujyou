@@ -1,5 +1,5 @@
 """
-Mission Control — Creator Factory OS v4.2
+Mission Control — Creator Factory OS
 Daily command center: KPI, tasks, factory status, finance, AI CEO message.
 No external API calls. Rule-based AI message generation.
 """
@@ -24,8 +24,9 @@ from src.hq.factory_status import (
     FACTORIES, FACTORY_ICONS, STATUS_COLORS,
 )
 from src.hq.daily_report import generate_report, export_report
+from src.utils.json_store import save_json_atomic
+from src.core.version import get_version_label
 
-APP_VERSION = "4.8"
 TODAY = date.today()
 
 st.set_page_config(page_title="Mission Control | Creator Factory OS", page_icon="🎯", layout="wide")
@@ -35,8 +36,8 @@ st.set_page_config(page_title="Mission Control | Creator Factory OS", page_icon=
 st.title("🎯 Creator Factory OS")
 h1, h2, h3 = st.columns(3)
 h1.caption(f"📅 {TODAY.strftime('%Y年%m月%d日 (%A)')}")
-h2.caption(f"🔨 Build: v{APP_VERSION} Automation Factory")
-h3.caption(f"✅ Status: v{APP_VERSION} Automation Factory")
+h2.caption(f"🔨 Build: {get_version_label()}")
+h3.caption("✅ Status: Local-first / no external API by default")
 
 st.divider()
 
@@ -313,7 +314,7 @@ with st.expander("財務データを更新する", expanded=False):
             "expense": new_month_exp,
             "breakeven": breakeven,
         }
-        finance_path.write_text(json.dumps(finance_data, ensure_ascii=False, indent=2), encoding="utf-8")
+        save_json_atomic(finance_path, finance_data)
         st.success("財務データを保存しました")
         st.rerun()
 

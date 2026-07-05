@@ -1,0 +1,32 @@
+{
+  "name": "intelligence.execution_report",
+  "description": "過去の実行履歴を分析して改善レポートを AI が生成する",
+  "version": "1.0.0",
+  "steps": [
+    {
+      "step_id": "analyze",
+      "step_type": "ai_task",
+      "name": "実行レポート生成",
+      "depends_on": [],
+      "config": {
+        "task_type": "analysis",
+        "output_key": "report",
+        "prompt": "AIOS の実行状況を分析して、経営者向けのサマリーレポートを作成してください。\n\n分析期間: {period_days} 日間\n対象: 全 Factory・全 Workflow\n\n以下の観点で分析してください:\n1. 全体的な利用状況（実行回数・成功率）\n2. 最も使われている Workflow トップ5\n3. 問題がある Workflow（失敗率・実行時間）\n4. 今後の改善提案（優先度付き）\n5. 来月の目標設定（定量的）\n\n読みやすいマークダウン形式で出力してください。"
+      },
+      "retry_max": 1,
+      "on_failure": "abort"
+    },
+    {
+      "step_id": "save",
+      "step_type": "memory_update",
+      "name": "レポート保存",
+      "depends_on": ["analyze"],
+      "config": {
+        "key": "last_intelligence_report",
+        "value_from_context": "report",
+        "scope": "global"
+      },
+      "on_failure": "continue"
+    }
+  ]
+}

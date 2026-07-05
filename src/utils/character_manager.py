@@ -6,6 +6,7 @@ from pathlib import Path
 
 from src.utils.config import PROJECT_ROOT
 
+from src.utils.json_store import save_json_atomic
 CHARACTERS_PATH = PROJECT_ROOT / "config" / "characters.json"
 
 GENDER_MAP = {"female": "女性", "male": "男性", "other": "その他"}
@@ -25,9 +26,7 @@ def load_characters() -> dict:
 
 def save_characters(data: dict) -> None:
     CHARACTERS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    CHARACTERS_PATH.write_text(
-        json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
+    save_json_atomic(CHARACTERS_PATH, data)
 
 
 # ── Read ───────────────────────────────────────────────────────────────────────

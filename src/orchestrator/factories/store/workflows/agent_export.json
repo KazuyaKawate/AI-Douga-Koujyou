@@ -1,0 +1,32 @@
+{
+  "name": "store.agent_export",
+  "description": "指定 Agent の説明文を AI で改善してから .apagent としてエクスポートする",
+  "version": "1.0.0",
+  "steps": [
+    {
+      "step_id": "improve_description",
+      "step_type": "ai_task",
+      "name": "Agent説明文の改善",
+      "depends_on": [],
+      "config": {
+        "task_type": "writing",
+        "output_key": "improved_description",
+        "prompt": "以下の Agent の説明文を、Marketplace で魅力的に見えるように改善してください。\n\nAgent ID: {agent_id}\n現在の説明: {description}\n\n【改善のポイント】\n- 何ができるかを具体的に（動詞で始める）\n- ユーザーが得られる価値を明確に\n- 50〜100文字程度で簡潔に\n- 技術的すぎず、ビジネス視点で\n\n改善後の説明文のみ出力してください。"
+      },
+      "retry_max": 1,
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "save_export_log",
+      "step_type": "memory_update",
+      "name": "エクスポートログ保存",
+      "depends_on": ["improve_description"],
+      "config": {
+        "key": "last_exported_agent",
+        "value_from_context": "agent_id",
+        "scope": "global"
+      },
+      "on_failure": "continue"
+    }
+  ]
+}

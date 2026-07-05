@@ -19,10 +19,14 @@ from src.approval.approval_queue import (
 from src.approval.approval_models import STATUS_ICONS, RISK_ICONS, SOURCE_LABELS, RISK_LEVELS
 from src.approval.risk_analyzer import analyze_risk, get_risk_color
 from src.approval.command_preview import preview_action, get_short_summary
+from src.core.version import get_version_label
 
 st.set_page_config(page_title="Approval Center | Creator Factory OS", page_icon="✅", layout="wide")
 st.title("✅ Approval Center")
-st.caption("人間承認ゲートウェイ — すべてのアクションに人間の承認が必要です。自動実行なし。v5.1")
+st.caption(
+    f"人間承認ゲートウェイ — すべてのアクションに人間の承認が必要です。"
+    f"自動実行なし。{get_version_label()}"
+)
 
 # ── Live Inbox aggregation ─────────────────────────────────────────────────────
 

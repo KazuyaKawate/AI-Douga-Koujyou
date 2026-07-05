@@ -4,6 +4,7 @@ import json
 import uuid
 from datetime import datetime
 from pathlib import Path
+from src.utils.json_store import save_json_atomic
 
 ROOT = Path(__file__).parent.parent.parent
 EVENTS_PATH = ROOT / "config" / "factory_events.json"
@@ -64,7 +65,7 @@ def load_events() -> dict:
 
 
 def _save_events(data: dict) -> None:
-    EVENTS_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    save_json_atomic(EVENTS_PATH, data)
 
 
 # ── EventBus ──────────────────────────────────────────────────────────────────

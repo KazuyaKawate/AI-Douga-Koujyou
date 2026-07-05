@@ -316,7 +316,11 @@ def check_credentials_gitkeep() -> tuple[bool, list[str]]:
 
 
 def check_phase3_dependencies() -> dict:
-    """Check gspread and google-auth installation. Never raises, no circular import."""
+    """Check optional Google packages. Never raises, no circular import.
+
+    Sheets readiness requires only gspread + google-auth. google-genai is
+    reported separately for Gemini features and must not block local-first sync.
+    """
     import importlib.metadata as _meta
 
     def _check(pkg: str) -> tuple[bool, str]:
@@ -327,16 +331,26 @@ def check_phase3_dependencies() -> dict:
 
     gspread_ok, gspread_ver = _check("gspread")
     gauth_ok, gauth_ver = _check("google-auth")
+    genai_ok, genai_ver = _check("google-genai")
     missing = [p for p, ok in [("gspread", gspread_ok), ("google-auth", gauth_ok)] if not ok]
+    optional_missing = list(missing)
+    if not genai_ok:
+        optional_missing.append("google-genai")
 
     return {
         "gspread_installed":     gspread_ok,
         "gspread_version":       gspread_ver,
         "google_auth_installed": gauth_ok,
         "google_auth_version":   gauth_ver,
+        "google_genai_installed": genai_ok,
+        "google_genai_version":   genai_ver,
+        "sheets_ready":           gspread_ok and gauth_ok,
         "all_ready":             gspread_ok and gauth_ok,
         "missing":               missing,
+        "optional_missing":       optional_missing,
         "install_hint":          "pip install gspread google-auth" if missing else "",
+        "optional_install_hint":  "pip install gspread google-auth google-genai" if optional_missing else "",
+        "google_genai_hint":      "pip install google-genai" if not genai_ok else "",
     }
 
 
@@ -399,7 +413,7 @@ def get_phase3_readiness(settings: dict | None = None) -> dict:
         "optional": False,
     })
 
-    # 5. gspread / google-auth (optional — needed for Phase 4+)
+    # 5. gspread / google-auth (optional — needed for live Sheets sync)
     deps = check_phase3_dependencies()
     deps_ok = deps["all_ready"]
     if deps_ok:
@@ -417,6 +431,18 @@ def get_phase3_readiness(settings: dict | None = None) -> dict:
         "label":    "gspread / google-auth",
         "ok":       deps_ok,
         "detail":   dep_detail,
+        "optional": True,
+    })
+
+    # 5b. google-genai (optional — needed only for Gemini provider usage)
+    genai_ok = deps["google_genai_installed"]
+    checks.append({
+        "label":    "google-genai",
+        "ok":       genai_ok,
+        "detail":   (
+            f"✅ google-genai {deps['google_genai_version']}" if genai_ok
+            else "📦 未インストール: google-genai — pip install google-genai（Gemini利用時のみ必要）"
+        ),
         "optional": True,
     })
 

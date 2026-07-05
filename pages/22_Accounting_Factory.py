@@ -34,6 +34,7 @@ from src.factories.accounting.subscription_manager import (
 from src.factories.accounting.roi_calculator import calculate_roi, load_settings
 from src.factories.accounting.audit_checker import check_audits, get_audit_summary, AUDIT_LEVELS
 from src.factories.accounting.monthly_report import generate_monthly_report, export_monthly_report
+from src.utils.json_store import save_json_atomic
 
 st.set_page_config(page_title="会計監査工場 | Creator Factory OS", page_icon="💰", layout="wide")
 
@@ -509,7 +510,7 @@ with tabs[4]:
             sd = _json.loads(_sp.read_text(encoding="utf-8")) if _sp.exists() else {}
             sd["break_even_monthly"] = int(new_be)
             sd["large_expense_threshold"] = int(new_thresh)
-            _sp.write_text(_json.dumps(sd, ensure_ascii=False, indent=2), encoding="utf-8")
+            save_json_atomic(_sp, sd)
             st.success("設定を保存しました")
             st.rerun()
         except Exception as exc:

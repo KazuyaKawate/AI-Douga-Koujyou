@@ -11,6 +11,7 @@ from .models import JobStatus, OrchestratorConfig, OrchestratorStatus, WorkflowJ
 from .registry import FactoryRegistry
 from .state import OrchestratorState
 
+from src.utils.json_store import save_json_atomic
 if TYPE_CHECKING:
     from src.workflow.runner import WorkflowRunner
     from src.workflow.models import WorkflowStatus
@@ -417,13 +418,6 @@ class FactoryOrchestrator:
         """data/orchestrator_status.json へ書き出す。例外は無視する。"""
         try:
             self._status_path.parent.mkdir(parents=True, exist_ok=True)
-            self._status_path.write_text(
-                json.dumps(
-                    self._orch_status.to_dict(),
-                    ensure_ascii=False,
-                    indent=2,
-                ),
-                encoding="utf-8",
-            )
+            save_json_atomic(self._status_path, self._orch_status.to_dict())
         except Exception:
             pass

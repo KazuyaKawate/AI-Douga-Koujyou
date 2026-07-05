@@ -7,6 +7,9 @@ from .inbox_poll import InboxPollExecutor
 from .queue_push import QueuePushExecutor
 from .condition import ConditionExecutor
 from .notification import NotificationExecutor
+from .file_save   import FileSaveExecutor
+from .file_read   import FileReadExecutor
+from .diff_output import DiffOutputExecutor
 
 # StepType.value → Executor クラスのレジストリ。
 # 新規 Executor 追加時はここと enums.StepType に登録する。
@@ -19,7 +22,13 @@ EXECUTOR_REGISTRY: dict[str, type[BaseStepExecutor]] = {
     "queue_push":     QueuePushExecutor,
     "condition":      ConditionExecutor,
     "notification":   NotificationExecutor,
+    "file_save":      FileSaveExecutor,
+    "file_read":      FileReadExecutor,
+    "diff_output":    DiffOutputExecutor,
 }
+
+# Register domain-specific executors that extend the core workflow engine.
+import src.factories.note  # noqa: F401
 
 __all__ = [
     "BaseStepExecutor",
@@ -32,5 +41,8 @@ __all__ = [
     "QueuePushExecutor",
     "ConditionExecutor",
     "NotificationExecutor",
+    "FileSaveExecutor",
+    "FileReadExecutor",
+    "DiffOutputExecutor",
     "EXECUTOR_REGISTRY",
 ]

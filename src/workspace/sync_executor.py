@@ -189,7 +189,6 @@ def test_read_connection(settings: dict | None = None) -> dict:
       error         — str | None
       duration_ms   — int
     """
-    import time
     t0 = time.time()
 
     if settings is None:
@@ -276,9 +275,6 @@ def run_test_write(
       duration_ms   — int
       phase         — str
     """
-    import time
-    from datetime import datetime, timezone
-
     t0 = time.time()
 
     if settings is None:
@@ -383,22 +379,30 @@ def run_production_sync(
       duration_ms    — int
       phase          — str
     """
-    from src.workspace.sheets_sync import read_flat_rows, get_mapping
+    from src.workspace.sheets_sync import read_flat_rows
     from src.workspace.sheet_writer import write_sheet_upsert
 
-    import time
     t0 = time.time()
 
     if settings is None:
         settings = load_merged_settings()
 
     auth_cfg = get_auth_config(settings)
+    deps = get_dependency_status()
+    cred_status = get_credential_status(settings)
+    spreadsheet_id = (
+        settings.get("google_sheets", {}).get("spreadsheet_id", "").strip()
+        or settings.get("spreadsheet_id", "").strip()
+    )
 
     base: dict = {
         "ok":            False,
         "dry_run":       dry_run,
         "executed":      False,
         "auth_mode":     auth_cfg["auth_mode"],
+        "credential_ready": cred_status["ready"],
+        "deps_ready":    deps["all_ready"],
+        "spreadsheet_id_set": bool(spreadsheet_id),
         "targets":       [],
         "total_appended": 0,
         "total_updated":  0,
@@ -407,6 +411,32 @@ def run_production_sync(
         "duration_ms":   0,
         "phase":         "Phase 4-5 (本番シート upsert 同期)",
     }
+
+    if not dry_run:
+        blockers: list[str] = []
+        if auth_cfg["auth_mode"] == "disabled":
+            blockers.append(
+                "auth_mode=disabled のため本番同期は無効です。"
+                "config/workspace_local.json で service_account を設定した場合のみ実行できます。"
+            )
+        if not manual_execute:
+            blockers.append("manual_execute=False のため実行できません。")
+        if not allow_write:
+            blockers.append("allow_write=False のため実行できません。")
+        if not deps["all_ready"]:
+            blockers.append(
+                f"Google Sheets 依存パッケージ不足: {', '.join(deps['missing'])}。"
+                f"{deps['install_hint']} を実行してください。"
+            )
+        if not cred_status["ready"]:
+            blockers.append(f"認証準備未完了: {cred_status['label']}")
+        if not spreadsheet_id:
+            blockers.append("spreadsheet_id 未設定。config/workspace_local.json に設定してください。")
+
+        if blockers:
+            base["error"] = " / ".join(blockers)
+            base["duration_ms"] = int((time.time() - t0) * 1000)
+            return base
 
     # 有効ターゲットを取得し Phase 4-5 対象のみに絞る
     all_targets = get_enabled_targets(settings)

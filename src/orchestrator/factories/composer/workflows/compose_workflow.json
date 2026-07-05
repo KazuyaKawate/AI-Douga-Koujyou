@@ -1,0 +1,32 @@
+{
+  "name": "composer.compose_workflow",
+  "description": "目的から Workflow を AI で自動設計して登録する",
+  "version": "1.0.0",
+  "steps": [
+    {
+      "step_id": "plan",
+      "step_type": "ai_task",
+      "name": "Workflow プラン生成",
+      "depends_on": [],
+      "config": {
+        "task_type": "analysis",
+        "output_key": "workflow_plan",
+        "prompt": "以下の目的を達成するために、どのような AI Workflow が必要かを設計してください。\n\n【目的】\n{goal}\n\n【設計の視点】\n1. この目的を達成するためのステップを分解する\n2. 各ステップで必要な AI タスク（調査・執筆・分析・生成）を特定する\n3. ステップ間の依存関係を整理する\n4. どの Factory/Agent が最適かを提案する\n\n【出力形式】\n## Workflow 設計\n\n### 目的の分解\n...\n\n### 必要なステップ（順序付き）\n1. [ステップ名]: 目的、使用 Agent/Factory\n2. ...\n\n### 推奨 Factory の組み合わせ\n- Factory A → B → C\n\n### 期待される成果物\n- 成果物1\n- 成果物2\n\n### 自動化のポイント\n..."
+      },
+      "retry_max": 1,
+      "on_failure": "abort"
+    },
+    {
+      "step_id": "save_plan",
+      "step_type": "memory_update",
+      "name": "プラン保存",
+      "depends_on": ["plan"],
+      "config": {
+        "key": "last_composed_plan",
+        "value_from_context": "workflow_plan",
+        "scope": "global"
+      },
+      "on_failure": "continue"
+    }
+  ]
+}

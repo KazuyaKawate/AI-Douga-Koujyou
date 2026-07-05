@@ -2,6 +2,7 @@
 import json
 from datetime import date, timedelta
 from pathlib import Path
+from src.utils.json_store import save_json_atomic
 
 SCHEDULE_PATH = Path(__file__).parent.parent.parent.parent / "config" / "sns_schedule.json"
 
@@ -19,7 +20,7 @@ def load_schedule() -> dict:
 
 def _save(data: dict) -> None:
     SCHEDULE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    SCHEDULE_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    save_json_atomic(SCHEDULE_PATH, data)
 
 
 def get_posts_for_date(target_date: str) -> list[dict]:

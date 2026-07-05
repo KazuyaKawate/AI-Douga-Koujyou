@@ -1,0 +1,59 @@
+{
+  "name": "social.x_post",
+  "description": "トピックから X (Twitter) 投稿を生成し output/social/x/ に保存する",
+  "version": "1.0.0",
+  "steps": [
+    {
+      "step_id": "base_content",
+      "step_type": "ai_task",
+      "name": "ベースコンテンツ生成",
+      "depends_on": [],
+      "config": {
+        "task_type": "writing",
+        "output_key": "base_content",
+        "prompt": "以下のトピックについて、SNS投稿の素材となる要点をまとめてください。\n\nトピック: {topic}\nトーン: {tone}\nターゲット: {target}\nキーワード: {keywords}\n\n3〜5つの重要ポイントを箇条書きでまとめ、印象的なキャッチコピー案も1つ添えてください。"
+      },
+      "retry_max": 1,
+      "on_failure": "abort"
+    },
+    {
+      "step_id": "x_content",
+      "step_type": "ai_task",
+      "name": "X投稿文生成",
+      "depends_on": ["base_content"],
+      "config": {
+        "task_type": "writing",
+        "output_key": "x_content",
+        "prompt": "以下の内容をもとに、X (Twitter) への投稿文を作成してください。\n\n【素材】\n{base_content}\n\n【X投稿のルール】\n- 文字数: 140〜280文字（日本語）\n- 最初の1行でスクロールを止める強いフック\n- 改行を効果的に使い読みやすく\n- 数字・具体例・意外性で拡散力を高める\n- 末尾にソフトなCTA（「詳細→」「保存推奨」等）\n- ハッシュタグ: 1〜2個（本文に自然に溶け込ませる）\n- ブランド: {brand_name}\n\n投稿文のみ出力してください（説明不要）。"
+      },
+      "retry_max": 1,
+      "on_failure": "abort"
+    },
+    {
+      "step_id": "save_memory",
+      "step_type": "memory_update",
+      "name": "Memory保存",
+      "depends_on": ["x_content"],
+      "config": {
+        "key": "last_x_post",
+        "value_from_context": "x_content",
+        "scope": "global"
+      },
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "save_file",
+      "step_type": "file_save",
+      "name": "ファイル保存",
+      "depends_on": ["x_content"],
+      "config": {
+        "output_dir": "output/social/x",
+        "filename_prefix": "x_post",
+        "value_from_context": "x_content",
+        "extension": ".md",
+        "append_timestamp": true
+      },
+      "on_failure": "continue"
+    }
+  ]
+}

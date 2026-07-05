@@ -1,0 +1,102 @@
+{
+  "name": "dev.refactor",
+  "description": "リファクタリング提案・修正コード・unified diff を生成する（ファイル変更なし）",
+  "version": "1.0.0",
+  "steps": [
+    {
+      "step_id": "read_file",
+      "step_type": "file_read",
+      "name": "リファクタリング対象読み込み",
+      "depends_on": [],
+      "config": {
+        "file_path_from_context": "target_file",
+        "output_key": "file_content",
+        "max_lines": 500,
+        "include_line_numbers": true
+      },
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "analyze",
+      "step_type": "ai_task",
+      "name": "リファクタリング分析",
+      "depends_on": ["read_file"],
+      "config": {
+        "task_type": "analysis",
+        "output_key": "refactor_plan",
+        "prompt": "以下のコードのリファクタリング計画を立案してください。\n\n【リファクタリング指示】\n{instruction}\n\n【対象コード】\n{file_content}\n\n## リファクタリング計画\n\n### 現状の問題点\n1. （コードスメル・問題の列挙）\n\n### リファクタリング方針\n- 適用するパターン: （例: Extract Method, Strategy Pattern, etc.）\n- 変更の範囲: （このファイルのみ / 複数ファイルへの波及）\n\n### 変更一覧（優先度順）\n| 優先度 | 変更内容 | 理由 |\n|--------|----------|------|\n\n### 後方互換性への影響\n- API の変更: なし / あり（詳細）\n- 呼び出し元への影響: なし / あり（詳細）\n\n### リスク\n- ..."
+      },
+      "retry_max": 1,
+      "on_failure": "abort"
+    },
+    {
+      "step_id": "generate_refactored",
+      "step_type": "ai_task",
+      "name": "リファクタリング済みコード生成",
+      "depends_on": ["read_file", "analyze"],
+      "config": {
+        "task_type": "writing",
+        "output_key": "modified_code",
+        "prompt": "リファクタリング計画に基づいて修正した完全なファイルを出力してください。\n\n【リファクタリング計画】\n{refactor_plan}\n\n【元のファイル】\n{file_content}\n\n【出力ルール】\n- リファクタリング後のファイル全体を ```python ブロックで出力する\n- コードを省略しない\n- リファクタリング箇所に # REFACTORED: 理由 のコメントを添える\n- 外部から見た動作（API）は変えない\n- 不要なコメント・デッドコードは削除する\n\n```python\n# ここにリファクタリング済みのコードを出力\n```"
+      },
+      "retry_max": 2,
+      "on_failure": "abort"
+    },
+    {
+      "step_id": "compute_diff",
+      "step_type": "diff_output",
+      "name": "unified diff 生成",
+      "depends_on": ["generate_refactored"],
+      "config": {
+        "original_from_context": "file_content_raw",
+        "modified_from_context": "modified_code",
+        "file_path_from_context": "target_file",
+        "output_key": "unified_diff",
+        "context_lines": 5,
+        "save_to_file": true,
+        "output_dir": "output/dev",
+        "extract_code_block": true
+      },
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "build_report",
+      "step_type": "ai_task",
+      "name": "リファクタリングレポート生成",
+      "depends_on": ["compute_diff"],
+      "config": {
+        "task_type": "writing",
+        "output_key": "dev_report",
+        "prompt": "# リファクタリングレポート\n\n**ファイル**: `{target_file}`\n\n## 指示\n{instruction}\n\n## リファクタリング計画\n{refactor_plan}\n\n## 変更差分（unified diff）\n```diff\n{unified_diff}\n```\n\n## 適用後の確認事項\n- [ ] 単体テストがすべて通る\n- [ ] API の挙動が変わっていない\n- [ ] パフォーマンスが改善または維持されている\n\n## 実行コマンド\n```bash\n# テスト\npython -m pytest tests/ -v\n\n# diff を patch コマンドで適用（確認用）\npatch -p1 < output/dev/diff_{target_file_stem}.patch\n```\n\n---\n上記をそのまま出力してください。"
+      },
+      "retry_max": 1,
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "save_report",
+      "step_type": "file_save",
+      "name": "レポートを保存",
+      "depends_on": ["build_report"],
+      "config": {
+        "output_dir": "output/dev",
+        "value_from_context": "dev_report",
+        "filename_prefix": "refactor_report",
+        "extension": ".md",
+        "append_timestamp": true
+      },
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "save_memory",
+      "step_type": "memory_update",
+      "name": "Memory 保存",
+      "depends_on": ["build_report"],
+      "config": {
+        "key": "last_refactor",
+        "value_from_context": "dev_report",
+        "scope": "global"
+      },
+      "on_failure": "continue"
+    }
+  ]
+}

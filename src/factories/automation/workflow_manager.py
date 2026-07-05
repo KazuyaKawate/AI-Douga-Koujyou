@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 
 from src.factories.automation.automation_rules import WORKFLOW_TEMPLATES
+from src.utils.json_store import save_json_atomic
 
 ROOT        = Path(__file__).parent.parent.parent.parent
 CONFIG_PATH = ROOT / "config" / "automation_workflows.json"
@@ -32,7 +33,7 @@ def load_workflows() -> dict:
 
 
 def save_workflows(data: dict) -> None:
-    CONFIG_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    save_json_atomic(CONFIG_PATH, data)
 
 
 # ── CRUD ──────────────────────────────────────────────────────────────────────

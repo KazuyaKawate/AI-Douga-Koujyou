@@ -3,6 +3,7 @@ import json
 import uuid
 from datetime import date
 from pathlib import Path
+from src.utils.json_store import save_json_atomic
 
 CONFIG_PATH = Path(__file__).parent.parent.parent.parent / "config" / "note_articles.json"
 
@@ -76,7 +77,7 @@ def save_articles(data: dict) -> None:
 
 def _save(data: dict) -> None:
     CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    CONFIG_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    save_json_atomic(CONFIG_PATH, data)
 
 
 def _default_integration() -> dict:

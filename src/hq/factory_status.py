@@ -1,6 +1,7 @@
 """Factory Status — loads and saves factory status cards from config/factory_status.json."""
 import json
 from pathlib import Path
+from src.utils.json_store import save_json_atomic
 
 CONFIG_PATH = Path(__file__).parent.parent.parent / "config" / "factory_status.json"
 
@@ -53,7 +54,7 @@ def save_factory_status(data: dict) -> None:
 
 def _save(data: dict) -> None:
     CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    CONFIG_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    save_json_atomic(CONFIG_PATH, data)
 
 
 def sync_from_tasks(factory_data: dict, tasks_data: dict) -> dict:

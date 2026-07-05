@@ -1,0 +1,59 @@
+{
+  "name": "social.instagram_caption",
+  "description": "トピックから Instagram キャプション＋ハッシュタグを生成し output/social/instagram/ に保存する",
+  "version": "1.0.0",
+  "steps": [
+    {
+      "step_id": "visual_concept",
+      "step_type": "ai_task",
+      "name": "ビジュアルコンセプト設計",
+      "depends_on": [],
+      "config": {
+        "task_type": "writing",
+        "output_key": "visual_concept",
+        "prompt": "以下のトピックについて、Instagramに適したビジュアルコンセプトと伝えるべきメッセージを設計してください。\n\nトピック: {topic}\nターゲット: {target}\nトーン: {tone}\nブランド: {brand_name}\n\n投稿画像のコンセプト・伝えるべき感情・コアメッセージをまとめてください。"
+      },
+      "retry_max": 1,
+      "on_failure": "abort"
+    },
+    {
+      "step_id": "instagram_content",
+      "step_type": "ai_task",
+      "name": "Instagramキャプション＋ハッシュタグ生成",
+      "depends_on": ["visual_concept"],
+      "config": {
+        "task_type": "writing",
+        "output_key": "instagram_content",
+        "prompt": "以下のコンセプトをもとに、Instagramのキャプションとハッシュタグを作成してください。\n\n【コンセプト】\n{visual_concept}\n\n【Instagram投稿ルール】\n- キャプション: 150〜300文字（最初の125文字で掴む）\n- 最初の1〜2行は「もっと見る」をタップさせる強いフック\n- 絵文字を効果的に使い、視覚的にリズムを作る\n- 改行でブロック分け（読みやすく）\n- CTA: 「保存して後で読み返して」「コメントで教えて」等\n- ハッシュタグ: 20〜25個（大・中・小タグのバランス）\n  * 大タグ（100万+）: 3〜4個\n  * 中タグ（1万〜100万）: 8〜10個\n  * 小タグ（1000〜1万）: 5〜7個\n  * ブランドタグ: 1〜2個\n  * 日英混在でリーチ拡大\n- ハッシュタグはキャプション末尾に改行して配置\n\n完成版のキャプション＋ハッシュタグのみ出力してください。"
+      },
+      "retry_max": 1,
+      "on_failure": "abort"
+    },
+    {
+      "step_id": "save_memory",
+      "step_type": "memory_update",
+      "name": "Memory保存",
+      "depends_on": ["instagram_content"],
+      "config": {
+        "key": "last_instagram_post",
+        "value_from_context": "instagram_content",
+        "scope": "global"
+      },
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "save_file",
+      "step_type": "file_save",
+      "name": "ファイル保存",
+      "depends_on": ["instagram_content"],
+      "config": {
+        "output_dir": "output/social/instagram",
+        "filename_prefix": "instagram_post",
+        "value_from_context": "instagram_content",
+        "extension": ".md",
+        "append_timestamp": true
+      },
+      "on_failure": "continue"
+    }
+  ]
+}

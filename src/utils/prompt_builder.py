@@ -6,6 +6,7 @@ from pathlib import Path
 
 from src.utils.config import PROJECT_ROOT
 
+from src.utils.json_store import save_json_atomic
 TEMPLATES_PATH = PROJECT_ROOT / "config" / "prompt_templates.json"
 
 # ── Option sets ────────────────────────────────────────────────────────────────
@@ -335,9 +336,7 @@ def load_templates() -> dict:
 
 def save_templates(data: dict) -> None:
     TEMPLATES_PATH.parent.mkdir(parents=True, exist_ok=True)
-    TEMPLATES_PATH.write_text(
-        json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
+    save_json_atomic(TEMPLATES_PATH, data)
 
 
 def get_template(tmpl_id: str) -> dict | None:

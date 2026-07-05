@@ -1,4 +1,5 @@
 """
+from src.utils.json_store import save_json_atomic
 Project Snapshot — AI引き継ぎ・コンテキスト復元用スナップショット。
 
 SnapshotBuilder : 現在の状態を JSON として出力
@@ -69,17 +70,17 @@ class SnapshotBuilder:
         snapshots/latest.json を上書き保存し、history/ にも記録する。
         extra_path が指定された場合はそちらにも保存する。
         """
-        content = json.dumps(self.build(), ensure_ascii=False, indent=2)
+        snapshot = self.build()
 
         SNAPSHOT_DIR.mkdir(exist_ok=True)
-        LATEST_PATH.write_text(content, encoding="utf-8")
+        save_json_atomic(LATEST_PATH, snapshot)
 
         HISTORY_DIR.mkdir(exist_ok=True)
         ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        (HISTORY_DIR / f"snapshot_{ts}.json").write_text(content, encoding="utf-8")
+        save_json_atomic(HISTORY_DIR / f"snapshot_{ts}.json", snapshot)
 
         if extra_path is not None:
-            extra_path.write_text(content, encoding="utf-8")
+            save_json_atomic(extra_path, snapshot)
 
         return LATEST_PATH
 

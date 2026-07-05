@@ -4,6 +4,7 @@ import json
 from typing import Literal
 
 from src.utils.config import PROJECT_ROOT
+from src.utils.json_store import save_json_atomic
 
 SCHEMA_VERSION = "1.1"
 VALID_STEPS = ("script", "image_prompts", "video_prompts", "voice_script", "subtitles")
@@ -48,7 +49,7 @@ def save_episode(episode: dict) -> Path:
     folder = PROJECT_ROOT / "project" / episode["episode_id"]
     folder.mkdir(parents=True, exist_ok=True)
     path = folder / "episode.json"
-    path.write_text(json.dumps(episode, ensure_ascii=False, indent=2), encoding="utf-8")
+    save_json_atomic(path, episode)
     return path
 
 

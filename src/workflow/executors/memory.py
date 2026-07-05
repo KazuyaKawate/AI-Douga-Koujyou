@@ -44,7 +44,7 @@ class MemoryUpdateExecutor(BaseStepExecutor):
             else:
                 value = str(cfg.get("value", ""))
 
-            self._memory.save(key=key, value=value, scope=scope)
+            self._memory.set(key=key, value=value, scope=scope)
             return StepResult(success=True, output={"key": key, "scope": scope_str})
         except Exception as exc:
             return StepResult(success=False, error=str(exc))

@@ -113,10 +113,13 @@ def get_credential_status(settings: dict | None = None) -> dict:
 
 
 def get_dependency_status() -> dict:
-    """Check whether optional gspread and google-auth packages are installed.
+    """Check whether optional Google integration packages are installed.
 
     Uses importlib.metadata — no import side effects, safe to call at any time.
     Never raises; always returns a dict.
+
+    ``all_ready`` intentionally means "Google Sheets live sync ready" so the
+    Gemini package never blocks Sheets synchronization.
     """
     import importlib.metadata as _meta
 
@@ -128,17 +131,27 @@ def get_dependency_status() -> dict:
 
     gspread_ok,      gspread_ver  = _check("gspread")
     google_auth_ok,  gauth_ver    = _check("google-auth")
+    google_genai_ok, genai_ver    = _check("google-genai")
 
     missing = [p for p, ok in [("gspread", gspread_ok), ("google-auth", google_auth_ok)] if not ok]
+    optional_missing = list(missing)
+    if not google_genai_ok:
+        optional_missing.append("google-genai")
 
     return {
         "gspread_installed":      gspread_ok,
         "gspread_version":        gspread_ver,
         "google_auth_installed":  google_auth_ok,
         "google_auth_version":    gauth_ver,
+        "google_genai_installed": google_genai_ok,
+        "google_genai_version":   genai_ver,
+        "sheets_ready":           gspread_ok and google_auth_ok,
         "all_ready":              gspread_ok and google_auth_ok,
         "missing":                missing,
+        "optional_missing":       optional_missing,
         "install_hint":           "pip install gspread google-auth" if missing else "",
+        "optional_install_hint":  "pip install gspread google-auth google-genai" if optional_missing else "",
+        "google_genai_hint":      "pip install google-genai" if not google_genai_ok else "",
     }
 
 

@@ -1,0 +1,128 @@
+{
+  "name": "dev.add_feature",
+  "description": "機能追加の実装計画・修正コード・unified diff を生成する（ファイル変更なし）",
+  "version": "1.0.0",
+  "steps": [
+    {
+      "step_id": "read_file",
+      "step_type": "file_read",
+      "name": "対象ファイル読み込み",
+      "depends_on": [],
+      "config": {
+        "file_path_from_context": "target_file",
+        "output_key": "file_content",
+        "max_lines": 500,
+        "include_line_numbers": true
+      },
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "read_file_2",
+      "step_type": "file_read",
+      "name": "関連ファイル読み込み（任意）",
+      "depends_on": [],
+      "config": {
+        "file_path_from_context": "target_file_2",
+        "output_key": "file_content_2",
+        "max_lines": 300,
+        "include_line_numbers": true
+      },
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "plan",
+      "step_type": "ai_task",
+      "name": "実装計画生成",
+      "depends_on": ["read_file", "read_file_2"],
+      "config": {
+        "task_type": "analysis",
+        "output_key": "implementation_plan",
+        "prompt": "以下の機能を既存コードに追加する実装計画を立案してください。\n\n【追加する機能】\n{instruction}\n\n【既存コード】\n{file_content}\n\n【関連コード（あれば）】\n{file_content_2}\n\n## 実装計画\n\n### 変更内容サマリー\n（何を、どこに、どのように追加するか）\n\n### 変更対象\n- `{target_file}`: （変更内容）\n\n### 追加/変更するクラス・関数\n- `ClassName.method_name()`: 新規追加 / 変更\n\n### 依存関係・インポート\n- 追加が必要な import:\n\n### 後方互換性\n- 既存コードへの影響: なし / 要確認（理由）\n\n### 実装の注意点\n- ..."
+      },
+      "retry_max": 1,
+      "on_failure": "abort"
+    },
+    {
+      "step_id": "generate_code",
+      "step_type": "ai_task",
+      "name": "機能追加コード生成",
+      "depends_on": ["read_file", "plan"],
+      "config": {
+        "task_type": "writing",
+        "output_key": "modified_code",
+        "prompt": "以下の機能を追加した完全なファイル内容を出力してください。\n\n【追加する機能】\n{instruction}\n\n【実装計画】\n{implementation_plan}\n\n【元のファイル内容】\n{file_content}\n\n【出力ルール】\n- 修正後のファイル全体を ```python（または適切な言語）ブロックで出力する\n- コードを省略しない\n- 追加箇所に # ADDED: 機能名 のコメントを1行添える\n- 変更箇所に # MODIFIED: 理由 のコメントを1行添える\n- 元のコードスタイルを維持する\n\n```python\n# ここに機能追加済みの完全なコード\n```"
+      },
+      "retry_max": 2,
+      "on_failure": "abort"
+    },
+    {
+      "step_id": "compute_diff",
+      "step_type": "diff_output",
+      "name": "unified diff 生成",
+      "depends_on": ["generate_code"],
+      "config": {
+        "original_from_context": "file_content_raw",
+        "modified_from_context": "modified_code",
+        "file_path_from_context": "target_file",
+        "output_key": "unified_diff",
+        "context_lines": 5,
+        "save_to_file": true,
+        "output_dir": "output/dev",
+        "extract_code_block": true
+      },
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "generate_tests",
+      "step_type": "ai_task",
+      "name": "テスト生成",
+      "depends_on": ["compute_diff", "plan"],
+      "config": {
+        "task_type": "analysis",
+        "output_key": "test_commands",
+        "prompt": "以下の機能追加に対するテストを生成してください。\n\n【追加した機能】\n{instruction}\n\n【実装計画】\n{implementation_plan}\n\n## テスト計画\n\n### ユニットテスト例\n```python\nimport pytest\n\ndef test_new_feature_basic():\n    # 基本動作のテスト\n    ...\n\ndef test_new_feature_edge_cases():\n    # エッジケース\n    ...\n\ndef test_new_feature_error_handling():\n    # エラー処理\n    ...\n```\n\n### 実行コマンド\n```bash\npython -m pytest tests/ -v -k 'test_new_feature'\n```\n\n### 統合テスト確認項目\n- [ ] ..."
+      },
+      "retry_max": 1,
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "build_report",
+      "step_type": "ai_task",
+      "name": "機能追加レポート統合",
+      "depends_on": ["compute_diff", "generate_tests"],
+      "config": {
+        "task_type": "writing",
+        "output_key": "dev_report",
+        "prompt": "# 機能追加レポート\n\n**ファイル**: `{target_file}`\n\n## 追加機能サマリー\n{instruction}\n\n## 実装計画\n{implementation_plan}\n\n## unified diff（適用すべき変更）\n```diff\n{unified_diff}\n```\n\n## テスト計画\n{test_commands}\n\n---\n上記をそのまま出力してください（追加の整形不要）。"
+      },
+      "retry_max": 1,
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "save_report",
+      "step_type": "file_save",
+      "name": "レポートを保存",
+      "depends_on": ["build_report"],
+      "config": {
+        "output_dir": "output/dev",
+        "value_from_context": "dev_report",
+        "filename_prefix": "feature_report",
+        "extension": ".md",
+        "append_timestamp": true
+      },
+      "on_failure": "continue"
+    },
+    {
+      "step_id": "save_memory",
+      "step_type": "memory_update",
+      "name": "Memory 保存",
+      "depends_on": ["build_report"],
+      "config": {
+        "key": "last_feature_addition",
+        "value_from_context": "dev_report",
+        "scope": "global"
+      },
+      "on_failure": "continue"
+    }
+  ]
+}

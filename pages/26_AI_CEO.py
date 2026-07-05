@@ -1,5 +1,5 @@
 """
-AI CEO Core — Creator Factory OS v5.0-beta
+AI CEO Core — Creator Factory OS
 Executive decision layer. Read-only analysis. Strategic recommendations only.
 NOT a Factory. NOT a chatbot. No external APIs. No automatic execution.
 """
@@ -13,7 +13,8 @@ import streamlit as st
 ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT))
 
-APP_VERSION = "5.0-beta"
+from src.core.version import get_version_label
+
 TODAY = date.today().isoformat()
 
 st.set_page_config(
@@ -24,7 +25,7 @@ st.set_page_config(
 
 st.title("🧠 AI CEO Core")
 st.caption(
-    f"Creator Factory OS v{APP_VERSION} — Executive Decision Layer  |  "
+    f"Creator Factory OS {get_version_label()} — Executive Decision Layer  |  "
     "Read-only analysis · Strategic recommendations only · No external APIs"
 )
 st.divider()

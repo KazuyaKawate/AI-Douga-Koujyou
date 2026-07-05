@@ -7,6 +7,7 @@ from pathlib import Path
 from src.devtools.command_classifier import classify, get_dominant_risk, detect_tool_type, extract_file_paths
 from src.devtools.risk_rules import RISK_LEVELS
 from src.devtools.approval_templates import get_template, get_recommendation_text, DEFAULT_TEMPLATE
+from src.utils.json_store import save_json_atomic
 
 HISTORY_PATH = Path(__file__).parent.parent.parent / "config" / "approval_history.json"
 MAX_HISTORY = 100
@@ -142,7 +143,7 @@ def _save_history(result: dict) -> None:
     if len(data["history"]) > MAX_HISTORY:
         data["history"] = data["history"][:MAX_HISTORY]
     HISTORY_PATH.parent.mkdir(parents=True, exist_ok=True)
-    HISTORY_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    save_json_atomic(HISTORY_PATH, data)
 
 
 def load_history(limit: int = 20) -> list[dict]:
@@ -157,7 +158,4 @@ def get_latest_risk() -> dict | None:
 
 
 def clear_history() -> None:
-    HISTORY_PATH.write_text(
-        json.dumps({"history": [], "meta": {"version": "4.4.1"}}, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
+    save_json_atomic(HISTORY_PATH, {"history": [], "meta": {"version": "4.4.1"}})
