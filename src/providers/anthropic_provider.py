@@ -7,17 +7,13 @@ from datetime import datetime
 from typing import Any
 
 from src.providers.base_provider import BaseProvider, ProviderResult, estimate_tokens
-from src.utils.config import OPENAI_API_KEY
-
-NAME = "OpenAI"
-IS_MANUAL = False
 
 
-class OpenAIProvider(BaseProvider):
-    provider_id = "openai"
-    name = "OpenAI"
-    env_key = "OPENAI_API_KEY"
-    model = "gpt-4o-mini"
+class AnthropicProvider(BaseProvider):
+    provider_id = "anthropic"
+    name = "Claude"
+    env_key = "ANTHROPIC_API_KEY"
+    model = "claude-sonnet-4"
 
     def complete(self, prompt: str, **kwargs: Any) -> ProviderResult:
         if not self.is_available():
@@ -25,19 +21,18 @@ class OpenAIProvider(BaseProvider):
         if self.test_mode:
             return self._test_response(prompt)
 
+        model = kwargs.get("model") or self.model
         payload = {
-            "model": kwargs.get("model") or self.model,
-            "messages": [
-                {"role": "system", "content": "You are AIOS, a local-first content production assistant."},
-                {"role": "user", "content": prompt},
-            ],
-            "temperature": float(kwargs.get("temperature", 0.7)),
+            "model": model,
+            "max_tokens": int(kwargs.get("max_tokens", 2048)),
+            "messages": [{"role": "user", "content": prompt}],
         }
         request = urllib.request.Request(
-            "https://api.openai.com/v1/chat/completions",
+            "https://api.anthropic.com/v1/messages",
             data=json.dumps(payload).encode("utf-8"),
             headers={
-                "Authorization": f"Bearer {os.getenv(self.env_key, '')}",
+                "x-api-key": os.getenv(self.env_key, ""),
+                "anthropic-version": "2023-06-01",
                 "Content-Type": "application/json",
             },
             method="POST",
@@ -45,48 +40,30 @@ class OpenAIProvider(BaseProvider):
         try:
             with urllib.request.urlopen(request, timeout=int(kwargs.get("timeout_seconds", 60))) as response:
                 data = json.loads(response.read().decode("utf-8"))
-            content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+            blocks = data.get("content", [])
+            content = "\n".join(block.get("text", "") for block in blocks if isinstance(block, dict)).strip()
             usage = data.get("usage", {})
             self.last_call_at = datetime.now().isoformat(timespec="seconds")
-            input_tokens = int(usage.get("prompt_tokens") or estimate_tokens(prompt))
-            output_tokens = int(usage.get("completion_tokens") or estimate_tokens(content))
+            input_tokens = int(usage.get("input_tokens") or estimate_tokens(prompt))
+            output_tokens = int(usage.get("output_tokens") or estimate_tokens(content))
             self.estimated_token_usage += input_tokens + output_tokens
             return ProviderResult(
                 ok=bool(content),
                 content=content,
                 provider=self.provider_id,
-                model=payload["model"],
+                model=model,
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,
                 external_request=True,
-                metadata={"api": "openai_chat_completions"},
+                metadata={"api": "anthropic_messages"},
             )
         except Exception as exc:
             return ProviderResult(
                 ok=False,
                 content="",
                 provider=self.provider_id,
-                model=payload["model"],
+                model=model,
                 input_tokens=estimate_tokens(prompt),
                 error=str(exc),
                 external_request=True,
             )
-
-
-def is_available() -> bool:
-    return bool(OPENAI_API_KEY)
-
-
-def generate_script(topic: str, episode_id: str, **kwargs) -> tuple[dict, dict]:
-    """Backward-compatible script helper.
-
-    This path is only used by older Video Factory screens. Phase 5 ProviderRegistry
-    does not call it unless external APIs are explicitly enabled elsewhere.
-    """
-    from src.core import ai_pipeline
-
-    return ai_pipeline.generate_episode_ai(
-        topic=topic,
-        episode_id=episode_id,
-        **kwargs,
-    )

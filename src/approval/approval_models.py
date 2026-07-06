@@ -4,13 +4,18 @@ import uuid
 from datetime import datetime
 
 STATUSES = ["pending", "approved", "rejected", "expired"]
+CONTENT_STATUSES = ["pending_review", "approved", "rejected", "revision_requested", "publish_ready"]
+CONTENT_TYPES = ["note_article", "sns_post", "seo_article", "affiliate_description", "business_report"]
 RISK_LEVELS = ["none", "low", "medium", "high"]
 SOURCES = ["aiceo", "automation", "devstudio", "manual"]
 
 STATUS_ICONS = {
     "pending":  "⏳",
+    "pending_review": "⏳",
     "approved": "✅",
     "rejected": "❌",
+    "revision_requested": "📝",
+    "publish_ready": "📦",
     "expired":  "🕒",
 }
 

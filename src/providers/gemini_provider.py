@@ -1,0 +1,150 @@
+from __future__ import annotations
+
+import json
+import os
+import urllib.error
+import urllib.request
+from datetime import datetime
+from typing import Any
+
+from src.providers.base_provider import BaseProvider, ProviderResult, estimate_tokens
+
+
+class GeminiProvider(BaseProvider):
+    provider_id = "gemini"
+    name = "Gemini"
+    env_key = "GOOGLE_API_KEY"
+    model = "gemini-3.1-flash-lite"
+    endpoint = "https://generativelanguage.googleapis.com/v1beta/interactions"
+
+    def api_key(self) -> str:
+        return os.getenv("GOOGLE_API_KEY", "") or os.getenv("GEMINI_API_KEY", "")
+
+    def has_key(self) -> bool:
+        return bool(self.api_key())
+
+    def complete(self, prompt: str, **kwargs: Any) -> ProviderResult:
+        if not self.is_available():
+            return super().complete(prompt, **kwargs)
+        if self.test_mode:
+            return self._test_response(prompt)
+
+        model = kwargs.get("model") or self.model
+        payload = {
+            "model": model,
+            "input": prompt,
+            "generation_config": {"temperature": float(kwargs.get("temperature", 0.7))},
+        }
+        url = self.endpoint
+        request = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "Content-Type": "application/json",
+                "x-goog-api-key": self.api_key(),
+            },
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=int(kwargs.get("timeout_seconds", 60))) as response:
+                data = json.loads(response.read().decode("utf-8"))
+            content = _extract_interaction_text(data)
+            usage = data.get("usage", {}) or data.get("usage_metadata", {}) or data.get("usageMetadata", {})
+            self.last_call_at = datetime.now().isoformat(timespec="seconds")
+            input_tokens = int(
+                usage.get("total_input_tokens")
+                or usage.get("input_tokens")
+                or usage.get("promptTokenCount")
+                or estimate_tokens(prompt)
+            )
+            output_tokens = int(
+                usage.get("total_output_tokens")
+                or usage.get("output_tokens")
+                or usage.get("candidatesTokenCount")
+                or estimate_tokens(content)
+            )
+            self.estimated_token_usage += input_tokens + output_tokens
+            return ProviderResult(
+                ok=bool(content),
+                content=content,
+                provider=self.provider_id,
+                model=model,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                external_request=True,
+                metadata={"api": "gemini_interactions", "endpoint": url},
+            )
+        except urllib.error.HTTPError as exc:
+            error_text = exc.reason
+            try:
+                payload = json.loads(exc.read().decode("utf-8"))
+                if isinstance(payload, list) and payload:
+                    payload = payload[0]
+                error = payload.get("error", {})
+                message = error.get("message") or error_text
+                status = error.get("status", "")
+                code = error.get("code", exc.code)
+                error_text = f"HTTP {code} {status}: {message}".strip()
+            except Exception:
+                error_text = f"HTTP {exc.code}: {exc.reason}"
+            return ProviderResult(
+                ok=False,
+                content="",
+                provider=self.provider_id,
+                model=model,
+                input_tokens=estimate_tokens(prompt),
+                error=error_text,
+                external_request=True,
+            )
+        except Exception as exc:
+            return ProviderResult(
+                ok=False,
+                content="",
+                provider=self.provider_id,
+                model=model,
+                input_tokens=estimate_tokens(prompt),
+                error=str(exc),
+                external_request=True,
+            )
+
+
+def _extract_interaction_text(data: dict[str, Any]) -> str:
+    output_text = data.get("output_text")
+    if isinstance(output_text, str):
+        return output_text.strip()
+
+    output = data.get("output")
+    if isinstance(output, str):
+        return output.strip()
+    if isinstance(output, list):
+        parts = []
+        for item in output:
+            if isinstance(item, str):
+                parts.append(item)
+            elif isinstance(item, dict):
+                parts.append(str(item.get("text") or item.get("output_text") or ""))
+        text = "\n".join(part for part in parts if part).strip()
+        if text:
+            return text
+
+    candidates = data.get("candidates", [])
+    if candidates:
+        parts = candidates[0].get("content", {}).get("parts", [])
+        return "\n".join(part.get("text", "") for part in parts if isinstance(part, dict)).strip()
+
+    steps = data.get("steps", [])
+    for step in reversed(steps):
+        if not isinstance(step, dict) or step.get("type") != "model_output":
+            continue
+        content = step.get("content", [])
+        if isinstance(content, str):
+            return content.strip()
+        if isinstance(content, list):
+            text = "\n".join(
+                part.get("text", "")
+                for part in content
+                if isinstance(part, dict) and part.get("type") == "text"
+            ).strip()
+            if text:
+                return text
+    return ""

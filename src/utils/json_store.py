@@ -55,7 +55,15 @@ def save_json_atomic(
     try:
         text = json.dumps(data, ensure_ascii=ensure_ascii, indent=indent)
         tmp_path.write_text(text, encoding="utf-8")
-        os.replace(str(tmp_path), str(p))
+        for attempt in range(retries):
+            try:
+                os.replace(str(tmp_path), str(p))
+                break
+            except PermissionError as exc:
+                last_error = exc
+                time.sleep(retry_delay * (attempt + 1))
+        else:
+            raise JsonStoreError(f"Could not replace JSON file: {p}") from last_error
         return p
     finally:
         if lock_fd is not None:
