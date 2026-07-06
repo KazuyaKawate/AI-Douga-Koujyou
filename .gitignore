@@ -72,6 +72,14 @@ Desktop.ini
 *.log
 logs/
 
+# AIOS runtime/generated state
+data/
+output/
+release/
+config/business_engine.json
+config/export_manager.json
+config/devstudio_meetings.json
+
 # Node.js（スクリプトでnpmを使う場合）
 node_modules/
 npm-debug.log*

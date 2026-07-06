@@ -28,6 +28,7 @@ WORKFLOW = [
     ("📝", "note投稿工場",       "記事管理・スコア・収益・コンテンツ転用",    None),
     ("📱", "SNS投稿工場",       "プラットフォーム別SNS投稿管理・スケジュール", None),
     ("💼", "営業工場",          "CRM・リード管理・商談・フォロー・売上予測",   None),
+    ("📈", "Business Engine",  "収益パイプライン・KPI・実行履歴・リトライ管理", None),
     ("💰", "会計監査工場",       "収支管理・ROI・サブスク・監査・月次レポート", None),
     ("📊", "アナリティクス工場", "全工場・KPI・ROI・プロジェクト分析・インサイト", None),
     ("⚙️", "自動化工場",        "ルールベース工場間ワークフロー自動化",          None),
@@ -51,6 +52,11 @@ WORKFLOW = [
     ("🛠️", "Development Studio", "OS開発HQ — ロードマップ・決定ログ・リリース管理", None),
     ("🧠", "AI CEO",           "エグゼクティブ分析・優先度・リスク・推奨アクション", None),
     ("✅", "Approval Center",  "人間承認ゲートウェイ — AI CEO・自動化・DevStudio", None),
+    ("📦", "Export Manager",   "承認済みコンテンツのローカル書き出し管理", None),
+    ("🏭", "Creator Factory",  "複数の収益化向け制作パイプラインをローカル管理", None),
+    ("🔁", "Production Pipeline", "制作から承認・ローカル書き出しまでを接続", None),
+    ("⏱️", "Automation Engine", "Creator Factory制作ジョブをローカルスケジュール実行", None),
+    ("🚦", "RC Readiness", "AIOS RC向け統合・安全性・準備状況ゲート", None),
 ]
 
 WORKFLOW_PAGES = {
@@ -58,6 +64,7 @@ WORKFLOW_PAGES = {
     "note投稿工場": "pages/18_Note_Factory.py",
     "SNS投稿工場": "pages/19_SNS_Factory.py",
     "営業工場": "pages/21_Sales_Factory.py",
+    "Business Engine": "pages/29_Business_Engine.py",
     "会計監査工場": "pages/22_Accounting_Factory.py",
     "アナリティクス工場": "pages/23_Analytics_Factory.py",
     "自動化工場": "pages/24_Automation_Factory.py",
@@ -81,6 +88,11 @@ WORKFLOW_PAGES = {
     "Development Studio": "pages/25_Development_Studio.py",
     "AI CEO": "pages/26_AI_CEO.py",
     "Approval Center": "pages/27_Approval_Center.py",
+    "Export Manager": "pages/28_Export_Manager.py",
+    "Creator Factory": "pages/30_Creator_Factory.py",
+    "Production Pipeline": "pages/31_Production_Pipeline.py",
+    "Automation Engine": "pages/32_Automation.py",
+    "RC Readiness": "pages/33_RC_Readiness.py",
 }
 
 WORKFLOW_GROUPS = [
@@ -111,6 +123,7 @@ WORKFLOW_GROUPS = [
             "note投稿工場",
             "SNS投稿工場",
             "営業工場",
+            "Business Engine",
             "会計監査工場",
             "アナリティクス工場",
             "自動化工場",
@@ -126,6 +139,11 @@ WORKFLOW_GROUPS = [
             "Development Studio",
             "AI CEO",
             "Approval Center",
+            "Export Manager",
+            "Creator Factory",
+            "Production Pipeline",
+            "Automation Engine",
+            "RC Readiness",
             "承認アシスタント",
         ],
     ),
@@ -134,7 +152,14 @@ WORKFLOW_GROUPS = [
 WORKFLOW_BY_TITLE = {title: (icon, desc, folder) for icon, title, desc, folder in WORKFLOW}
 
 
+def _workflow_folder_path(folder: str | None) -> Path | None:
+    if not folder:
+        return None
+    return PROJECT_ROOT / folder
+
+
 def get_workflow_count(title: str, folder: str | None) -> int:
+    folder_path = _workflow_folder_path(folder)
     if title == "Mission Control":
         try:
             from src.hq.task_manager import load_tasks, get_task_stats
@@ -193,7 +218,9 @@ def get_workflow_count(title: str, folder: str | None) -> int:
         except Exception:
             count = 0
     elif title == "制作ダッシュボード":
-        ep_root = PROJECT_ROOT / folder
+        if folder_path is None:
+            return 0
+        ep_root = folder_path
         count = (
             sum(
                 1 for d in ep_root.iterdir()
@@ -275,7 +302,7 @@ def get_workflow_count(title: str, folder: str | None) -> int:
         except Exception:
             count = 0
     else:
-        count = count_files(PROJECT_ROOT / folder)
+        count = count_files(folder_path) if folder_path is not None else 0
     return count
 
 

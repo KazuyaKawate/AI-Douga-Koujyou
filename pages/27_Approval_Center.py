@@ -15,6 +15,9 @@ sys.path.insert(0, str(ROOT))
 from src.approval.approval_queue import (
     get_pending, get_history, add_item, approve_item,
     reject_item, delete_pending, get_summary,
+    approve_content_item, content_review_summary, export_content_item,
+    get_content_reviews, mark_content_publish_ready, reject_content_item,
+    request_content_revision,
 )
 from src.approval.approval_models import STATUS_ICONS, RISK_ICONS, SOURCE_LABELS, RISK_LEVELS
 from src.approval.risk_analyzer import analyze_risk, get_risk_color
@@ -100,19 +103,24 @@ def _aggregate_live_inbox() -> list[dict]:
 
 
 summary = get_summary()
+content_summary = content_review_summary()
 
 # ── Header metrics ─────────────────────────────────────────────────────────────
-hm1, hm2, hm3, hm4 = st.columns(4)
+hm1, hm2, hm3, hm4, hm5, hm6 = st.columns(6)
 hm1.metric("⏳ 承認待ち",     summary["pending_count"])
 hm2.metric("🔴 高リスク",     summary["high_risk_count"])
 hm3.metric("✅ 承認済み",     summary["approved_count"])
 hm4.metric("❌ 却下済み",     summary["rejected_count"])
+hm5.metric("🧾 Pending Reviews", content_summary["pending_reviews"])
+hm6.metric("📦 Publish Ready", content_summary["publish_ready"])
 
 st.divider()
 
 # ── Tabs ──────────────────────────────────────────────────────────────────────
-tab_pending, tab_approved, tab_rejected, tab_submit, tab_summary = st.tabs([
+tab_pending, tab_content, tab_publish_ready, tab_approved, tab_rejected, tab_submit, tab_summary = st.tabs([
     "📋 Pending",
+    "🧾 Content Review",
+    "📦 Publish Ready",
     "✅ Approved",
     "❌ Rejected",
     "➕ New Request",
@@ -208,7 +216,85 @@ with tab_pending:
     else:
         st.caption("現在、ライブインボックスにアイテムはありません。")
 
-# ── Tab 2: Approved History ────────────────────────────────────────────────────
+# ── Tab 2: Content Review ──────────────────────────────────────────────────────
+with tab_content:
+    st.markdown("#### 🧾 Generated Content Review Queue")
+    st.caption("Generated content stops here before any local export. External publishing is disabled.")
+
+    content_items = (
+        get_content_reviews("pending_review")
+        + get_content_reviews("revision_requested")
+        + get_content_reviews("approved")
+        + get_content_reviews("rejected")
+    )
+    if not content_items:
+        st.info("レビュー待ちコンテンツはありません。")
+
+    for item in content_items:
+        flags = item.get("risk_flags", [])
+        flag_label = f"{len(flags)} warning(s)" if flags else "no warnings"
+        with st.expander(
+            f"{STATUS_ICONS.get(item.get('status', ''), '•')} {item.get('title', '')} — "
+            f"{item.get('content_type', '')} — {flag_label}",
+            expanded=False,
+        ):
+            meta_col, content_col = st.columns([1, 2])
+            with meta_col:
+                st.markdown(f"**Status**: `{item.get('status', '')}`")
+                st.markdown(f"**Source Job**: `{item.get('source_job_id', '')}`")
+                st.markdown(f"**Generated**: {item.get('generated_at', '')}")
+                if flags:
+                    st.markdown("**Risk warnings**")
+                    for flag in flags:
+                        st.warning(f"{flag.get('severity')}: {flag.get('label')}")
+                else:
+                    st.success("No local risk warnings.")
+            with content_col:
+                st.text_area("Content", value=item.get("content", ""), height=260, key=f"content_{item['id']}")
+                notes = st.text_area("Reviewer notes", value=item.get("reviewer_notes", ""), height=80, key=f"review_notes_{item['id']}")
+
+                a1, a2, a3, a4 = st.columns(4)
+                with a1:
+                    if st.button("Approve", key=f"content_approve_{item['id']}", type="primary"):
+                        approve_content_item(item["id"], notes)
+                        st.success("Approved.")
+                        st.rerun()
+                with a2:
+                    if st.button("Reject", key=f"content_reject_{item['id']}"):
+                        reject_content_item(item["id"], notes)
+                        st.warning("Rejected.")
+                        st.rerun()
+                with a3:
+                    if st.button("Request revision", key=f"content_revision_{item['id']}"):
+                        request_content_revision(item["id"], notes)
+                        st.info("Revision requested.")
+                        st.rerun()
+                with a4:
+                    if item.get("status") == "approved" and st.button("Mark publish-ready", key=f"content_ready_{item['id']}"):
+                        mark_content_publish_ready(item["id"], notes)
+                        st.success("Marked publish-ready.")
+                        st.rerun()
+
+                if item.get("status") in ("approved", "rejected"):
+                    if st.button("Export locally", key=f"content_export_{item['id']}"):
+                        paths = export_content_item(item["id"])
+                        st.success(f"Exported: {paths['markdown']} and {paths['json']}" if paths else "Export failed.")
+
+# ── Tab 3: Publish Ready ───────────────────────────────────────────────────────
+with tab_publish_ready:
+    ready_items = get_content_reviews("publish_ready")
+    st.markdown(f"#### 📦 Publish-ready local exports ({len(ready_items)} 件)")
+    st.caption("This state means ready for local handoff only. No external publishing is performed.")
+    if not ready_items:
+        st.info("Publish-ready items are empty.")
+    for item in ready_items:
+        with st.expander(f"📦 {item.get('title', '')} — {item.get('content_type', '')}", expanded=False):
+            st.text_area("Content", value=item.get("content", ""), height=240, key=f"ready_content_{item['id']}")
+            if st.button("Export publish-ready locally", key=f"ready_export_{item['id']}"):
+                paths = export_content_item(item["id"], "publish_ready")
+                st.success(f"Exported: {paths['markdown']} and {paths['json']}" if paths else "Export failed.")
+
+# ── Tab 4: Approved History ────────────────────────────────────────────────────
 with tab_approved:
     history = get_history(limit=50)
     approved = [i for i in history if i.get("status") == "approved"]
@@ -228,7 +314,7 @@ with tab_approved:
     else:
         st.info("承認済みのアイテムはありません。")
 
-# ── Tab 3: Rejected History ────────────────────────────────────────────────────
+# ── Tab 5: Rejected History ────────────────────────────────────────────────────
 with tab_rejected:
     history = get_history(limit=50)
     rejected = [i for i in history if i.get("status") == "rejected"]
@@ -247,7 +333,7 @@ with tab_rejected:
     else:
         st.info("却下済みのアイテムはありません。")
 
-# ── Tab 4: New Request ─────────────────────────────────────────────────────────
+# ── Tab 6: New Request ─────────────────────────────────────────────────────────
 with tab_submit:
     st.markdown("#### ➕ 新規承認リクエストを登録")
     st.caption("手動で承認リクエストをキューに追加します。実行はされません。")
@@ -278,7 +364,7 @@ with tab_submit:
                 st.success("✅ 承認リクエストをキューに追加しました。")
                 st.rerun()
 
-# ── Tab 5: Summary ─────────────────────────────────────────────────────────────
+# ── Tab 7: Summary ─────────────────────────────────────────────────────────────
 with tab_summary:
     st.markdown("#### 📊 Approval Center サマリー")
 
@@ -292,6 +378,14 @@ with tab_summary:
     sm3.metric("✅ 承認済み",     sum(1 for i in all_history if i.get("status") == "approved"))
     sm4.metric("❌ 却下済み",     sum(1 for i in all_history if i.get("status") == "rejected"))
     sm5.metric("📋 総レビュー数", len(all_history))
+
+    cr1, cr2, cr3, cr4, cr5, cr6 = st.columns(6)
+    cr1.metric("Pending Reviews", content_summary["pending_reviews"])
+    cr2.metric("Approved Today", content_summary["approved_today"])
+    cr3.metric("Rejected Today", content_summary["rejected_today"])
+    cr4.metric("Revision Requested", content_summary["revision_requested"])
+    cr5.metric("Publish Ready", content_summary["publish_ready"])
+    cr6.metric("Risk Warnings", content_summary["risk_warnings"])
 
     st.divider()
 

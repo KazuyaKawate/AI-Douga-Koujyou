@@ -1,4 +1,6 @@
-# 🎯 Creator Factory OS — v5.2 — Google Workspace Sync Foundation
+# 🎯 Creator Factory OS — AIOS v5.2 RC1
+
+**RC1 status:** Local-first Creator Factory / Business Engine / Approval Center / Export Manager are wired into an end-to-end production flow. The default provider is `virtual`; Gemini real AI generation is available only when explicitly enabled with `GOOGLE_API_KEY` and provider environment flags.
 
 **v5.2 Phase 4-5:** **📊 Google Sheets 本番シート同期** — `run_production_sync()` が KPI / Revenue / Notes の3シートに upsert 同期（追加+更新のみ、削除なし）。`SHEET_MAPPINGS` を実データ構造に合わせて全面修正。`extract_flat_row()` でネスト構造を自動フラット化（kpi_targets の targets/actuals / revenue_expense の today / note_articles の score ネスト）。`write_sheet_upsert()` でヘッダー行自動初期化・key_field によるupsert。dry-run プレビュー → 確認チェックボックス → live sync のフロー。`allow_write=True` は UI ボタン経由のみ（コミット済みコードに含まない）。
 **v5.2 Phase 4-4:** **✏️ Google Sheets テストシート書き込み** — `run_test_write()` が孤立テストシートに 1 行だけ追記（`_phase`・`_ts`・`_source`・`_status`）。本番シート（KPI / Revenue / Notes / SNS / Sales）は `_PRODUCTION_WORKSHEETS` でブロック。`allow_write=True` は UI ボタン経由のみ（コミット済みコードに含まない）。Dev Studio Tab 10 に Phase 4-4 パネル追加（ドライランプレビュー → チェックボックス確認 → 書き込み実行 → ロールバック手順）。ヘルスチェック書き込みガードのバグ修正（`write_enabled` → `allow_write` チェック）。
@@ -17,7 +19,7 @@
 毎朝アプリを開くと **Mission Control** が起動し、今日のKPI・タスク・工場状態・財務スナップショットを一画面で確認できます。
 各工場（AI動画工場・note・SNS・営業・会計）へのワンクリックナビゲーションで、作業を即座に開始できます。
 
-> **ベース技術:** Python + Streamlit + OpenAI — ローカルファースト、外部APIは最小限。
+> **ベース技術:** Python + Streamlit + local JSON storage + Provider Registry — Virtual Provider標準、Gemini APIは明示設定時のみ使用。
 > **現在のバージョン情報:** `src/core/version.py` の `OS_VERSION` / `OS_CODENAME` を単一の基準にしています。
 > **前バージョン名:** AI動画工場 (v4.1まで)
 
@@ -72,7 +74,8 @@ pip install -r requirements.txt
 
 ```bash
 cp .env.example .env
-# .env を編集して OPENAI_API_KEY を設定
+# .env を編集して必要なAPIキーだけ設定
+# Geminiを使う場合: GOOGLE_API_KEY
 ```
 
 ### 4. プロジェクト整合性チェック（推奨）
@@ -94,6 +97,24 @@ streamlit run app.py
 ```
 
 `http://localhost:8501` が開きます。サイドバーで **🎯 Mission Control** をクリックして開始。
+
+### 6. Gemini real AI provider（任意）
+
+未設定時はVirtual Providerに自動フォールバックします。Gemini APIを使う場合だけ `.env` で以下を設定します。
+
+```env
+GOOGLE_API_KEY=your_gemini_api_key_here
+AIOS_EXTERNAL_APIS_ENABLED=true
+AIOS_ENABLED_PROVIDERS=gemini
+AIOS_DEFAULT_PROVIDER=gemini
+AIOS_ACTIVE_PROVIDER=gemini
+```
+
+RC1で確認済みの低コストモデル:
+
+```text
+gemini-3.1-flash-lite
+```
 
 ---
 
@@ -122,7 +143,7 @@ streamlit run app.py
 | 🧑 キャラクター管理 | キャラクターCRUD・AI生成への自動注入 |
 | 🏞️ 背景管理 | ロケーション・カメラ・雰囲気テンプレート |
 | 📝 プロンプトビルダー | キャラ×背景×ムード×スタイルを合成してプロンプト生成・保存 |
-| 🎭 AI Director | シーン別演出計画（手動 + OpenAI生成） |
+| 🎭 AI Director | シーン別演出計画（手動 + Provider Registry 経由の生成） |
 | 🎬 制作管理 | 6ステージ制作チェックリスト・書き出しパッケージ |
 | 📊 制作ダッシュボード | 全エピソードの進捗一覧・フィルター・ファイルプレビュー |
 | 📁 プロジェクト管理 | シリーズ管理・バックアップ・一括操作 |
@@ -149,7 +170,7 @@ streamlit run app.py
 │  project_manager  |  backup_manager  |  file_manager           │
 ├─────────────────────────────────────────────────────────────────┤
 │  Core Pipeline — src/core/                   [v2.x]            │
-│  ai_pipeline  |  episode_manager  |  openai_client             │
+│  ai_pipeline  |  episode_manager  |  provider clients          │
 │  whisper_client  |  ffmpeg_utils                               │
 ├─────────────────────────────────────────────────────────────────┤
 │  Production Pipeline — src/pipeline/         [v3.x]            │
@@ -158,8 +179,8 @@ streamlit run app.py
 │  Director — src/director/                    [v3.1]            │
 │  director_schema  |  director_planner                          │
 ├─────────────────────────────────────────────────────────────────┤
-│  Providers — src/providers/                  [v3.x]            │
-│  openai_provider  |  image/video/audio_provider_manual         │
+│  Providers — src/providers/                  [v5.2 RC1]        │
+│  virtual  |  gemini  |  gemini_cli  |  openai  |  anthropic    │
 ├─────────────────────────────────────────────────────────────────┤
 │  Storage: JSON Files + Local Filesystem                        │
 │  config/*.json  |  project/EPXX/  |  reports/daily/  |  assets/│
@@ -171,7 +192,7 @@ streamlit run app.py
 | 原則 | 詳細 |
 |------|------|
 | **ローカルファースト** | 全データはローカルJSONファイルに保存。クラウドDB不要 |
-| **外部API最小化** | OpenAIテキスト生成のみ自動呼び出し。メディア生成は手動（プロバイダー抽象化済み） |
+| **外部API最小化** | デフォルトはVirtual Provider。Gemini/OpenAI/Claudeは明示設定時のみ使用 |
 | **ルールベースAI** | AI CEO メッセージなどはAPI不要のルールエンジンで生成 |
 | **日次リセット** | KPI実績・タスク状態は毎日ページロード時にリセット |
 | **プロバイダー抽象化** | `src/providers/` で生成ロジックを分離。API統合時はここだけ変更 |
@@ -208,7 +229,7 @@ Creator Factory OS (AI動画工場)/
 │   │   ├── factory_status.py
 │   │   └── daily_report.py
 │   ├── agents/                    # マルチエージェントパイプライン
-│   ├── core/                      # AI生成パイプライン（OpenAI）
+│   ├── core/                      # AI生成パイプライン（Provider Registry）
 │   ├── utils/                     # 設定・マネージャー群
 │   ├── pipeline/                  # 制作バリデーション
 │   ├── director/                  # AI演出計画
@@ -240,7 +261,7 @@ Creator Factory OS (AI動画工場)/
 | モード | 説明 | 設定場所 |
 |--------|------|----------|
 | 開発モード | 外部生成API自動呼び出しを無効化 | ⚙️ スタジオ設定 → AI設定 |
-| コスト節約モード | OpenAI プロンプトを短縮 | ⚡ 一発生成フォーム内 |
+| コスト節約モード | Virtual Provider / Gemini低コストモデルを使用 | ⚡ 一発生成フォーム内 |
 
 ---
 
@@ -252,7 +273,7 @@ Creator Factory OS (AI動画工場)/
 | note / SNS / 営業 / 会計工場 | Mission Controlにカードはあるが、ページは未実装（v4.3〜v4.6で順次追加） |
 | マルチタブ同時操作 | JSON書き込みはアトミックでない。複数タブの同時操作は非推奨 |
 | KPI日次リセット | ページロード時にリセット。日付が変わっても最初のページロードまで前日値が残る |
-| OpenAI API | テキスト生成のみ使用。GPT-4o または GPT-4o-mini のAPIキーが必要 |
+| Gemini API | 任意。実AI生成に `GOOGLE_API_KEY` と明示的なprovider有効化が必要 |
 
 ---
 
