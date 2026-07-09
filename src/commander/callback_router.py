@@ -79,6 +79,8 @@ class CallbackRouter:
             "instruction": job.get("instruction", ""),
             "status": result.get("status", job.get("status", "")),
             "roi": result.get("roi", {}),
+            "business_task": result.get("business_task", job.get("business_task", {})),
+            "improvements": result.get("knowledge_record", {}).get("improvements", []),
             "revenue_gate": result.get("revenue_gate", {}),
             "provider_health": result.get("provider_health", []),
             "commit_ready": run.get("commit_candidate", {}).get("ready", False),

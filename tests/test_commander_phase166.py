@@ -124,9 +124,9 @@ def test_commander_worker_defers_non_revenue_large_job(tmp_path: Path, monkeypat
 
     result = CommanderWorker(queue, root=tmp_path, coding_manager=fake).process_next(dry_run=True)
 
-    assert result["status"] == "deferred"
+    assert result["status"] == "rejected"
     assert fake.runs == []
-    assert queue.summary()["deferred"] == 1
+    assert queue.summary()["rejected"] == 1
 
 
 def test_commander_worker_retries_failed_job_with_rotated_provider(tmp_path: Path, monkeypatch) -> None:
