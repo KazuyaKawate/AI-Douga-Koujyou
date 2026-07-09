@@ -88,3 +88,33 @@ def test_phase7_dryrun_publish_history_metrics_knowledge_and_mission_feedback(tm
     assert any(row.get("source") == "threads_automation" for row in data["research_feedback"])
     assert any(row.get("source") == "threads_automation" for row in data["mission_planner_feedback"])
     assert any(row["job_id"] == thread["thread_id"] for row in data["execution_history"])
+
+
+def test_phase7_generates_three_fortune_posts_with_note_cta_and_reservations(tmp_path, monkeypatch):
+    knowledge = _patch_knowledge(monkeypatch)
+    store = BusinessEngineStore(tmp_path / "business_engine.json")
+    threads = ThreadsAutomation(store)
+
+    result = threads.generate_fortune_note_campaign(
+        theme="Threads占い",
+        note_url="https://note.com/aios/n/demo",
+        scheduled_start="2026-07-20",
+    )
+    duplicate = threads.generate_fortune_note_campaign(
+        theme="Threads占い",
+        note_url="https://note.com/aios/n/demo",
+        scheduled_start="2026-07-20",
+    )
+    data = store.load()
+
+    assert result["status"] == "success"
+    assert len(result["posts"]) == 3
+    assert len(result["reservations"]) == 3
+    assert [row["scheduled_for"] for row in result["reservations"]] == ["2026-07-20", "2026-07-21", "2026-07-22"]
+    assert all("https://note.com/aios/n/demo" in post["text"] for post in result["posts"])
+    assert all(post["source_id"] == "revenue_threads_fortune_campaign" for post in result["posts"])
+    assert len([post for post in data["post_queue"] if post.get("source_id") == "revenue_threads_fortune_campaign"]) == 3
+    assert len([job for job in data["scheduled_jobs"] if job.get("payload", {}).get("platform") == "threads"]) == 3
+    assert duplicate["status"] == "duplicate_blocked"
+    assert len(duplicate["blocked"]) == 3
+    assert any(row["event"] == "fortune_campaign_generated" for row in knowledge["history"])

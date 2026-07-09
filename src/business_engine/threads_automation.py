@@ -65,6 +65,71 @@ class ThreadsAutomation:
         self.return_improvement_to_mission_planner(thread)
         return thread
 
+    def generate_fortune_note_campaign(
+        self,
+        *,
+        theme: str = "Threads占い",
+        note_url: str = "",
+        scheduled_start: str | None = None,
+    ) -> dict[str, Any]:
+        posts = []
+        reservations = []
+        blocked = []
+        start = self._parse_schedule_date(scheduled_start)
+        templates = self._fortune_templates(theme, note_url)
+        data = self.store.load()
+
+        for template in templates:
+            text = self.generate_fortune_threads_text(template, note_url)
+            if self._is_duplicate(data, "", text):
+                blocked.append({"status": "duplicate_blocked", "text": text})
+                continue
+            thread = {
+                "thread_id": _new_id("thread"),
+                "platform": "threads",
+                "article_id": "",
+                "source_id": "revenue_threads_fortune_campaign",
+                "topic": theme,
+                "title": template["title"],
+                "summary": template["summary"],
+                "cta": self.generate_note_cta(note_url),
+                "hashtags": template["hashtags"],
+                "text": text,
+                "image_prompt": template["image_prompt"],
+                "asset_ref": {"source": "revenue_engine", "path": "", "prompt": template["image_prompt"]},
+                "status": "draft",
+                "dry_run": True,
+                "reaction_rate": 0,
+                "ctr": 0,
+                "click_rate": 0,
+                "pv": 0,
+                "created_at": _now(),
+                "updated_at": _now(),
+            }
+            data.setdefault("post_queue", []).insert(0, thread)
+            posts.append(thread)
+
+        self.store.save(data)
+
+        for index, thread in enumerate(posts):
+            scheduled_for = (start + timedelta(days=index)).isoformat()
+            reservation = self.reserve_thread(thread["thread_id"], scheduled_for)
+            if reservation:
+                reservations.append(reservation)
+            self.save_threads_knowledge(thread, event="fortune_campaign_generated")
+            self.feedback_research_team(thread)
+            self.return_improvement_to_mission_planner(thread)
+
+        return {
+            "status": "success" if posts else "duplicate_blocked",
+            "theme": theme,
+            "note_url": note_url,
+            "posts": posts,
+            "reservations": reservations,
+            "blocked": blocked,
+            "dry_run": True,
+        }
+
     def summarize_note(self, article: dict[str, Any]) -> str:
         body = str(article.get("body", ""))
         lines = [
@@ -89,6 +154,11 @@ class ThreadsAutomation:
         keyword = article.get("keyword") or (article.get("keywords") or ["AIOS"])[0]
         return f"{keyword}の運用を小さく始めたい人は、まずnote本文の流れを1つだけ試してください。"
 
+    def generate_note_cta(self, note_url: str = "") -> str:
+        if note_url:
+            return f"続きと具体例はnoteでまとめています: {note_url}"
+        return "続きはnote下書きにまとめて、反応が良いテーマから公開します。"
+
     def generate_hashtags(self, article: dict[str, Any]) -> list[str]:
         source = " ".join([article.get("title", ""), article.get("topic", ""), " ".join(article.get("keywords", []))]).lower()
         tags = ["#AIOS", "#Threads", "#note"]
@@ -97,6 +167,14 @@ class ThreadsAutomation:
         if "automation" in source or "自動" in source:
             tags.append("#自動化")
         return tags[:5]
+
+    def generate_fortune_threads_text(self, template: dict[str, Any], note_url: str = "") -> str:
+        return (
+            f"{template['title']}\n\n"
+            f"{template['summary']}\n\n"
+            f"{self.generate_note_cta(note_url)}\n\n"
+            f"{' '.join(template['hashtags'])}"
+        )[:500]
 
     def image_prompt_for_article(self, article: dict[str, Any]) -> str:
         prompts = article.get("image_prompts", {})
@@ -327,10 +405,10 @@ class ThreadsAutomation:
         for post in data.get("post_queue", []):
             if post.get("platform") != "threads" or post.get("thread_id") == exclude_thread_id:
                 continue
-            if post.get("article_id") == article_id or post.get("text") == text:
+            if (article_id and post.get("article_id") == article_id) or post.get("text") == text:
                 return True
         for row in data.get("threads_history", []):
-            if row.get("article_id") == article_id or row.get("text") == text:
+            if (article_id and row.get("article_id") == article_id) or row.get("text") == text:
                 return True
         return False
 
@@ -339,6 +417,38 @@ class ThreadsAutomation:
 
     def _find_thread(self, data: dict[str, Any], thread_id: str) -> dict[str, Any] | None:
         return next((row for row in data.get("post_queue", []) if row.get("thread_id") == thread_id), None)
+
+    def _parse_schedule_date(self, scheduled_start: str | None) -> date:
+        if not scheduled_start:
+            return date.today() + timedelta(days=1)
+        try:
+            return date.fromisoformat(scheduled_start)
+        except ValueError:
+            return date.today() + timedelta(days=1)
+
+    def _fortune_templates(self, theme: str, note_url: str) -> list[dict[str, Any]]:
+        base_tags = ["#AIOS", "#Threads", "#占い", "#収益化"]
+        url_hint = "note導線あり" if note_url else "note導線準備中"
+        return [
+            {
+                "title": f"{theme}: 朝の一手",
+                "summary": "今日の小さな行動を1つ決めるだけで、発信は続けやすくなります。迷ったら保存、次に1投稿。",
+                "hashtags": base_tags,
+                "image_prompt": f"{theme} morning fortune visual, clean social post, {url_hint}",
+            },
+            {
+                "title": f"{theme}: 仕事運",
+                "summary": "今日伸びるのは、完璧な企画より公開できる下書きです。反応を見て、note本文へ改善を戻します。",
+                "hashtags": [*base_tags, "#仕事運"][:5],
+                "image_prompt": f"{theme} work luck visual, note funnel, calm productivity",
+            },
+            {
+                "title": f"{theme}: 金運",
+                "summary": "収益化は大きな賭けではなく、クリックされる導線を毎日1つ置くことから始まります。",
+                "hashtags": [*base_tags, "#金運"][:5],
+                "image_prompt": f"{theme} money luck visual, revenue funnel, local-first creator",
+            },
+        ]
 
     def _history_item(self, thread: dict[str, Any], status: str) -> dict[str, Any]:
         return {
