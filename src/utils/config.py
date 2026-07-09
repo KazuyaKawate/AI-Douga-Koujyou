@@ -1,10 +1,13 @@
-from pathlib import Path
-from dotenv import load_dotenv
 import os
+from pathlib import Path
 
-load_dotenv()
+from dotenv import load_dotenv
 
-PROJECT_ROOT = Path(__file__).parent.parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+OFFICIAL_WORKSPACE = PROJECT_ROOT
+DOTENV_PATH = PROJECT_ROOT / ".env"
+
+load_dotenv(dotenv_path=DOTENV_PATH, override=False)
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 
@@ -18,3 +21,4 @@ FOLDERS = {
     "一時ファイル": "temp",
     "エピソード": "project",
 }
+
