@@ -1,0 +1,689 @@
+from __future__ import annotations
+
+import html
+import json
+import re
+import shutil
+from datetime import date
+from pathlib import Path
+from typing import Any
+
+
+ROOT = Path(__file__).resolve().parents[2]
+BUSINESS_ENGINE_PATH = ROOT / "config" / "business_engine.json"
+OUTPUT_DIR = ROOT / "output" / "official_site"
+ASSETS_DIR = OUTPUT_DIR / "assets"
+DEFAULT_SITE_URL = "https://example.com"
+PAGE_SIZE = 10
+
+
+def load_business_engine(path: str | Path = BUSINESS_ENGINE_PATH) -> dict[str, Any]:
+    p = Path(path)
+    if not p.exists():
+        return {}
+    return json.loads(p.read_text(encoding="utf-8"))
+
+
+def seo_queue(data: dict[str, Any]) -> list[dict[str, Any]]:
+    return list(data.get("seo_queue", []))
+
+
+def article_list(data: dict[str, Any]) -> list[dict[str, Any]]:
+    return list(data.get("article_queue", []))
+
+
+def publication_summary(data: dict[str, Any]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for article in article_list(data):
+        status = str(article.get("status", "unknown"))
+        counts[status] = counts.get(status, 0) + 1
+    return counts
+
+
+def _slug(value: str) -> str:
+    normalized = "".join(ch.lower() if ch.isalnum() else "-" for ch in value.strip())
+    return "-".join(part for part in normalized.split("-") if part) or "article"
+
+
+def _article_id(article: dict[str, Any]) -> str:
+    return str(article.get("article_id") or _slug(str(article.get("title") or "article")))
+
+
+def _category(article: dict[str, Any]) -> str:
+    return str(article.get("category") or article.get("status") or "uncategorized")
+
+
+def _tags(article: dict[str, Any]) -> list[str]:
+    tags = article.get("tags") or []
+    if isinstance(tags, str):
+        tags = [part.strip() for part in tags.split(",") if part.strip()]
+    keyword = str(article.get("keyword") or "").strip()
+    if keyword:
+        tags = [*tags, keyword]
+    return sorted({str(tag).strip() for tag in tags if str(tag).strip()})
+
+
+def _article_url(article: dict[str, Any], site_url: str) -> str:
+    title = str(article.get("title") or article.get("topic") or article.get("article_id") or "article")
+    return f"{site_url.rstrip('/')}/articles/{_slug(title)}.html"
+
+
+def _article_path(article: dict[str, Any]) -> str:
+    title = str(article.get("title") or article.get("topic") or _article_id(article))
+    return f"articles/{_slug(title)}.html"
+
+
+def _site_href(path: str, site_url: str) -> str:
+    return f"{site_url.rstrip('/')}/{path.lstrip('/')}"
+
+
+def _ga_tag(google_analytics_id: str = "") -> str:
+    if not google_analytics_id:
+        return ""
+    ga_id = html.escape(google_analytics_id)
+    return (
+        f'<script async src="https://www.googletagmanager.com/gtag/js?id={ga_id}"></script>\n'
+        "<script>\n"
+        "window.dataLayer = window.dataLayer || [];\n"
+        "function gtag(){dataLayer.push(arguments);}\n"
+        "gtag('js', new Date());\n"
+        f"gtag('config', '{ga_id}');\n"
+        "</script>"
+    )
+
+
+def _gsc_tag(search_console_verification: str = "") -> str:
+    if not search_console_verification:
+        return ""
+    token = html.escape(search_console_verification)
+    return f'<meta name="google-site-verification" content="{token}">'
+
+
+def _layout(
+    title: str,
+    body: str,
+    *,
+    description: str = "",
+    google_analytics_id: str = "",
+    search_console_verification: str = "",
+    canonical_url: str = "",
+    og_image_url: str = "",
+) -> str:
+    escaped_title = html.escape(title)
+    escaped_description = html.escape(description)
+    canonical_tag = f'  <link rel="canonical" href="{html.escape(canonical_url)}">\n' if canonical_url else ""
+    og_image_tag = f'  <meta property="og:image" content="{html.escape(og_image_url)}">\n' if og_image_url else ""
+    return (
+        "<!doctype html>\n"
+        '<html lang="ja">\n'
+        "<head>\n"
+        '  <meta charset="utf-8">\n'
+        '  <meta name="viewport" content="width=device-width, initial-scale=1">\n'
+        f"  <title>{escaped_title}</title>\n"
+        f'  <meta name="description" content="{escaped_description}">\n'
+        f'  <meta property="og:title" content="{escaped_title}">\n'
+        f'  <meta property="og:description" content="{escaped_description}">\n'
+        "  <meta property=\"og:type\" content=\"website\">\n"
+        f"{og_image_tag}"
+        f"{canonical_tag}"
+        '  <link rel="icon" href="/assets/images/favicon.svg" type="image/svg+xml">\n'
+        '  <link rel="manifest" href="/manifest.json">\n'
+        '  <link rel="stylesheet" href="/assets/css/site.css">\n'
+        f"  {_gsc_tag(search_console_verification)}\n"
+        '  <script defer src="/assets/js/search.js"></script>\n'
+        f"  {_ga_tag(google_analytics_id)}\n"
+        "</head>\n"
+        "<body>\n"
+        "  <header><strong>AIOS Official Site</strong><nav><a href=\"/index.html\">Home</a><a href=\"/article.html\">Articles</a><a href=\"/rss.xml\">RSS</a></nav></header>\n"
+        f"  <main>{body}</main>\n"
+        "  <footer>Generated by AIOS Business Engine</footer>\n"
+        "</body>\n"
+        "</html>\n"
+    )
+
+
+def _markdown_to_html(markdown: str) -> str:
+    lines = []
+    in_list = False
+    for raw in markdown.splitlines():
+        line = raw.strip()
+        if not line:
+            if in_list:
+                lines.append("</ul>")
+                in_list = False
+            continue
+        if line.startswith("# "):
+            if in_list:
+                lines.append("</ul>")
+                in_list = False
+            lines.append(f"<h1>{html.escape(line[2:])}</h1>")
+        elif line.startswith("## "):
+            if in_list:
+                lines.append("</ul>")
+                in_list = False
+            lines.append(f"<h2>{html.escape(line[3:])}</h2>")
+        elif line.startswith("- ") or line[:2].replace(".", "").isdigit():
+            if not in_list:
+                lines.append("<ul>")
+                in_list = True
+            text = line[2:] if line.startswith("- ") else line.split(".", 1)[-1].strip()
+            lines.append(f"<li>{html.escape(text)}</li>")
+        else:
+            if in_list:
+                lines.append("</ul>")
+                in_list = False
+            lines.append(f"<p>{html.escape(line)}</p>")
+    if in_list:
+        lines.append("</ul>")
+    return "\n".join(lines)
+
+
+def _breadcrumbs(items: list[tuple[str, str]]) -> str:
+    links = [f'<a href="{html.escape(url)}">{html.escape(label)}</a>' for label, url in items[:-1]]
+    if items:
+        links.append(html.escape(items[-1][0]))
+    return f'<div class="crumbs">{" / ".join(links)}</div>'
+
+
+def _article_card(article: dict[str, Any]) -> str:
+    title = str(article.get("title") or "Untitled")
+    summary = str(article.get("topic") or article.get("keyword") or "")[:140]
+    tags = " ".join(f'<span class="pill">{html.escape(tag)}</span>' for tag in _tags(article))
+    return (
+        '<div class="card article-card">'
+        f'<h3><a href="/{html.escape(_article_path(article))}">{html.escape(title)}</a></h3>'
+        f'<p class="meta">{html.escape(_category(article))} / {html.escape(str(article.get("status", "")))}</p>'
+        f"<p>{html.escape(summary)}</p>"
+        f"<div>{tags}</div>"
+        "</div>"
+    )
+
+
+def _paginate(items: list[dict[str, Any]], page: int, page_size: int = PAGE_SIZE) -> tuple[list[dict[str, Any]], int]:
+    total_pages = max((len(items) + page_size - 1) // page_size, 1)
+    current = max(min(page, total_pages), 1)
+    start = (current - 1) * page_size
+    return items[start:start + page_size], total_pages
+
+
+def _pagination(base_name: str, total_pages: int) -> str:
+    if total_pages <= 1:
+        return ""
+    links = []
+    for page in range(1, total_pages + 1):
+        href = base_name if page == 1 else f"{Path(base_name).stem}-{page}.html"
+        links.append(f'<a href="{html.escape(href)}">{page}</a>')
+    return f'<div class="pagination">{" ".join(links)}</div>'
+
+
+def _asset_files() -> dict[str, str]:
+    return {
+        "css/site.css": (
+            "body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;margin:0;color:#17202a;background:#f7f8fb;line-height:1.7;}\n"
+            "header,main,footer{max-width:1040px;margin:auto;padding:24px;}\n"
+            "header{display:flex;gap:18px;align-items:center;justify-content:space-between;}\n"
+            "nav a,.crumbs a{margin-right:12px;color:#22577a;text-decoration:none;}\n"
+            ".hero,.card{background:#fff;border:1px solid #e6e9ef;border-radius:8px;padding:20px;margin:14px 0;}\n"
+            ".grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;}\n"
+            ".meta,.crumbs,footer{color:#667085;font-size:14px;}\n"
+            "input{width:100%;box-sizing:border-box;padding:12px;border:1px solid #cad1dc;border-radius:6px;margin:8px 0 16px;}\n"
+            ".pill{display:inline-block;background:#eef4ff;color:#22577a;border-radius:999px;padding:2px 10px;margin:2px;font-size:13px;}\n"
+            ".pagination a{display:inline-block;padding:6px 10px;margin:2px;border:1px solid #d0d7e2;border-radius:6px;text-decoration:none;color:#22577a;background:#fff;}\n"
+            "article img{max-width:100%;}\n"
+        ),
+        "js/search.js": (
+            "function filterArticles(q){\n"
+            "  q = (q || '').toLowerCase();\n"
+            "  document.querySelectorAll('.article-card').forEach(function(card){\n"
+            "    card.style.display = card.innerText.toLowerCase().includes(q) ? '' : 'none';\n"
+            "  });\n"
+            "}\n"
+        ),
+        "images/favicon.svg": (
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'
+            '<rect width="64" height="64" rx="12" fill="#22577a"/>'
+            '<path d="M18 44 32 12l14 32h-8l-3-8H29l-3 8z" fill="#fff"/>'
+            "</svg>"
+        ),
+        "images/ogp.svg": (
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">'
+            '<rect width="1200" height="630" fill="#f7f8fb"/>'
+            '<rect x="80" y="80" width="1040" height="470" rx="24" fill="#22577a"/>'
+            '<text x="130" y="300" font-family="Arial,sans-serif" font-size="84" font-weight="700" fill="#fff">AIOS Official Site</text>'
+            '<text x="132" y="390" font-family="Arial,sans-serif" font-size="34" fill="#d7eef9">Generated by AIOS Business Engine</text>'
+            "</svg>"
+        ),
+    }
+
+
+def write_assets() -> dict[str, str]:
+    written: dict[str, str] = {}
+    for relative, content in _asset_files().items():
+        path = ASSETS_DIR / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+        written[f"asset_{relative.replace('/', '_')}"] = str(path)
+    return written
+
+
+def _related_articles(article: dict[str, Any], articles: list[dict[str, Any]], limit: int = 3) -> list[dict[str, Any]]:
+    tags = set(_tags(article))
+    category = _category(article)
+    related = [
+        other for other in articles
+        if _article_id(other) != _article_id(article)
+        and (_category(other) == category or tags.intersection(_tags(other)))
+    ]
+    return related[:limit]
+
+
+def generate_sitemap(data: dict[str, Any], site_url: str = DEFAULT_SITE_URL) -> str:
+    today = date.today().isoformat()
+    urls = [site_url.rstrip("/")]
+    urls.extend(_article_url(article, site_url) for article in article_list(data))
+    urls.extend(f"{site_url.rstrip('/')}/categories/{_slug(category)}.html" for category in categories(data))
+    urls.extend(f"{site_url.rstrip('/')}/tags/{_slug(tag)}.html" for tag in tags(data))
+    body = "\n".join(
+        "  <url>\n"
+        f"    <loc>{html.escape(url)}</loc>\n"
+        f"    <lastmod>{today}</lastmod>\n"
+        "  </url>"
+        for url in urls
+    )
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        f"{body}\n"
+        "</urlset>\n"
+    )
+
+
+def generate_robots(site_url: str = DEFAULT_SITE_URL) -> str:
+    base = site_url.rstrip("/")
+    return f"User-agent: *\nAllow: /\nSitemap: {base}/sitemap.xml\n"
+
+
+def generate_rss(data: dict[str, Any], site_url: str = DEFAULT_SITE_URL) -> str:
+    base = site_url.rstrip("/")
+    items = "\n".join(
+        "    <item>\n"
+        f"      <title>{html.escape(str(article.get('title', 'Untitled')))}</title>\n"
+        f"      <link>{html.escape(_article_url(article, base))}</link>\n"
+        f"      <guid>{html.escape(str(article.get('article_id') or article.get('title', 'article')))}</guid>\n"
+        f"      <description>{html.escape(str(article.get('topic') or article.get('keyword') or ''))}</description>\n"
+        "    </item>"
+        for article in article_list(data)
+    )
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<rss version="2.0">\n'
+        "  <channel>\n"
+        "    <title>AIOS Official Site</title>\n"
+        f"    <link>{html.escape(base)}</link>\n"
+        "    <description>AIOS official content feed</description>\n"
+        f"{items}\n"
+        "  </channel>\n"
+        "</rss>\n"
+    )
+
+
+def categories(data: dict[str, Any]) -> list[str]:
+    return sorted({_category(article) for article in article_list(data)})
+
+
+def tags(data: dict[str, Any]) -> list[str]:
+    found: set[str] = set()
+    for article in article_list(data):
+        found.update(_tags(article))
+    return sorted(found)
+
+
+def _write_index_pages(
+    articles: list[dict[str, Any]],
+    *,
+    title: str,
+    base_name: str,
+    intro: str,
+    site_url: str,
+    google_analytics_id: str,
+    search_console_verification: str,
+) -> list[Path]:
+    paths = []
+    _, total_pages = _paginate(articles, 1)
+    for page in range(1, total_pages + 1):
+        page_items, _ = _paginate(articles, page)
+        body = (
+            _breadcrumbs([(title, base_name)])
+            + f'<section class="hero"><h1>{html.escape(title)}</h1><p>{html.escape(intro)}</p>'
+            + '<input id="search" placeholder="記事検索" oninput="filterArticles(this.value)">'
+            + "</section>"
+            + '<section class="grid" id="articles">'
+            + "".join(_article_card(article) for article in page_items)
+            + "</section>"
+            + _pagination(base_name, total_pages)
+        )
+        filename = base_name if page == 1 else f"{Path(base_name).stem}-{page}.html"
+        path = OUTPUT_DIR / filename
+        path.write_text(
+            _layout(
+                title,
+                body,
+                description=intro,
+                google_analytics_id=google_analytics_id,
+                search_console_verification=search_console_verification,
+                canonical_url=_site_href(filename, site_url),
+                og_image_url=_site_href("assets/images/ogp.svg", site_url),
+            ),
+            encoding="utf-8",
+        )
+        paths.append(path)
+    return paths
+
+
+def _manifest(site_url: str) -> str:
+    base = site_url.rstrip("/")
+    return json.dumps(
+        {
+            "name": "AIOS Official Site",
+            "short_name": "AIOS",
+            "start_url": f"{base}/index.html",
+            "scope": f"{base}/",
+            "display": "standalone",
+            "background_color": "#f7f8fb",
+            "theme_color": "#22577a",
+            "icons": [
+                {
+                    "src": f"{base}/assets/images/favicon.svg",
+                    "sizes": "64x64",
+                    "type": "image/svg+xml",
+                }
+            ],
+        },
+        ensure_ascii=False,
+        indent=2,
+    )
+
+
+def write_404(site_url: str, google_analytics_id: str = "", search_console_verification: str = "") -> str:
+    body = (
+        '<section class="hero"><h1>404</h1><p>ページが見つかりません。</p>'
+        '<p><a href="/index.html">トップページへ戻る</a></p></section>'
+    )
+    path = OUTPUT_DIR / "404.html"
+    path.write_text(
+        _layout(
+            "404 - AIOS Official Site",
+            body,
+            description="AIOS Official Site 404 page",
+            google_analytics_id=google_analytics_id,
+            search_console_verification=search_console_verification,
+            canonical_url=_site_href("404.html", site_url),
+            og_image_url=_site_href("assets/images/ogp.svg", site_url),
+        ),
+        encoding="utf-8",
+    )
+    return str(path)
+
+
+def write_manifest(site_url: str) -> str:
+    path = OUTPUT_DIR / "manifest.json"
+    path.write_text(_manifest(site_url), encoding="utf-8")
+    return str(path)
+
+
+def write_html_site(
+    data: dict[str, Any],
+    site_url: str = DEFAULT_SITE_URL,
+    *,
+    google_analytics_id: str = "",
+    search_console_verification: str = "",
+) -> dict[str, str]:
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    (OUTPUT_DIR / "articles").mkdir(exist_ok=True)
+    (OUTPUT_DIR / "categories").mkdir(exist_ok=True)
+    (OUTPUT_DIR / "tags").mkdir(exist_ok=True)
+
+    articles = article_list(data)
+    written: dict[str, str] = write_assets()
+
+    index_body = (
+        '<section class="hero"><h1>AIOS Official Site</h1><p>Business Engineから生成された公式サイトです。</p></section>'
+        '<section class="grid">'
+        + "".join(_article_card(article) for article in articles[:6])
+        + "</section>"
+    )
+    index_path = OUTPUT_DIR / "index.html"
+    index_path.write_text(
+        _layout(
+            "AIOS Official Site",
+            index_body,
+            description="AIOS official site",
+            google_analytics_id=google_analytics_id,
+            search_console_verification=search_console_verification,
+            canonical_url=_site_href("index.html", site_url),
+            og_image_url=_site_href("assets/images/ogp.svg", site_url),
+        ),
+        encoding="utf-8",
+    )
+    written["index"] = str(index_path)
+
+    for path in _write_index_pages(
+        articles,
+        title="Articles",
+        base_name="article.html",
+        intro="AIOS公式記事一覧",
+        site_url=site_url,
+        google_analytics_id=google_analytics_id,
+        search_console_verification=search_console_verification,
+    ):
+        written[f"articles_index_{path.stem}"] = str(path)
+
+    for article in articles:
+        title = str(article.get("title") or "Untitled")
+        body = (
+            _breadcrumbs([("Home", "/index.html"), ("Articles", "/article.html"), (title, _article_path(article))])
+            + "<article>"
+            + _markdown_to_html(str(article.get("body") or article.get("text") or title))
+            + "</article>"
+        )
+        related = _related_articles(article, articles)
+        if related:
+            body += "<section><h2>関連記事</h2><div class=\"grid\">" + "".join(_article_card(item) for item in related) + "</div></section>"
+        path = OUTPUT_DIR / _article_path(article)
+        path.write_text(
+            _layout(
+                title,
+                body,
+                description=str(article.get("topic") or article.get("keyword") or ""),
+                google_analytics_id=google_analytics_id,
+                search_console_verification=search_console_verification,
+                canonical_url=_article_url(article, site_url),
+                og_image_url=_site_href("assets/images/ogp.svg", site_url),
+            ),
+            encoding="utf-8",
+        )
+        written[f"article_{_article_id(article)}"] = str(path)
+
+    for category in categories(data):
+        category_articles = [article for article in articles if _category(article) == category]
+        path = OUTPUT_DIR / "categories" / f"{_slug(category)}.html"
+        body = (
+            _breadcrumbs([("Home", "/index.html"), ("Categories", "/article.html"), (category, str(path))])
+            + f"<h1>{html.escape(category)}</h1><div class=\"grid\">"
+            + "".join(_article_card(article) for article in category_articles)
+            + "</div>"
+        )
+        path.write_text(
+            _layout(
+                f"{category} articles",
+                body,
+                description=f"{category} articles",
+                google_analytics_id=google_analytics_id,
+                search_console_verification=search_console_verification,
+                canonical_url=_site_href(f"categories/{_slug(category)}.html", site_url),
+                og_image_url=_site_href("assets/images/ogp.svg", site_url),
+            ),
+            encoding="utf-8",
+        )
+        written[f"category_{_slug(category)}"] = str(path)
+
+    for tag in tags(data):
+        tag_articles = [article for article in articles if tag in _tags(article)]
+        path = OUTPUT_DIR / "tags" / f"{_slug(tag)}.html"
+        body = (
+            _breadcrumbs([("Home", "/index.html"), ("Tags", "/article.html"), (tag, str(path))])
+            + f"<h1>#{html.escape(tag)}</h1><div class=\"grid\">"
+            + "".join(_article_card(article) for article in tag_articles)
+            + "</div>"
+        )
+        path.write_text(
+            _layout(
+                f"{tag} tagged articles",
+                body,
+                description=f"{tag} tagged articles",
+                google_analytics_id=google_analytics_id,
+                search_console_verification=search_console_verification,
+                canonical_url=_site_href(f"tags/{_slug(tag)}.html", site_url),
+                og_image_url=_site_href("assets/images/ogp.svg", site_url),
+            ),
+            encoding="utf-8",
+        )
+        written[f"tag_{_slug(tag)}"] = str(path)
+
+    search_path = OUTPUT_DIR / "search.json"
+    search_path.write_text(
+        json.dumps([
+            {
+                "title": article.get("title", "Untitled"),
+                "url": f"/{_article_path(article)}",
+                "category": _category(article),
+                "tags": _tags(article),
+            }
+            for article in articles
+        ], ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    written["search"] = str(search_path)
+    written["404"] = write_404(site_url, google_analytics_id, search_console_verification)
+    written["manifest"] = write_manifest(site_url)
+    written.update(write_site_artifacts(data, site_url))
+    return written
+
+
+def write_site_artifacts(data: dict[str, Any], site_url: str = DEFAULT_SITE_URL) -> dict[str, str]:
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    artifacts = {
+        "sitemap": OUTPUT_DIR / "sitemap.xml",
+        "robots": OUTPUT_DIR / "robots.txt",
+        "rss": OUTPUT_DIR / "rss.xml",
+    }
+    artifacts["sitemap"].write_text(generate_sitemap(data, site_url), encoding="utf-8")
+    artifacts["robots"].write_text(generate_robots(site_url), encoding="utf-8")
+    artifacts["rss"].write_text(generate_rss(data, site_url), encoding="utf-8")
+    return {key: str(path) for key, path in artifacts.items()}
+
+
+def _local_reference_exists(current_file: Path, reference: str, output_dir: Path) -> bool:
+    clean = reference.split("#", 1)[0].split("?", 1)[0]
+    if not clean or clean.startswith(("http://", "https://", "mailto:", "tel:")):
+        return True
+    target = output_dir / clean.lstrip("/") if clean.startswith("/") else current_file.parent / clean
+    if target.suffix == "":
+        target = target / "index.html"
+    return target.exists()
+
+
+def preflight_check(output_dir: str | Path = OUTPUT_DIR) -> dict[str, Any]:
+    base = Path(output_dir)
+    errors: list[str] = []
+    warnings: list[str] = []
+    html_files = list(base.rglob("*.html")) if base.exists() else []
+
+    if not html_files:
+        errors.append("HTMLファイルがありません。")
+
+    for file in html_files:
+        content = file.read_text(encoding="utf-8")
+        refs = re.findall(r'(?:href|src)="([^"]+)"', content)
+        for ref in refs:
+            if not _local_reference_exists(file, ref, base):
+                errors.append(f"リンク切れ: {file.relative_to(base)} -> {ref}")
+        image_refs = re.findall(r'<img[^>]+src="([^"]+)"', content)
+        for ref in image_refs:
+            if not _local_reference_exists(file, ref, base):
+                errors.append(f"画像欠落: {file.relative_to(base)} -> {ref}")
+        if not re.search(r"<title>.+?</title>", content, re.S):
+            errors.append(f"SEO必須項目不足(title): {file.relative_to(base)}")
+        if 'name="description"' not in content:
+            errors.append(f"SEO必須項目不足(description): {file.relative_to(base)}")
+        if 'rel="canonical"' not in content:
+            warnings.append(f"canonical未設定: {file.relative_to(base)}")
+
+    sitemap = base / "sitemap.xml"
+    if not sitemap.exists() or not sitemap.read_text(encoding="utf-8").strip():
+        errors.append("sitemap.xmlがありません。")
+
+    return {
+        "ok": not errors,
+        "errors": errors,
+        "warnings": warnings,
+        "checked_html": len(html_files),
+        "sitemap": str(sitemap),
+    }
+
+
+def deploy_site(public_dir: str | Path, output_dir: str | Path = OUTPUT_DIR) -> dict[str, str]:
+    source = Path(output_dir)
+    target = Path(public_dir)
+    if not source.exists():
+        raise FileNotFoundError(f"公開元がありません: {source}")
+    target.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(source, target, dirs_exist_ok=True)
+    return {"source": str(source), "target": str(target)}
+
+
+def production_check(settings: dict[str, Any], output_dir: str | Path = OUTPUT_DIR) -> dict[str, Any]:
+    release = settings.get("release", {})
+    domain_url = str(release.get("domain_url") or "").strip()
+    public_dir = str(release.get("public_dir") or "").strip()
+    checks = {
+        "ドメイン接続": bool(domain_url and domain_url != DEFAULT_SITE_URL),
+        "HTTPS": domain_url.startswith("https://"),
+        "robots": (Path(output_dir) / "robots.txt").exists(),
+        "sitemap": (Path(output_dir) / "sitemap.xml").exists(),
+        "RSS": (Path(output_dir) / "rss.xml").exists(),
+        "Threads API": bool(release.get("threads_access_token") and release.get("threads_user_id")),
+        "Analytics": bool(release.get("google_analytics_id")),
+        "Search Console": bool(release.get("search_console_verification")),
+        "公開ディレクトリ": bool(public_dir),
+        "公開前レビュー": bool(release.get("pre_publication_review_approved")),
+    }
+    missing = [name for name, ok in checks.items() if not ok]
+    return {"ok": not missing, "checks": checks, "missing": missing}
+
+
+def formal_release(data: dict[str, Any], settings: dict[str, Any]) -> dict[str, Any]:
+    release = settings.get("release", {})
+    site_url = str(release.get("domain_url") or DEFAULT_SITE_URL)
+    public_dir = str(release.get("public_dir") or "").strip()
+    if not public_dir:
+        raise ValueError("公開ディレクトリが未設定です。")
+    if not release.get("pre_publication_review_approved"):
+        raise RuntimeError("公開前レビューが未承認です。Phase5公開前レビューを完了してください。")
+
+    written = write_html_site(
+        data,
+        site_url,
+        google_analytics_id=str(release.get("google_analytics_id") or ""),
+        search_console_verification=str(release.get("search_console_verification") or ""),
+    )
+    preflight = preflight_check()
+    if not preflight["ok"]:
+        raise RuntimeError("公開前チェックに失敗しました: " + ", ".join(preflight["errors"]))
+
+    deployed = deploy_site(public_dir)
+    release["threads_live"] = True
+    release["business_engine_live"] = True
+    release["formal_release"] = True
+    settings["release"] = release
+    return {"written": written, "preflight": preflight, "deployed": deployed, "settings": settings}
