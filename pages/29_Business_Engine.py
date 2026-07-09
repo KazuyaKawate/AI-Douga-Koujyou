@@ -7,6 +7,7 @@ import streamlit as st
 from src.business_engine.manager import BusinessEngineStore, GEMINI_RUNTIME_JOB_TYPES, JOB_TYPES, REVENUE_STAGES
 from src.business_engine.automation import RevenueAutomation
 from src.business_engine.scheduler_daemon import SchedulerDaemon
+from src.business_engine.threads_automation import ThreadsAutomation
 from src.business_engine.worker import BusinessWorker
 from src.core.version import get_version_label
 from src.providers.gemini_cli_provider import GeminiCLIProvider
@@ -15,12 +16,15 @@ st.set_page_config(page_title="Business Engine", page_icon="📈", layout="wide"
 
 store = BusinessEngineStore()
 automation = RevenueAutomation(store)
+threads_automation = ThreadsAutomation(store)
 scheduler = SchedulerDaemon(store)
 data = store.load()
 summary = store.pipeline_summary()
 forecast = store.earnings_forecast()
 monitor = store.execution_monitor()
+phase1_dashboard = store.business_phase1_dashboard()
 revenue_summary = automation.dashboard_summary()
+threads_summary = threads_automation.dashboard_summary()
 beta_metrics = store.beta_metrics()
 adapter_registry = store.adapter_registry()
 ai_runtime = store.ai_runtime_summary()
@@ -39,12 +43,37 @@ tabs = st.tabs([
     "📈 Forecast",
     "🧾 History",
     "🔁 Retry Queue",
+    "📝 Note Ops",
+    "🧵 Threads Ops",
     "🤖 Automation",
     "🧠 AI Runtime",
     "🔌 Adapters",
 ])
 
 with tabs[0]:
+    st.subheader("Business Engine Phase1: 初収益ダッシュボード")
+    st.caption("AIOS初収益を最優先に、DryRun・Local Firstのまま日次KPIと収益予測を管理します。")
+    ph1a, ph1b, ph1c, ph1d = st.columns(4)
+    ph1a.metric("DryRun", "ON" if phase1_dashboard["dry_run"] else "OFF")
+    ph1b.metric("Local First", "ON" if phase1_dashboard["local_first"] else "OFF")
+    ph1c.metric("初収益までの進捗率", f"{phase1_dashboard['first_revenue_progress_rate']}%")
+    ph1d.metric("収益予測", f"¥{phase1_dashboard['revenue_prediction']:,}")
+
+    ph2a, ph2b, ph2c, ph2d, ph2e, ph2f = st.columns(6)
+    ph2a.metric("今日の投稿数", phase1_dashboard["today_post_count"])
+    ph2b.metric("note記事数", phase1_dashboard["note_article_count"])
+    ph2c.metric("Threads投稿数", phase1_dashboard["threads_post_count"])
+    ph2d.metric("PV", phase1_dashboard["pv"])
+    ph2e.metric("クリック率", phase1_dashboard["click_rate"])
+    ph2f.metric("CTR", phase1_dashboard["ctr"])
+
+    if phase1_dashboard["daily_kpis"]:
+        st.markdown("**毎日のKPI**")
+        st.dataframe(phase1_dashboard["daily_kpis"], use_container_width=True, hide_index=True)
+    else:
+        st.info("毎日のKPIはまだありません。Daily KPIタブから記録できます。")
+
+    st.divider()
     worker = monitor.get("worker", {})
     c1, c2, c3, c4, c5, c6 = st.columns(6)
     c1.metric("Today's Revenue", f"¥{revenue_summary['today_revenue']:,}")
@@ -260,17 +289,36 @@ with tabs[3]:
     k1, k2, k3, k4, k5 = st.columns(5)
     kpi_date = k1.date_input("Date", value=date.today(), key="be_kpi_date")
     revenue = k2.number_input("Revenue", min_value=0, step=1000, key="be_kpi_revenue")
-    articles = k3.number_input("Articles", min_value=0, step=1, key="be_kpi_articles")
-    sns_posts = k4.number_input("SNS posts", min_value=0, step=1, key="be_kpi_sns")
+    articles = k3.number_input("note articles", min_value=0, step=1, key="be_kpi_articles")
+    sns_posts = k4.number_input("Threads posts", min_value=0, step=1, key="be_kpi_sns")
     clicks = k5.number_input("Affiliate clicks", min_value=0, step=1, key="be_kpi_clicks")
+    k6, k7 = st.columns(2)
+    pv = k6.number_input("PV", min_value=0, step=10, key="be_kpi_pv")
+    ctr = k7.number_input("CTR", min_value=0.0, max_value=1.0, step=0.01, format="%.4f", key="be_kpi_ctr")
     notes = st.text_area("Notes", height=80, key="be_kpi_notes")
     if st.button("Record KPI", type="primary"):
-        store.record_daily_kpi(kpi_date.isoformat(), int(revenue), int(articles), int(sns_posts), int(clicks), notes)
+        store.record_daily_kpi(
+            kpi_date.isoformat(),
+            int(revenue),
+            int(articles),
+            int(sns_posts),
+            int(clicks),
+            notes,
+            pv=int(pv),
+            ctr=float(ctr),
+            note_articles=int(articles),
+            threads_posts=int(sns_posts),
+        )
         st.success("KPI recorded.")
         st.rerun()
 
     for row in data.get("daily_kpis", [])[:14]:
-        st.write(f"{row.get('date')} — ¥{int(row.get('revenue', 0)):,} / articles {row.get('articles', 0)} / SNS {row.get('sns_posts', 0)}")
+        st.write(
+            f"{row.get('date')} — ¥{int(row.get('revenue', 0)):,} / "
+            f"note {row.get('note_articles', row.get('articles', 0))} / "
+            f"Threads {row.get('threads_posts', row.get('sns_posts', 0))} / "
+            f"PV {row.get('pv', 0)} / CTR {row.get('ctr', 0)}"
+        )
 
 with tabs[4]:
     st.subheader("📈 Earnings Forecast")
@@ -305,6 +353,160 @@ with tabs[6]:
                 st.rerun()
 
 with tabs[7]:
+    st.subheader("📝 Phase6 Note Operations")
+    st.caption("Topic Researchからnote予約、投稿履歴、SEO/PV/CTR/収益、Knowledge返却までをLocal-firstで管理します。")
+
+    n1, n2, n3, n4, n5, n6, n7 = st.columns(7)
+    n1.metric("記事Queue", revenue_summary["article_queue"])
+    n2.metric("予約一覧", revenue_summary.get("note_reservations", 0))
+    n3.metric("投稿履歴", revenue_summary.get("posting_history", 0))
+    n4.metric("SEO評価", revenue_summary.get("seo_average", 0))
+    n5.metric("PV", revenue_summary.get("pv", 0))
+    n6.metric("CTR", revenue_summary.get("ctr", 0))
+    n7.metric("収益", f"¥{int(revenue_summary.get('article_revenue', 0)):,}")
+
+    gen_cols = st.columns([2, 1, 1])
+    phase6_topic = gen_cols[0].text_input("Topic Research", value="AIOS Business Engine 実運用", key="phase6_topic")
+    phase6_target = gen_cols[1].text_input("Target", value="AIOS users", key="phase6_target")
+    if gen_cols[2].button("記事生成", type="primary", use_container_width=True):
+        article = automation.generate_note_article_pipeline(phase6_topic, phase6_target)
+        if article.get("status") == "duplicate_blocked":
+            st.warning(article["reason"])
+        else:
+            st.success("記事、SEO、画像Prompt、Markdown、Knowledge連携を生成しました。")
+        st.rerun()
+
+    note_tabs = st.tabs(["記事Queue", "予約一覧", "投稿履歴", "SEO評価", "Research/Mission返却"])
+    with note_tabs[0]:
+        for article in data.get("article_queue", [])[:20]:
+            with st.container(border=True):
+                c1, c2, c3, c4, c5 = st.columns([3, 1, 1, 1, 1])
+                c1.markdown(f"**{article.get('title', '')}**")
+                c1.caption(article.get("markdown_path", ""))
+                c2.metric("Status", article.get("status", ""))
+                c3.metric("SEO", article.get("seo", {}).get("score", article.get("review", {}).get("score", 0)))
+                c4.metric("PV", article.get("pv", 0))
+                c5.metric("CTR", article.get("ctr", 0))
+                actions = st.columns(4)
+                if actions[0].button("予約", key=f"note_reserve_{article.get('article_id')}"):
+                    automation.schedule_note_post(article["article_id"])
+                    st.rerun()
+                if actions[1].button("投稿", key=f"note_publish_{article.get('article_id')}"):
+                    automation.publish_article(article["article_id"])
+                    st.rerun()
+                if actions[2].button("PV/CTR取得", key=f"note_metrics_{article.get('article_id')}"):
+                    automation.fetch_article_metrics(article["article_id"])
+                    st.rerun()
+                if actions[3].button("Knowledge保存", key=f"note_kb_{article.get('article_id')}"):
+                    automation.save_article_knowledge(article)
+                    st.success("Knowledgeへ保存しました。")
+    with note_tabs[1]:
+        for reservation in data.get("note_reservations", [])[:30]:
+            st.write(f"{reservation.get('scheduled_for')} — `{reservation.get('status')}` — {reservation.get('title')}")
+    with note_tabs[2]:
+        for history in data.get("posting_history", [])[:30]:
+            st.write(
+                f"{history.get('published_at')} — `{history.get('status')}` — "
+                f"{history.get('title')} / PV {history.get('pv', 0)} / CTR {history.get('ctr', 0)}"
+            )
+    with note_tabs[3]:
+        for article in data.get("article_queue", [])[:20]:
+            if article.get("seo"):
+                st.write(f"{article.get('title')} — score {article['seo'].get('score')}")
+                st.json(article["seo"])
+    with note_tabs[4]:
+        st.markdown("**Research Team Feedback**")
+        st.json(data.get("research_feedback", [])[:10])
+        st.markdown("**Mission Planner Feedback**")
+        st.json(data.get("mission_planner_feedback", [])[:10])
+
+with tabs[8]:
+    st.subheader("🧵 Phase7 Threads Operations")
+    st.caption("note記事からThreads投稿を生成、予約、DryRun投稿、分析し、改善結果をAIOSへ戻します。")
+
+    t1, t2, t3, t4, t5, t6, t7 = st.columns(7)
+    t1.metric("投稿Queue", threads_summary["queue"])
+    t2.metric("予約一覧", threads_summary["reservations"])
+    t3.metric("投稿履歴", threads_summary["history"])
+    t4.metric("DryRun", "ON" if threads_summary["dry_run"] else "OFF")
+    t5.metric("反応率", threads_summary["reaction_rate"])
+    t6.metric("CTR", threads_summary["ctr"])
+    t7.metric("改善提案", threads_summary["improvements"])
+
+    st_status = "本番投稿可能" if threads_summary["production_ready"] else "DryRun: Threads API未設定または外部API無効"
+    st.info(st_status)
+
+    article_options = {article.get("title", article.get("article_id", "")): article.get("article_id", "") for article in data.get("article_queue", [])}
+    op_cols = st.columns([2, 1, 1, 1])
+    selected_title = op_cols[0].selectbox("note記事", list(article_options.keys()) or ["記事がありません"], key="threads_article_select")
+    selected_article_id = article_options.get(selected_title, "")
+    if op_cols[1].button("Threads生成", type="primary", use_container_width=True):
+        if selected_article_id:
+            thread = threads_automation.generate_from_note(selected_article_id)
+            if thread and thread.get("status") == "duplicate_blocked":
+                st.warning(thread["reason"])
+            else:
+                st.success("note記事からThreads本文、CTA、ハッシュタグ、asset参照を生成しました。")
+            st.rerun()
+        else:
+            st.warning("先にPhase6でnote記事を生成してください。")
+    if op_cols[2].button("予約登録", use_container_width=True):
+        pending = [post for post in data.get("post_queue", []) if post.get("platform") == "threads" and post.get("status") == "draft"]
+        if pending:
+            threads_automation.reserve_thread(pending[0]["thread_id"])
+            st.rerun()
+        else:
+            st.info("予約できるThreads下書きがありません。")
+    if op_cols[3].button("DryRun投稿", use_container_width=True):
+        pending = [post for post in data.get("post_queue", []) if post.get("platform") == "threads" and post.get("status") in ("draft", "reserved")]
+        if pending:
+            threads_automation.publish_thread(pending[0]["thread_id"], dry_run=True)
+            st.rerun()
+        else:
+            st.info("投稿できるThreads Queueがありません。")
+
+    thread_tabs = st.tabs(["投稿Queue", "予約一覧", "投稿履歴", "改善提案", "Research/Mission返却"])
+    with thread_tabs[0]:
+        for post in [p for p in data.get("post_queue", []) if p.get("platform") == "threads"][:20]:
+            with st.container(border=True):
+                c1, c2, c3, c4 = st.columns([3, 1, 1, 1])
+                c1.markdown(f"**{post.get('title', post.get('topic', ''))}**")
+                c1.caption(post.get("text", "")[:220])
+                c2.metric("Status", post.get("status", ""))
+                c3.metric("反応率", post.get("reaction_rate", 0))
+                c4.metric("CTR", post.get("ctr", 0))
+                action_cols = st.columns(4)
+                if action_cols[0].button("予約", key=f"thread_reserve_{post.get('thread_id')}"):
+                    threads_automation.reserve_thread(post["thread_id"])
+                    st.rerun()
+                if action_cols[1].button("DryRun", key=f"thread_dry_{post.get('thread_id')}"):
+                    threads_automation.publish_thread(post["thread_id"], dry_run=True)
+                    st.rerun()
+                if action_cols[2].button("反応取得", key=f"thread_metrics_{post.get('thread_id')}"):
+                    threads_automation.fetch_thread_metrics(post["thread_id"])
+                    st.rerun()
+                if action_cols[3].button("Knowledge保存", key=f"thread_kb_{post.get('thread_id')}"):
+                    threads_automation.save_threads_knowledge(post)
+                    st.success("Knowledgeへ保存しました。")
+    with thread_tabs[1]:
+        for reservation in data.get("threads_reservations", [])[:30]:
+            st.write(f"{reservation.get('scheduled_for')} — `{reservation.get('status')}` — {reservation.get('title')}")
+    with thread_tabs[2]:
+        for history in data.get("threads_history", [])[:30]:
+            st.write(
+                f"{history.get('published_at')} — `{history.get('status')}` — "
+                f"{history.get('title')} / reaction {history.get('reaction_rate', 0)} / CTR {history.get('ctr', 0)}"
+            )
+    with thread_tabs[3]:
+        for improvement in data.get("threads_improvements", [])[:20]:
+            st.write(f"{improvement.get('created_at')} — {', '.join(improvement.get('suggestions', []))}")
+    with thread_tabs[4]:
+        st.markdown("**Research Team Feedback**")
+        st.json([row for row in data.get("research_feedback", []) if row.get("source") == "threads_automation"][:10])
+        st.markdown("**Mission Planner Feedback**")
+        st.json([row for row in data.get("mission_planner_feedback", []) if row.get("source") == "threads_automation"][:10])
+
+with tabs[9]:
     st.subheader("🤖 AI Revenue Automation")
     st.caption("Local-first queue preparation. No external APIs are called.")
 
@@ -363,7 +565,7 @@ with tabs[7]:
             else:
                 st.warning("SEO keyword is required.")
 
-with tabs[8]:
+with tabs[10]:
     st.subheader("🧠 AI Runtime")
     st.caption("Gemini CLI runtime only. No OpenAI API, Anthropic API, Gemini Cloud SDK, Google Workspace, or publishing APIs are called here.")
 
@@ -436,7 +638,7 @@ with tabs[8]:
             f"{record.get('total_tokens')} tokens — ¥{record.get('estimated_cost_yen', 0)}"
         )
 
-with tabs[9]:
+with tabs[11]:
     st.subheader("🔌 Integration Adapters")
     st.caption("Interfaces are present for beta deployment readiness. All external adapters remain disabled until explicitly approved and configured.")
 

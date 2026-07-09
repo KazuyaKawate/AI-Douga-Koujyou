@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import date
+
 from src.business_engine.manager import BusinessEngineStore
 from src.business_engine.worker import BusinessWorker
 
@@ -26,6 +28,53 @@ def test_business_engine_pipeline_and_forecast(tmp_path):
     assert summary["open_items"] == 1
     assert summary["weighted_forecast"] == 7000
     assert forecast["forecast_total"] >= 7000
+
+
+def test_business_engine_phase1_revenue_dashboard_tracks_initial_revenue(tmp_path):
+    store = BusinessEngineStore(tmp_path / "business_engine.json")
+    store.record_daily_kpi(
+        date.today().isoformat(),
+        revenue=0,
+        articles=1,
+        sns_posts=2,
+        affiliate_clicks=8,
+        pv=400,
+        ctr=0.02,
+        note_articles=1,
+        threads_posts=2,
+    )
+    store.add_revenue_item(
+        "First AIOS revenue article",
+        channel="note",
+        expected_revenue=5000,
+        stage="published",
+    )
+
+    dashboard = store.business_phase1_dashboard()
+
+    assert dashboard["phase"] == "Business Engine Phase1"
+    assert dashboard["priority"] == "AIOS initial revenue"
+    assert dashboard["local_first"] is True
+    assert dashboard["dry_run"] is True
+    assert dashboard["today_post_count"] == 3
+    assert dashboard["note_article_count"] == 1
+    assert dashboard["threads_post_count"] == 2
+    assert dashboard["pv"] == 400
+    assert dashboard["click_rate"] == 0.02
+    assert dashboard["ctr"] == 0.02
+    assert dashboard["revenue_prediction"] >= 2500
+    assert dashboard["first_revenue_progress_rate"] >= 40
+    assert dashboard["daily_kpis"][0]["note_articles"] == 1
+
+
+def test_business_engine_phase1_revenue_progress_reaches_100_after_revenue(tmp_path):
+    store = BusinessEngineStore(tmp_path / "business_engine.json")
+    store.record_daily_kpi("2026-07-09", revenue=1000, articles=1, sns_posts=1)
+
+    dashboard = store.business_phase1_dashboard()
+
+    assert dashboard["actual_revenue"] == 1000
+    assert dashboard["first_revenue_progress_rate"] == 100
 
 
 def test_business_engine_scheduler_history_and_retry(tmp_path):

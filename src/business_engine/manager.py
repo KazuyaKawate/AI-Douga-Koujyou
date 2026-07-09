@@ -7,6 +7,7 @@ from typing import Any
 
 from src.approval.approval_queue import content_review_summary
 from src.business_engine.adapters import AdapterRegistry, default_adapter_state
+from src.core.development_constitution import record_improvement, score_improvement
 from src.creator_factory.factory_manager import creator_factory_summary
 from src.export.export_manager import export_summary
 from src.providers.provider_registry import get_provider_registry
@@ -111,9 +112,18 @@ def default_store() -> dict[str, Any]:
         "execution_history": [],
         "retry_queue": [],
         "article_queue": [],
+        "note_reservations": [],
+        "posting_history": [],
         "post_queue": [],
+        "threads_reservations": [],
+        "threads_history": [],
+        "threads_improvements": [],
         "affiliate_queue": [],
         "seo_queue": [],
+        "content_automation_runs": [],
+        "research_feedback": [],
+        "mission_planner_feedback": [],
+        "constitution_business_evaluations": [],
         "worker": {
             "status": "idle",
             "current_job_id": "",
@@ -479,15 +489,33 @@ class BusinessEngineStore:
         sns_posts: int = 0,
         affiliate_clicks: int = 0,
         notes: str = "",
+        pv: int = 0,
+        ctr: float = 0,
+        cv: float = 0,
+        seo: int = 0,
+        posts: int | None = None,
+        roi: int = 0,
+        note_articles: int | None = None,
+        threads_posts: int | None = None,
     ) -> dict[str, Any]:
         kpi_date = kpi_date or date.today().isoformat()
         data = self.load()
+        note_count = int(note_articles if note_articles is not None else int(articles or 0))
+        threads_count = int(threads_posts if threads_posts is not None else int(sns_posts or 0))
         row = {
             "date": kpi_date,
             "revenue": int(revenue or 0),
             "articles": int(articles or 0),
             "sns_posts": int(sns_posts or 0),
+            "note_articles": note_count,
+            "threads_posts": threads_count,
             "affiliate_clicks": int(affiliate_clicks or 0),
+            "pv": int(pv or 0),
+            "ctr": float(ctr or 0),
+            "cv": float(cv or 0),
+            "seo": int(seo or 0),
+            "posts": int(posts if posts is not None else note_count + threads_count),
+            "roi": int(roi or 0),
             "notes": notes,
             "updated_at": _now(),
         }
@@ -495,6 +523,34 @@ class BusinessEngineStore:
         data["daily_kpis"].insert(0, row)
         self.save(data)
         return row
+
+    def evaluate_improvement_roi(self, improvement: dict[str, Any]) -> dict[str, Any]:
+        data = self.load()
+        scored = score_improvement(improvement)
+        summary = self.pipeline_summary()
+        kpis = data.get("daily_kpis", [])
+        recent = kpis[0] if kpis else {}
+        evaluation = {
+            "evaluation_id": _new_id("beval"),
+            "improvement": improvement,
+            "score": scored,
+            "business_metrics": {
+                "pv": int(recent.get("pv", 0) or 0),
+                "ctr": float(recent.get("ctr", 0) or 0),
+                "cv": float(recent.get("cv", 0) or 0),
+                "seo": int(recent.get("seo", 0) or 0),
+                "posts": int(recent.get("articles", 0) or 0) + int(recent.get("sns_posts", 0) or 0),
+                "revenue": int(recent.get("revenue", 0) or summary.get("earned_revenue", 0)),
+                "roi": int(scored.get("roi_score", 0)),
+            },
+            "decision": "prioritize" if int(scored.get("constitution_priority_score", 0)) >= 30 else "defer",
+            "created_at": _now(),
+        }
+        data.setdefault("constitution_business_evaluations", []).insert(0, evaluation)
+        data["constitution_business_evaluations"] = data["constitution_business_evaluations"][:100]
+        self.save(data)
+        record_improvement(scored)
+        return evaluation
 
     def earnings_forecast(self, days: int = 30) -> dict[str, Any]:
         data = self.load()
@@ -514,6 +570,94 @@ class BusinessEngineStore:
             "projected_kpi_revenue": avg_daily * days,
             "weighted_pipeline": pipeline["weighted_forecast"],
             "forecast_total": avg_daily * days + pipeline["weighted_forecast"],
+        }
+
+    def business_phase1_dashboard(self) -> dict[str, Any]:
+        """Local-first dashboard focused on reaching the first AIOS revenue."""
+        data = self.load()
+        today = date.today().isoformat()
+        kpis = data.get("daily_kpis", [])
+        today_rows = [row for row in kpis if row.get("date") == today]
+        articles = data.get("article_queue", [])
+        posts = data.get("post_queue", [])
+        threads = [post for post in posts if post.get("platform") == "threads"]
+        posting_history = data.get("posting_history", [])
+        threads_history = data.get("threads_history", [])
+        affiliate_queue = data.get("affiliate_queue", [])
+
+        today_post_count = sum(int(row.get("posts", 0)) for row in today_rows)
+        if today_post_count == 0:
+            today_post_count = sum(
+                1 for row in [*posting_history, *threads_history, *posts]
+                if str(row.get("published_at", row.get("posted_at", ""))).startswith(today)
+            )
+
+        note_article_ids = {
+            str(row.get("article_id", row.get("history_id", "")))
+            for row in [*articles, *posting_history]
+            if row.get("article_id") or row.get("history_id")
+        }
+        threads_post_ids = {
+            str(row.get("thread_id", row.get("post_id", row.get("history_id", ""))))
+            for row in [*threads, *threads_history]
+            if row.get("thread_id") or row.get("post_id") or row.get("history_id")
+        }
+        kpi_note_articles = sum(int(row.get("note_articles", row.get("articles", 0)) or 0) for row in kpis)
+        kpi_threads_posts = sum(int(row.get("threads_posts", row.get("sns_posts", 0)) or 0) for row in kpis)
+        note_article_count = max(len(note_article_ids), kpi_note_articles)
+        threads_post_count = max(len(threads_post_ids), kpi_threads_posts)
+
+        kpi_pv = sum(int(row.get("pv", 0)) for row in kpis)
+        article_pv = sum(int(row.get("pv", 0)) for row in articles)
+        thread_pv = sum(int(row.get("pv", 0)) for row in threads)
+        total_pv = kpi_pv + article_pv + thread_pv
+
+        total_clicks = sum(int(row.get("affiliate_clicks", 0)) for row in kpis)
+        total_clicks += sum(int(row.get("clicks", 0)) for row in affiliate_queue)
+        ctr_values = [
+            float(row.get("ctr", 0) or 0)
+            for row in [*kpis, *articles, *threads]
+            if float(row.get("ctr", 0) or 0) > 0
+        ]
+        click_rate = round(total_clicks / max(total_pv, 1), 4) if total_clicks else 0
+        avg_ctr = round(sum(ctr_values) / max(len(ctr_values), 1), 4)
+
+        kpi_revenue = sum(int(row.get("revenue", 0)) for row in kpis)
+        article_revenue = sum(int(row.get("actual_revenue", 0)) for row in articles)
+        affiliate_forecast = sum(int(row.get("estimated_revenue", 0)) for row in affiliate_queue)
+        forecast = self.earnings_forecast(days=30)
+        pipeline = self.pipeline_summary()
+        actual_revenue = kpi_revenue + article_revenue + pipeline["earned_revenue"]
+        revenue_prediction = forecast["forecast_total"] + affiliate_forecast
+
+        if actual_revenue > 0:
+            first_revenue_progress = 100
+        else:
+            first_revenue_progress = min(
+                90,
+                (25 if note_article_count else 0)
+                + (25 if threads_post_count else 0)
+                + (20 if total_pv > 0 else 0)
+                + (10 if total_clicks > 0 or avg_ctr > 0 else 0)
+                + (10 if revenue_prediction > 0 else 0),
+            )
+
+        return {
+            "phase": "Business Engine Phase1",
+            "priority": "AIOS initial revenue",
+            "local_first": bool(data.get("meta", {}).get("local_first", True)),
+            "dry_run": not bool(data.get("meta", {}).get("external_apis_enabled", False)),
+            "today_post_count": today_post_count,
+            "note_article_count": note_article_count,
+            "threads_post_count": threads_post_count,
+            "pv": total_pv,
+            "clicks": total_clicks,
+            "ctr": avg_ctr,
+            "click_rate": click_rate,
+            "actual_revenue": actual_revenue,
+            "revenue_prediction": revenue_prediction,
+            "first_revenue_progress_rate": first_revenue_progress,
+            "daily_kpis": kpis[:14],
         }
 
     def record_execution(

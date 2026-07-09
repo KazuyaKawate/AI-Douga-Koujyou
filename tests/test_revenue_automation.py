@@ -81,3 +81,32 @@ def test_seo_automation_builds_queue_calendar_and_rankings(tmp_path):
     assert ranked and ranked["ranking"]["current"] == 18
     assert summary["seo_queue"] == 2
     assert second["keyword"] in clusters["aios"]
+
+
+def test_content_automation_agents_return_improvements_to_mission_planner(tmp_path):
+    automation = RevenueAutomation(BusinessEngineStore(tmp_path / "business_engine.json"))
+    automation.store.add_revenue_item(
+        "AIOS content automation launch",
+        channel="note",
+        expected_revenue=50000,
+        stage="published",
+    )
+    automation.add_keyword("AIOS Content Automation", "commercial", "high")
+
+    run = automation.start_content_automation(target="初心者クリエイター")
+    data = automation.store.load()
+
+    assert [agent["agent"] for agent in run["agents"]] == [
+        "Content Planner Agent",
+        "SEO Agent",
+        "Image Prompt Agent",
+        "Publisher",
+        "Analytics Agent",
+    ]
+    assert run["references"] == ["business_engine", "research_team"]
+    assert run["outputs"]["content_planner"]["profitability_score"] >= 50
+    assert "AIOS Content Automation" in run["outputs"]["seo"]["keywords"]
+    assert len(run["outputs"]["publisher"]["reservation_management"]) == 5
+    assert run["mission_planner_feedback"]["receiver"] == "Mission Planner"
+    assert run["mission_planner_feedback"]["improvement_tasks"]
+    assert data["content_automation_runs"][0]["run_id"] == run["run_id"]
