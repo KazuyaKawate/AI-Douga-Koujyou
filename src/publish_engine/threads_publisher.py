@@ -4,6 +4,7 @@ from typing import Any
 from uuid import uuid4
 
 from src.api_connectors.manager import APIConnectorManager
+from src.publish_engine.safety_guard import PublishSafetyGuard
 
 
 class ThreadsPublisher:
@@ -13,7 +14,14 @@ class ThreadsPublisher:
         self.manager = manager or APIConnectorManager()
 
     def publish(self, item: dict[str, Any], *, dry_run: bool = True) -> dict[str, Any]:
+        if dry_run is not True:
+            raise ValueError("Threads live publishing is disabled; dry_run=True is required")
         content = item.get("content", {})
+        PublishSafetyGuard().enforce(
+            channel="threads", dry_run=True, production_actions_enabled=False,
+            review_required=True, approval=item.get("approval"), content=content,
+            content_version=int(item.get("content_version", 1)),
+        )
         text = str(content.get("text") or content.get("title", ""))[:500]
         base = {
             "platform": "threads",
@@ -26,12 +34,12 @@ class ThreadsPublisher:
         }
         if not text.strip():
             return {**base, "status": "failed", "message": "Threads text is empty."}
-        create = self.manager.create_post("threads", text, dry_run=dry_run)
+        create = self.manager.create_post("threads", text, dry_run=True)
         if not create.get("ok"):
             return {**base, "status": "failed", "message": _error_message(create), "create": create}
         creation_id = str(create.get("body", {}).get("id", ""))
-        published = self.manager.publish_post("threads", creation_id, dry_run=dry_run)
-        status = "dry_run" if dry_run else ("published" if published.get("ok") else "failed")
+        published = self.manager.publish_post("threads", creation_id, dry_run=True)
+        status = "dry_run" if published.get("ok") else "failed"
         external_id = str(published.get("body", {}).get("id") or creation_id or base["external_id"])
         return {
             **base,
@@ -40,6 +48,7 @@ class ThreadsPublisher:
             "create": create,
             "publish": published,
             "message": "Threads post completed via Meta official API." if status == "published" else _error_message(published),
+            "external_request_sent": False,
         }
 
 

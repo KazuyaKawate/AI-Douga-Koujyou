@@ -32,6 +32,23 @@ DEFAULTS: dict = {
         "tiktok": False,
         "instagram_reels": False,
     },
+    "release": {
+        "domain_url": "https://example.com",
+        "public_dir": "",
+        "vps_host": "",
+        "vps_user": "deploy",
+        "vps_web_root": "/var/www/aios",
+        "google_analytics_id": "",
+        "search_console_verification": "",
+        "search_console_file": "",
+        "search_console_file_content": "",
+        "pre_publication_review_approved": False,
+        "threads_access_token": "",
+        "threads_user_id": "",
+        "threads_live": False,
+        "business_engine_live": False,
+        "formal_release": False,
+    },
 }
 
 

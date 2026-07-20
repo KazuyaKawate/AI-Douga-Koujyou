@@ -1,0 +1,70 @@
+{
+  "records": [
+    {
+      "source_id": "phase70-ui-design-concept",
+      "title": "デザインコンセプトの作り方",
+      "source_type": "markdown",
+      "category": "ui_ux_design",
+      "purpose": "AIOS UI設計基準",
+      "summary": "Design concepts should connect facts, user emotions, target users, and a clear direction for visual and interaction decisions.",
+      "principles": ["purpose", "target_user", "fact", "emotion", "direction"],
+      "actionable_rules": [
+        "Define a concept name before UI implementation.",
+        "Connect every UI choice to user emotion and AIOS first revenue purpose.",
+        "Use Calm Revenue Command Center as the guiding concept."
+      ],
+      "risks": ["Concept drift", "Decorative UI without revenue purpose"],
+      "confidence": 86,
+      "applicable_engines": ["dashboard", "commander", "content", "publish", "website"],
+      "review_required": true,
+      "dry_run": true,
+      "production_action": false
+    },
+    {
+      "source_id": "phase70-ui-four-principles",
+      "title": "デザインの基本4原則",
+      "source_type": "markdown",
+      "category": "ui_ux_design",
+      "purpose": "AIOS UI設計基準",
+      "summary": "Proximity, alignment, repetition, and contrast create understandable screens and reduce user confusion.",
+      "principles": ["proximity", "alignment", "repetition", "contrast"],
+      "actionable_rules": [
+        "Group related information.",
+        "Align cards, headings, metrics, and buttons to shared baselines.",
+        "Repeat state labels and components.",
+        "Limit each screen to one primary CTA."
+      ],
+      "risks": ["Information overload", "Inconsistent engine screens"],
+      "confidence": 90,
+      "applicable_engines": ["dashboard", "commander", "revenue", "content", "publish", "website"],
+      "review_required": true,
+      "dry_run": true,
+      "production_action": false
+    },
+    {
+      "source_id": "phase70-ui-nine-rules",
+      "title": "UIデザインとは？重要性や優れたデザインの要素9つ",
+      "source_type": "markdown",
+      "category": "ui_ux_design",
+      "purpose": "AIOS UI設計基準",
+      "summary": "Good UI keeps state visible, uses familiar patterns, supports user control, stays consistent, and makes success, warning, and failure clear.",
+      "principles": ["visibility", "familiarity", "control", "consistency", "feedback", "simplicity", "help"],
+      "actionable_rules": [
+        "Always show current state and next action.",
+        "Use familiar controls and clear feedback.",
+        "Provide cancel, hold, and back paths.",
+        "Keep help and FAQ available."
+      ],
+      "risks": ["Unclear operation result", "User loses control", "Mobile confusion"],
+      "confidence": 88,
+      "applicable_engines": ["dashboard", "commander", "revenue", "content", "publish", "website"],
+      "review_required": true,
+      "dry_run": true,
+      "production_action": false
+    }
+  ],
+  "dry_run": true,
+  "local_first": true,
+  "external_api_enabled": false,
+  "production_actions_enabled": false
+}

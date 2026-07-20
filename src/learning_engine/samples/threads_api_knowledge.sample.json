@@ -1,0 +1,43 @@
+{
+  "records": [
+    {
+      "source_id": "phase70-threads-api-token",
+      "title": "Threads APIアクセストークン取得方法",
+      "source_type": "markdown",
+      "category": "threads_api_operations",
+      "purpose": "Threads連携準備知識",
+      "summary": "Threads API preparation involves Meta App setup, adding Threads testers, accepting invitations, and generating access tokens. Current screens and requirements may change.",
+      "principles": [
+        "official_verification_required",
+        "no_secret_storage",
+        "no_external_api_execution",
+        "review_before_connection"
+      ],
+      "actionable_rules": [
+        "Record only procedural knowledge.",
+        "Never acquire or save real access tokens in AIOS.",
+        "Do not log tokens.",
+        "Do not auto-post or call external APIs during intake.",
+        "Verify current Meta documentation before real setup."
+      ],
+      "risks": [
+        "Token leakage",
+        "Outdated platform screens",
+        "Unauthorized external API communication",
+        "Production posting by mistake"
+      ],
+      "confidence": 70,
+      "applicable_engines": ["threads", "publish", "revenue", "commander"],
+      "verified_current": false,
+      "needs_official_verification": true,
+      "review_required": true,
+      "dry_run": true,
+      "production_action": false
+    }
+  ],
+  "dry_run": true,
+  "local_first": true,
+  "external_api_enabled": false,
+  "production_actions_enabled": false,
+  "secret_value_saved": false
+}

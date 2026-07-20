@@ -6,10 +6,14 @@ import pandas as pd
 import streamlit as st
 
 from src.commander.api import CommanderAPI
+from src.commander.chat_ui import render_chat_ui
 from src.commander.production_connection import ENV_KEYS, ProductionConnectionManager
 from src.commander.queue import STATUS_LABELS, CommanderQueue
 from src.commander.templates import list_templates
 from src.commander.worker import CommanderWorker
+from src.hq.task_manager import STATUS_LABEL, load_tasks, update_task_status
+from src.operations.phase9_revenue import Phase9RevenueManager
+from src.ui import apply_design_system, page_header, safety_status_strip
 
 
 STATUS_COLORS = {
@@ -28,21 +32,12 @@ STATUS_COLORS = {
 
 
 def render_console() -> None:
-    st.markdown(
-        """
-        <style>
-        .cmd-card{background:#fff;border:1px solid #e6e9ef;border-radius:8px;padding:16px;min-height:110px;}
-        .cmd-number{font-size:28px;font-weight:760;color:#155e75;line-height:1.1;}
-        .cmd-label{color:#667085;font-size:13px;}
-        .cmd-pill{display:inline-block;border-radius:999px;padding:3px 9px;color:#fff;font-size:12px;font-weight:700;}
-        div.stButton > button{min-height:44px;font-weight:700;border-radius:8px;}
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.title("AIOS CEO Dashboard")
-    st.caption("Business Commander: note / Threads / 公式サイトをROI順に実行します。")
+    apply_design_system()
+    # Keep the native heading for accessibility and Streamlit/AppTest compatibility.
+    st.markdown('<p class="aios-eyebrow">AIOS / CHAT COMMAND</p>', unsafe_allow_html=True)
+    st.title("AIOS Commander")
+    st.caption("AIOSの正式な操作入口。自然文からWorkflow Preview、Engine Routing、DryRun、承認、結果まで追跡します。")
+    safety_status_strip()
 
     queue = CommanderQueue()
     api = CommanderAPI(queue, worker=CommanderWorker(queue))
@@ -50,7 +45,10 @@ def render_console() -> None:
     state = queue.load()
     provider_health = state.get("provider_health", [])
 
+    render_chat_ui(api, queue, summary)
     _render_metrics(summary)
+    _render_google_workspace(api)
+    _render_monetization_flow(api)
     _render_production_ready()
     _render_company_cards(summary)
     _render_content_cards(summary)
@@ -91,6 +89,7 @@ def render_console() -> None:
                 "/api/commander/approve": {"method": "POST", "body": {"job_id": "cmd-..."}},
                 "/api/commander/execute": {"method": "POST", "body": {"job_id": "cmd-..."}},
                 "/api/commander/reject": {"method": "POST", "body": {"job_id": "cmd-...", "reason": "..."}},
+                "/api/commander/google-workspace/check": {"method": "POST", "body": {"dry_run": True}},
             }
         )
         st.caption("Provider状態")
@@ -102,6 +101,289 @@ def render_console() -> None:
     content = summary.get("content_operation", {}).get("today_content_mission")
     if content:
         st.info(f"今日AIOSが最優先で作るコンテンツ: {content.get('title', '')}")
+
+
+def _render_google_workspace(api: CommanderAPI) -> None:
+    status = api.queue_endpoint().get("google_workspace", {})
+    st.subheader("Google Workspace")
+    cols = st.columns([1, 1, 1, 2])
+    for col, service in zip(cols[:3], ("sheets", "drive", "gmail")):
+        col.metric(service.title(), "Enabled" if status.get("services", {}).get(service) else "Disabled")
+    cols[3].metric("Connection", status.get("label", "認証情報が必要です"))
+    st.caption("Local First / DryRun必須 / Review Required / Production操作禁止")
+    if st.button("Google Workspace接続確認（DryRun）", key="commander_google_workspace_check"):
+        result = api.google_workspace_connection_endpoint(dry_run=True)
+        st.session_state["google_workspace_check"] = result
+    result = st.session_state.get("google_workspace_check")
+    if result:
+        if result.get("ok"):
+            st.success(result.get("label", "接続確認済み"))
+        else:
+            st.warning(result.get("label", "認証情報が必要です"))
+        st.json(result)
+
+
+def _render_monetization_flow(api: CommanderAPI) -> None:
+    st.subheader("Phase 9 初収益フロー: 記事作成 → レビュー → 承認 → 投稿確認")
+    st.caption("Local First / Dry Run固定 / Review Required / Production OFF / 外部公開禁止")
+    
+    phase9 = Phase9RevenueManager()
+    phase9_summary = phase9.revenue_summary()
+    steps = st.columns(4)
+    steps[0].metric("1. 記事作成", "READY")
+    steps[1].metric("2. レビュー", phase9_summary["review_waiting"])
+    steps[2].metric("3. 承認", phase9_summary["approved"])
+    steps[3].metric("4. 投稿確認", phase9_summary["publish_waiting"])
+    
+    instruction = st.text_area(
+        "記事テーマ・読者の課題",
+        value="AIOSで初収益につなげるため、noteとThreadsの導線を小さく検証する",
+        key="monetization_instruction",
+    )
+    cta_url = st.text_input("CTAリンク（任意・HTTPS）", key="monetization_cta_url")
+    if st.button("1. 記事作成 → 自動レビュー → 承認待ち", type="primary", key="monetization_create_review"):
+        workflow = api.create_monetization_package_endpoint(instruction=instruction, cta_url=cta_url)
+        st.session_state["monetization_workflow_id"] = workflow.get("workflow_id", "")
+        st.success("記事とThreads案を作成し、人間承認待ちで停止しました。")
+        st.rerun()
+
+    summary = api.monetization.summary()
+    workflows = summary.get("workflows", [])
+    
+    if not workflows:
+        st.info("収益化ワークフローはまだありません。")
+        return
+        
+    st.markdown("---")
+    st.markdown("### 収益化ワークフロー詳細編集・承認・投稿 (1画面完結)")
+    
+    wf_options = {f"{wf['workflow_id']} | {wf['note']['title'][:30]} | {wf['stage']}": wf['workflow_id'] for wf in workflows}
+    selected_id = st.session_state.get("monetization_workflow_id", "")
+    default_index = 0
+    if selected_id:
+        for idx, key in enumerate(wf_options.keys()):
+            if wf_options[key] == selected_id:
+                default_index = idx
+                break
+                
+    selected_label = st.selectbox("編集・承認・投稿対象のワークフロー", list(wf_options.keys()), index=default_index)
+    selected_wf_id = wf_options[selected_label]
+    st.session_state["monetization_workflow_id"] = selected_wf_id
+    
+    workflow = next(w for w in workflows if w["workflow_id"] == selected_wf_id)
+    
+    st.markdown(f"**現在の工程:** {workflow.get('current_step', workflow.get('stage', ''))} (コンテンツ版数: {workflow.get('content_version', 1)})")
+    
+    # Render inline editable fields
+    edit_note_title = st.text_input("noteタイトル", value=workflow["note"]["title"], key=f"edit_title_{workflow['workflow_id']}")
+    edit_note_body = st.text_area("note本文", value=workflow["note"]["body"], height=250, key=f"edit_body_{workflow['workflow_id']}")
+    edit_threads_text = st.text_area("Threads投稿内容", value=workflow["threads"]["text"], height=150, key=f"edit_text_{workflow['workflow_id']}")
+    
+    if st.button("編集内容を保存して再レビュー", key=f"save_edit_{workflow['workflow_id']}"):
+        updated_note = {
+            "content_id": workflow["note"]["content_id"],
+            "type": "note",
+            "title": edit_note_title,
+            "body": edit_note_body,
+            "cta": workflow["note"].get("cta", ""),
+            "cta_url": workflow["note"].get("cta_url", ""),
+            "revenue_purpose": workflow["note"].get("revenue_purpose", "")
+        }
+        updated_threads = {
+            "content_id": workflow["threads"]["content_id"],
+            "type": "threads",
+            "title": edit_note_title,
+            "text": edit_threads_text,
+            "cta": workflow["threads"].get("cta", ""),
+            "source_note_id": workflow["note"]["content_id"],
+            "revenue_purpose": workflow["threads"].get("revenue_purpose", "")
+        }
+        with st.spinner("コンテンツ更新および再レビューの検証中..."):
+            api.monetization.update_content(workflow["workflow_id"], channel="note", content=updated_note)
+            api.monetization.update_content(workflow["workflow_id"], channel="threads", content=updated_threads)
+            st.success("コンテンツが更新され、自動再レビューが完了しました。")
+            st.rerun()
+            
+    # Review results
+    note_review = workflow["reviews"]["note"]
+    threads_review = workflow["reviews"]["threads"]
+    
+    st.markdown("#### 自動レビュー結果")
+    c_rev1, c_rev2 = st.columns(2)
+    with c_rev1:
+        if note_review.get("passed"):
+            st.success("note自動レビュー: 合格")
+        else:
+            st.warning("note自動レビュー: 警告あり")
+            for warning in note_review.get("warnings", []):
+                st.write(f"- ⚠️ {warning}")
+    with c_rev2:
+        if threads_review.get("passed"):
+            st.success("Threads自動レビュー: 合格")
+        else:
+            st.warning("Threads自動レビュー: 警告あり")
+            for warning in threads_review.get("warnings", []):
+                st.write(f"- ⚠️ {warning}")
+                
+    st.markdown("#### 人間承認と投稿実行")
+    approver = st.text_input("承認者名（人間による明示入力）", key=f"approver_{workflow['workflow_id']}")
+    approval = workflow.get("approval", {})
+    
+    col_btn1, col_btn2 = st.columns(2)
+    
+    # Enable approve only if review warnings are resolved
+    can_approve = note_review.get("passed") and threads_review.get("passed")
+    if not can_approve:
+        st.warning("自動レビュー警告を解消（編集・保存）するまで承認は行えません。")
+        
+    if col_btn1.button("人間レビュー完了・承認", disabled=bool(approval) or not approver.strip() or not can_approve, key=f"approve_money_{workflow['workflow_id']}", use_container_width=True):
+        api.approve_monetization_package_endpoint(workflow["workflow_id"], approver=approver)
+        st.success("本文ハッシュと版数を固定して承認しました。")
+        st.rerun()
+        
+    if approval:
+        st.json({
+            "approval_id": approval.get("approval_id"),
+            "content_hash": approval.get("content_hash"),
+            "approver": approval.get("approver"),
+            "approved_at": approval.get("approved_at"),
+            "approved_content_version": approval.get("approved_content_version"),
+        })
+        
+    if col_btn2.button("承認済み記事をnote／ThreadsへDry Run投稿", disabled=not bool(approval) or workflow.get("stage") == "DryRunSucceeded", key=f"dryrun_money_{workflow['workflow_id']}", use_container_width=True):
+        result = api.dry_run_monetization_package_endpoint(workflow["workflow_id"])
+        st.success("Dry Runを完了しました。外部公開は0件です。") if result.get("stage") == "DryRunSucceeded" else st.error("安全停止しました。自動再試行は行いません。")
+        st.rerun()
+        
+    if workflow.get("dry_run_result"):
+        st.json({"Dry Run結果": workflow.get("dry_run_result", {}), "監査ログ参照先": workflow.get("audit_log_path", summary.get("audit_log_path", ""))})
+    st.page_link("pages/48_Phase9_Revenue.py", label="Phase 9 投稿確認・共通履歴", icon="💴", use_container_width=True)
+
+
+def _render_chat_workspace(api: CommanderAPI, queue: CommanderQueue, summary: dict[str, Any]) -> None:
+    st.markdown('<div class="cmd-shell">', unsafe_allow_html=True)
+    st.markdown("#### Commander Workspace")
+    st.markdown('<div class="cmd-route">Dashboardで今日のタスク確認 → Commanderで作業開始 → DryRun → Review → 完了 → Dashboardで進捗確認</div>', unsafe_allow_html=True)
+
+    current = summary.get("current_job", {})
+    next_action = summary.get("executive", {}).get("next_action") or {}
+    next_task = next_action.get("business_task", {})
+    pending_review = summary.get("dashboard", {}).get("pending_review", [])
+    queued = summary.get("queue", [])
+    history = summary.get("history", [])
+
+    context_cols = st.columns([1.4, 1, 1, 1])
+    context_cols[0].markdown(
+        f"""
+        <div class="cmd-context">
+          <strong>現在の作業コンテキスト</strong><br>
+          {next_task.get('title') or next_action.get('instruction') or current.get('instruction') or '今日の収益導線タスクを開始できます。'}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    context_cols[1].metric("Queue", len(queued))
+    context_cols[2].metric("Review待ち", len(pending_review))
+    context_cols[3].metric("DryRun", "ON")
+
+    if "commander_messages" not in st.session_state:
+        st.session_state["commander_messages"] = [
+            {"role": "ai", "content": summary.get("executive", {}).get("message", "今日のタスクを選んで作業を開始できます。")}
+        ]
+
+    for message in st.session_state["commander_messages"][-6:]:
+        role_class = "cmd-user" if message.get("role") == "user" else "cmd-ai"
+        label = "You" if message.get("role") == "user" else "AIOS"
+        st.markdown(
+            f'<div class="cmd-chat {role_class}"><strong>{label}</strong><br>{message.get("content", "")}</div>',
+            unsafe_allow_html=True,
+        )
+
+    default_prompt = st.session_state.pop(
+        "commander_prefill",
+        "AIOS開発記録をnote、Threads、公式サイトへ展開する。DryRunでレビュー可能な形まで進める。",
+    )
+    st.markdown('<div class="cmd-fixed-input">', unsafe_allow_html=True)
+    instruction = st.text_area("Commanderへの自然文指示", value=default_prompt, height=105, key="commander_chat_instruction")
+    target_files_text = st.text_input("対象ファイル（任意・カンマ区切り）", value="", key="commander_chat_targets")
+
+    action_cols = st.columns([1, 1, 1, 1, 1, 1])
+    if action_cols[0].button("作業開始", type="primary", use_container_width=True, key="chat_start_work"):
+        target_files = [item.strip() for item in target_files_text.split(",") if item.strip()]
+        result = api.enqueue_instruction(instruction, priority=90, target_files=target_files, dry_run=True)
+        if result.get("ok"):
+            st.session_state["commander_messages"].append({"role": "user", "content": instruction})
+            st.session_state["commander_messages"].append({"role": "ai", "content": f"Jobを作成しました: {result['job']['job_id']}。次はDryRunで安全確認します。"})
+            st.success(f"Queued: {result['job']['job_id']}")
+        else:
+            st.error(result.get("error", "Job作成に失敗しました"))
+        st.rerun()
+
+    if action_cols[1].button("Mission実行", type="primary", use_container_width=True, key="chat_run_mission"):
+        mission_instruction = instruction or "今日の初収益ミッションをnote、Threads、公式サイトへ展開する。DryRunでレビュー可能な形まで進める。"
+        result = api.enqueue_instruction(mission_instruction, engine="revenue", priority=95, target_files=[], dry_run=True)
+        if result.get("ok"):
+            st.session_state["commander_messages"].append({"role": "user", "content": mission_instruction})
+            st.session_state["commander_messages"].append({"role": "ai", "content": f"Missionを開始しました: {result['job']['job_id']}。次にDryRun実行を押してください。"})
+            st.success(f"Mission queued: {result['job']['job_id']}")
+        else:
+            st.error(result.get("error", "Mission作成に失敗しました"))
+        st.rerun()
+
+    dryrun_disabled = not bool(queue.next_job())
+    if action_cols[2].button("DryRun実行", use_container_width=True, disabled=dryrun_disabled, key="chat_dryrun"):
+        with st.spinner("DryRunを実行中です。実ファイル適用や本番投稿は行いません。"):
+            result = CommanderWorker(queue).process_next(dry_run=True)
+        st.session_state["commander_messages"].append({"role": "ai", "content": f"DryRun結果: {result.get('status', 'unknown')}。レビュー待ちに進められるか確認してください。"})
+        st.json(result)
+        st.rerun()
+
+    review_job = next((job for job in queued + history if job.get("status") == "dry_run_completed"), None)
+    if action_cols[3].button("レビュー送信", use_container_width=True, disabled=review_job is None, key="chat_review"):
+        result = api.approve_endpoint(review_job["job_id"], approved_by="human_review")
+        st.session_state["commander_messages"].append({"role": "ai", "content": f"レビュー結果: {result.get('job', {}).get('job_id', review_job['job_id'])} をApprovedへ更新しました。"})
+        st.json(result)
+        st.rerun()
+
+    task_data = load_tasks()
+    task_options = [task for task in task_data.get("tasks", []) if task.get("status") != "done"]
+    selected_label = ""
+    if task_options:
+        labels = [f"{STATUS_LABEL.get(task.get('status', ''), task.get('status', ''))} / {task.get('title', '')}" for task in task_options]
+        selected_label = st.selectbox("完了にする当日タスク", labels, key="chat_task_complete_select")
+    if action_cols[4].button("タスク完了", use_container_width=True, disabled=not task_options, key="chat_complete_task"):
+        index = labels.index(selected_label)
+        update_task_status(task_options[index]["id"], "done")
+        st.session_state["commander_messages"].append({"role": "ai", "content": f"タスク完了にしました: {task_options[index].get('title', '')}。Dashboardで進捗を確認してください。"})
+        st.rerun()
+
+    action_cols[5].page_link("pages/8_Dashboard.py", label="Dashboardへ戻る", icon="📊", use_container_width=True)
+
+    chat_prompt = st.chat_input("AIOSに自然文で依頼する")
+    if chat_prompt:
+        result = api.enqueue_instruction(chat_prompt, priority=90, target_files=[], dry_run=True)
+        st.session_state["commander_messages"].append({"role": "user", "content": chat_prompt})
+        st.session_state["commander_messages"].append({"role": "ai", "content": f"受け取りました。DryRun前提のJobとしてQueueへ追加しました: {result.get('job', {}).get('job_id', '')}"})
+        st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    log_rows = []
+    for job in (queued + history)[:6]:
+        log_rows.append(
+            {
+                "job_id": job.get("job_id", ""),
+                "status": STATUS_LABELS.get(job.get("status", ""), job.get("status", "")),
+                "instruction": job.get("instruction", "")[:80],
+                "dry_run": job.get("dry_run", True),
+                "updated_at": job.get("updated_at", job.get("finished_at", "")),
+            }
+        )
+    st.markdown("##### 実行ログ")
+    if log_rows:
+        st.dataframe(pd.DataFrame(log_rows), use_container_width=True, hide_index=True)
+    else:
+        st.info("まだCommander実行ログはありません。自然文で作業を開始してください。")
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def _render_metrics(summary: dict[str, Any]) -> None:

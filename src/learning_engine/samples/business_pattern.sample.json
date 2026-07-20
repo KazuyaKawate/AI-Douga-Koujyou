@@ -1,0 +1,71 @@
+{
+  "pattern_id": "bpat-sample",
+  "name": "Affiliate affiliate pattern: Affiliate Website SEO Plan",
+  "source_knowledge_id": "lkn-sample",
+  "category": "Affiliate",
+  "monetization_model": "affiliate",
+  "target_audience": "small business operators",
+  "channels": [
+    "note",
+    "Website"
+  ],
+  "required_assets": [
+    "Local outline",
+    "CTA draft",
+    "Landing page draft",
+    "Keyword memo",
+    "Affiliate disclosure memo",
+    "Product comparison draft"
+  ],
+  "revenue_hypothesis": "If this Affiliate knowledge is validated locally, it may support a affiliate experiment through note, Website.",
+  "validation_plan": [
+    "Write a local one-page pattern memo.",
+    "Define one measurable success signal before any production use.",
+    "Prepare a local landing page outline only.",
+    "Check disclosure and product evidence before review."
+  ],
+  "action_items": [
+    "Create a local landing page draft.",
+    "Prepare SEO keyword notes.",
+    "Write a local one-page pattern memo."
+  ],
+  "risks": [],
+  "evidence": [
+    {
+      "type": "knowledge",
+      "knowledge_id": "lkn-sample",
+      "title": "Affiliate Website SEO Plan"
+    },
+    {
+      "type": "summary_data",
+      "category": "Affiliate",
+      "confidence": 86
+    }
+  ],
+  "reproducibility_score": 82,
+  "reproducibility_report": {
+    "aios_priority": "HIGH",
+    "estimated_first_profit_days": 17,
+    "estimated_initial_cost": 1000,
+    "manual_work_ratio": 82,
+    "automation_ratio": 18,
+    "compatible_with_current_aios": true,
+    "recommended_current_phase": "Phase7 note First Revenue Pilot"
+  },
+  "aios_priority": "HIGH",
+  "estimated_first_profit_days": 17,
+  "estimated_initial_cost": 1000,
+  "manual_work_ratio": 82,
+  "automation_ratio": 18,
+  "compatible_with_current_aios": true,
+  "recommended_current_phase": "Phase7 note First Revenue Pilot",
+  "estimated_value": 78,
+  "confidence": 86,
+  "stage": "idea",
+  "dry_run": true,
+  "local_first": true,
+  "external_api_enabled": false,
+  "production_actions_enabled": false,
+  "generated_by": "rule_based_business_pattern_engine",
+  "created_at": "2026-07-11T00:00:00"
+}

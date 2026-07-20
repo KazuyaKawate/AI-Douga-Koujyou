@@ -18,6 +18,7 @@ from src.publish_engine.retry_manager import RetryManager
 from src.publish_engine.rollback_manager import RollbackManager
 from src.publish_engine.rss_manager import RSSManager
 from src.publish_engine.scheduler import PublishScheduler
+from src.publish_engine.safety_guard import PublishSafetyError, content_hash
 from src.publish_engine.threads_publisher import ThreadsPublisher
 from src.publish_engine.wordpress_publisher import WordPressPublisher
 from src.revenue_engine.dashboard import RevenueEngineDashboard
@@ -123,7 +124,13 @@ class PublishEngine:
 
     def approve(self, publish_id: str, reviewer: str = "AIOS") -> dict[str, Any] | None:
         state = self.load_state()
-        item = self.queue.update(state, publish_id, status="approved", approval=self.approval.approve({"publish_id": publish_id}, reviewer))
+        existing = next((row for row in state.get("queue", []) if row.get("publish_id") == publish_id), None)
+        if existing is None:
+            return None
+        version = int(existing.get("content_version", 1))
+        approval = self.approval.approve({"publish_id": publish_id}, reviewer)
+        approval.update({"approval_id": f"approval-{publish_id}", "content_hash": content_hash(existing.get("content", {})), "approved_content_version": version})
+        item = self.queue.update(state, publish_id, status="approved", approval=approval, content_version=version)
         if item:
             state.setdefault("logs", []).insert(0, self.logger.entry(item, "approved"))
             self.save_state(state)
@@ -182,6 +189,12 @@ class PublishEngine:
         dry_run = bool(state.get("dry_run_default", True) or (publish_mode != "manual" and oauth.get("dry_run", True)))
         try:
             result = self._publisher_for(item.get("platform", "")).publish(item, dry_run=dry_run)
+        except PublishSafetyError as exc:
+            item["status"] = "rejected"
+            item["error_summary"] = str(exc)
+            state.setdefault("logs", []).insert(0, self.logger.entry(item, "safety_stopped", {"reason": str(exc), "retry_scheduled": False}))
+            self.save_state(state)
+            return {"status": "rejected", "reason": str(exc), "retry_scheduled": False, "external_request_sent": False}
         except Exception as exc:
             retry = self.retry.queue_retry(item, str(exc))
             rollback = self.rollback.create_plan(item, str(exc))
